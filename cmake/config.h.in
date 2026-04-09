@@ -1,0 +1,6 @@
+#pragma once
+#cmakedefine01 ENABLE_NETWORK
+#cmakedefine01 ENABLE_STREAMING
+#cmakedefine01 ENABLE_SERVICE
+
+#define RAUC_VERSION "@PROJECT_VERSION@"
