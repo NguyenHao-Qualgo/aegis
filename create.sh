@@ -15,7 +15,7 @@ Arguments:
 
 Environment overrides:
   AEGIS_BIN      Aegis binary path (default: ./build/aegis)
-  CONTENT_DIR    Working content directory (default: ./content-dir)
+  CONTENT_DIR    Working content directory (default: ./build/content-dir)
   COMPATIBLE     Manifest compatible string (default: MyBoard)
   VERSION        Manifest version string (default: 1.0.0)
   DESCRIPTION    Manifest description (default: Simple Aegis bundle)
@@ -40,7 +40,7 @@ KEY="$(realpath "$3")"
 OUTPUT_BUNDLE="${4:-update.aegisb}"
 
 AEGIS_BIN="${AEGIS_BIN:-./build/aegis}"
-CONTENT_DIR="${CONTENT_DIR:-./content-dir}"
+CONTENT_DIR="${CONTENT_DIR:-./build/content-dir}"
 COMPATIBLE="${COMPATIBLE:-MyBoard}"
 VERSION="${VERSION:-1.0.0}"
 DESCRIPTION="${DESCRIPTION:-Simple Aegis bundle}"
