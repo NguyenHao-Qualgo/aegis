@@ -65,7 +65,7 @@ A clean, OOP reimplementation of [RAUC](https://rauc.io/) (Robust Auto-Update Co
 | GPT/MBR partition editing | **Removed** |
 | eMMC boot partition handling | Stub only |
 | GLib/GIO runtime dependency | **Removed** |
-| D-Bus service (full) | Skeleton only |
+| D-Bus service | Minimal `de.pengutronix.rauc.Installer` implementation |
 | Adaptive updates | **Removed** |
 
 ## Kept / Reimplemented
@@ -141,7 +141,46 @@ rauc mark-good
 
 # Run as service
 rauc service
+
+# Example D-Bus calls
+busctl introspect de.pengutronix.rauc / de.pengutronix.rauc.Installer
+busctl get-property de.pengutronix.rauc / de.pengutronix.rauc.Installer Operation
+busctl call de.pengutronix.rauc / de.pengutronix.rauc.Installer GetSlotStatus
 ```
+
+The service now exposes a minimal RAUC-like D-Bus object at `/` on bus name
+`de.pengutronix.rauc` with:
+
+- methods: `InstallBundle`, `Install`, `Info`, `InspectBundle`, `Mark`, `GetSlotStatus`, `GetPrimary`
+- properties: `Operation`, `LastError`, `Progress`, `Compatible`, `Variant`, `BootSlot`
+- signal: `Completed`
+
+`Install` and `InstallBundle` are non-blocking and emit `Completed` when the
+background installation thread finishes.
+
+For the real system bus, D-Bus policy must allow the process to own
+`de.pengutronix.rauc`. This repository now installs
+`packaging/dbus-1/system.d/de.pengutronix.rauc.conf` via CMake to
+`/usr/share/dbus-1/system.d` by default, which matches the packaged layout
+used by RAUC on current systems.
+
+For D-Bus activation, this repository also installs
+`de.pengutronix.rauc.service` to `/usr/share/dbus-1/system-services` by
+default so `busctl introspect de.pengutronix.rauc / de.pengutronix.rauc.Installer`
+can auto-start the daemon.
+
+For systemd-based targets, the build also installs `rauc.service` to
+`/usr/lib/systemd/system` by default. The unit uses `Type=dbus` with
+`BusName=de.pengutronix.rauc`, matching how packaged RAUC services are
+typically integrated with the system bus.
+
+This implementation exposes the installer object at `/`. Real RAUC targets
+may expose slash-separated object paths such as `/de/pengutronix/rauc/Installer`,
+so use `busctl introspect` on the target to confirm the path before scripting
+against it.
+
+For local development without touching the system bus, run the service with
+`RAUC_DBUS_BUS=session`.
 
 ## system.conf Example
 

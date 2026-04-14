@@ -1,9 +1,18 @@
 cmake_minimum_required(VERSION 3.16)
 project(rauc-cpp VERSION 1.0.0 LANGUAGES CXX)
 
+include(GNUInstallDirs)
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+set(DBUS_SYSTEM_POLICY_DIR "/usr/share/dbus-1/system.d"
+    CACHE PATH "Install path for the RAUC D-Bus system bus policy")
+set(DBUS_SYSTEM_SERVICES_DIR "/usr/share/dbus-1/system-services"
+    CACHE PATH "Install path for the RAUC D-Bus activation service")
+set(SYSTEMD_SYSTEM_UNIT_DIR "/usr/lib/systemd/system"
+    CACHE PATH "Install path for the RAUC systemd service unit")
 
 find_package(PkgConfig REQUIRED)
 find_package(OpenSSL REQUIRED)
@@ -22,6 +31,15 @@ configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/cmake/config.h.in
     ${CMAKE_CURRENT_BINARY_DIR}/config.h
 )
+
+if(ENABLE_SERVICE)
+    set(bindir "${CMAKE_INSTALL_FULL_BINDIR}")
+    configure_file(
+        ${CMAKE_CURRENT_SOURCE_DIR}/packaging/systemd/system/rauc.service.in
+        ${CMAKE_CURRENT_BINARY_DIR}/rauc.service
+        @ONLY
+    )
+endif()
 
 set(RAUC_SOURCES
     src/main.cpp
@@ -82,4 +100,11 @@ target_compile_definitions(rauc PRIVATE
     $<$<BOOL:${ENABLE_SERVICE}>:ENABLE_SERVICE=1>
 )
 
-install(TARGETS rauc RUNTIME DESTINATION bin)
+install(TARGETS rauc RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+
+if(ENABLE_SERVICE)
+    install(FILES packaging/dbus-1/system.d/de.pengutronix.rauc.conf
+            DESTINATION ${DBUS_SYSTEM_POLICY_DIR})
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/rauc.service
+            DESTINATION ${SYSTEMD_SYSTEM_UNIT_DIR})
+endif()

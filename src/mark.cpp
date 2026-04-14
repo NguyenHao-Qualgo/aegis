@@ -10,12 +10,42 @@ static Slot* resolve_slot(const std::string& identifier) {
     auto& ctx = Context::instance();
     auto& slots = ctx.config().slots;
 
-    if (identifier.empty()) {
-        // Default: the booted slot
+    auto find_booted = [&]() -> Slot* {
         for (auto& [name, slot] : slots) {
             if (slot.is_booted) return &slot;
         }
+        return nullptr;
+    };
+
+    if (identifier.empty()) {
+        // Default: the booted slot
+        auto* slot = find_booted();
+        if (slot) return slot;
         throw SlotError("Cannot determine booted slot");
+    }
+
+    if (identifier == "booted") {
+        auto* slot = find_booted();
+        if (slot) return slot;
+        throw SlotError("Cannot determine booted slot");
+    }
+
+    if (identifier == "other") {
+        auto* booted = find_booted();
+        if (!booted)
+            throw SlotError("Cannot determine booted slot");
+
+        for (auto& [name, slot] : slots) {
+            if (slot.name == booted->name) continue;
+            if (slot.slot_class == booted->slot_class && slot.index != booted->index)
+                return &slot;
+        }
+
+        for (auto& [name, slot] : slots) {
+            if (!slot.is_booted) return &slot;
+        }
+
+        throw SlotError("Cannot determine other slot");
     }
 
     // Try by name
