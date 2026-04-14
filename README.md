@@ -85,7 +85,6 @@ A clean, OOP C++17 update service inspired by RAUC. It keeps the core functional
 | Manifest parser/writer | `manifest.cpp` |
 | Slot status persistence | `status_file.cpp` |
 | Mark good/bad/active | `mark.cpp` |
-| HTTP bundle download | `network.cpp` |
 | Full CLI interface | `main.cpp` |
 
 ## Building

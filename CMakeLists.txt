@@ -60,11 +60,13 @@ set(AEGIS_SOURCES
     src/mark.cpp
     src/status_file.cpp
     src/utils.cpp
+    src/app_context.cpp
+    src/application.cpp
+    src/cli_parser.cpp
+    src/command_registry.cpp
+    src/commands.cpp
+    src/installer_dbus_client.cpp
 )
-
-if(ENABLE_NETWORK)
-    list(APPEND AEGIS_SOURCES src/network.cpp)
-endif()
 
 if(ENABLE_SERVICE)
     list(APPEND AEGIS_SOURCES src/service.cpp)
