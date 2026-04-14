@@ -1,5 +1,5 @@
-#include "rauc/dm.h"
-#include "rauc/utils.h"
+#include "aegis/dm.h"
+#include "aegis/utils.h"
 
 #include <cerrno>
 #include <cstring>
@@ -10,7 +10,7 @@
 #include <sys/sysmacros.h>
 #include <unistd.h>
 
-namespace rauc {
+namespace aegis {
 
 namespace {
 
@@ -49,7 +49,7 @@ void set_dm_header(dm_ioctl& hdr,
 int open_dm_control() {
     int fd = ::open("/dev/mapper/control", O_RDWR | O_CLOEXEC);
     if (fd < 0) {
-        throw RaucError("Failed to open /dev/mapper/control: " + std::string(std::strerror(errno)));
+        throw AegisError("Failed to open /dev/mapper/control: " + std::string(std::strerror(errno)));
     }
     return fd;
 }
@@ -60,10 +60,10 @@ std::string build_verity_params(const std::string& data_device,
                                 const std::string& salt,
                                 uint64_t hash_offset) {
     if (data_size == 0 || (data_size % kBlockSize) != 0) {
-        throw RaucError("dm-verity data_size must be a non-zero multiple of 4096");
+        throw AegisError("dm-verity data_size must be a non-zero multiple of 4096");
     }
     if ((hash_offset % kBlockSize) != 0) {
-        throw RaucError("dm-verity hash_offset must be a multiple of 4096");
+        throw AegisError("dm-verity hash_offset must be a multiple of 4096");
     }
 
     const uint64_t data_blocks = data_size / kBlockSize;
@@ -83,14 +83,14 @@ std::string build_crypt_params(const std::string& data_device,
 
 void check_ioctl(int rc, const std::string& what) {
     if (rc != 0) {
-        throw RaucError(what + ": " + std::string(std::strerror(errno)));
+        throw AegisError(what + ": " + std::string(std::strerror(errno)));
     }
 }
 
 void quick_check_device(const std::string& path) {
     int fd = ::open(path.c_str(), O_RDONLY | O_CLOEXEC);
     if (fd < 0) {
-        throw RaucError("Failed to open mapped device " + path + ": " + std::string(std::strerror(errno)));
+        throw AegisError("Failed to open mapped device " + path + ": " + std::string(std::strerror(errno)));
     }
 
     char b = 0;
@@ -99,7 +99,7 @@ void quick_check_device(const std::string& path) {
     ::close(fd);
 
     if (rd != 1) {
-        throw RaucError("Check read from mapped device failed: " + std::string(std::strerror(saved_errno)));
+        throw AegisError("Check read from mapped device failed: " + std::string(std::strerror(saved_errno)));
     }
 }
 
@@ -108,10 +108,10 @@ DmTarget create_dm_target(const std::string& dm_name,
                           uint64_t data_size,
                           const std::string& params) {
     if (data_size == 0) {
-        throw RaucError("data_size must be > 0");
+        throw AegisError("data_size must be > 0");
     }
     if ((data_size % kSectorSize) != 0) {
-        throw RaucError("data_size must be a multiple of 512");
+        throw AegisError("data_size must be a multiple of 512");
     }
 
     DmIoctlBuffer setup{};
@@ -132,7 +132,7 @@ DmTarget create_dm_target(const std::string& dm_name,
         std::snprintf(setup.target.target_type, sizeof(setup.target.target_type), "%s", target_type.c_str());
 
         if (params.size() + 1 > sizeof(setup.params)) {
-            throw RaucError("dm parameter string too long");
+            throw AegisError("dm parameter string too long");
         }
         std::snprintf(setup.params, sizeof(setup.params), "%s", params.c_str());
 
@@ -176,12 +176,12 @@ LoopDevice loop_setup(const std::string& file_path, uint64_t offset, uint64_t si
     try {
         backing_fd = ::open(file_path.c_str(), O_RDONLY | O_CLOEXEC);
         if (backing_fd < 0) {
-            throw RaucError("Failed to open bundle file " + file_path + ": " + std::string(std::strerror(errno)));
+            throw AegisError("Failed to open bundle file " + file_path + ": " + std::string(std::strerror(errno)));
         }
 
         control_fd = ::open("/dev/loop-control", O_RDWR | O_CLOEXEC);
         if (control_fd < 0) {
-            throw RaucError("Failed to open /dev/loop-control: " + std::string(std::strerror(errno)));
+            throw AegisError("Failed to open /dev/loop-control: " + std::string(std::strerror(errno)));
         }
 
         int loop_idx = -1;
@@ -190,7 +190,7 @@ LoopDevice loop_setup(const std::string& file_path, uint64_t offset, uint64_t si
         for (int tries = 0; tries < 10; ++tries) {
             loop_idx = ::ioctl(control_fd, LOOP_CTL_GET_FREE);
             if (loop_idx < 0) {
-                throw RaucError("Failed to get free loop device: " + std::string(std::strerror(errno)));
+                throw AegisError("Failed to get free loop device: " + std::string(std::strerror(errno)));
             }
 
             loop_path = "/dev/loop" + std::to_string(loop_idx);
@@ -199,7 +199,7 @@ LoopDevice loop_setup(const std::string& file_path, uint64_t offset, uint64_t si
                 if (errno == ENOENT || errno == ENXIO) {
                     continue;
                 }
-                throw RaucError("Failed to open " + loop_path + ": " + std::string(std::strerror(errno)));
+                throw AegisError("Failed to open " + loop_path + ": " + std::string(std::strerror(errno)));
             }
 
             if (::ioctl(loop_fd, LOOP_SET_FD, backing_fd) == 0) {
@@ -217,7 +217,7 @@ LoopDevice loop_setup(const std::string& file_path, uint64_t offset, uint64_t si
                     int saved_errno = errno;
                     ::ioctl(loop_fd, LOOP_CLR_FD, 0);
                     ::close(loop_fd);
-                    throw RaucError("Failed to configure loop device: " + std::string(std::strerror(saved_errno)));
+                    throw AegisError("Failed to configure loop device: " + std::string(std::strerror(saved_errno)));
                 }
 
                 if (::ioctl(loop_fd, LOOP_SET_BLOCK_SIZE, kBlockSize) != 0) {
@@ -241,10 +241,10 @@ LoopDevice loop_setup(const std::string& file_path, uint64_t offset, uint64_t si
                 continue;
             }
 
-            throw RaucError("Failed to bind file to loop device: " + std::string(std::strerror(saved_errno)));
+            throw AegisError("Failed to bind file to loop device: " + std::string(std::strerror(saved_errno)));
         }
 
-        throw RaucError("Failed to find a usable free loop device");
+        throw AegisError("Failed to find a usable free loop device");
 
     } catch (...) {
         if (loop_fd >= 0) {
@@ -300,7 +300,7 @@ DmTarget dm_verity_setup(const std::string& data_device,
                          const std::string& root_hash,
                          const std::string& salt,
                          uint64_t hash_offset) {
-    std::string dm_name = "rauc-verity-" + random_hex(4);
+    std::string dm_name = "aegis-verity-" + random_hex(4);
     std::string params = build_verity_params(data_device, data_size, root_hash, salt, hash_offset);
     return create_dm_target(dm_name, "verity", data_size, params);
 }
@@ -309,7 +309,7 @@ DmTarget dm_crypt_setup(const std::string& data_device,
                         uint64_t data_size,
                         const std::string& hex_key,
                         const std::string& cipher) {
-    std::string dm_name = "rauc-crypt-" + random_hex(4);
+    std::string dm_name = "aegis-crypt-" + random_hex(4);
     std::string params = build_crypt_params(data_device, hex_key, cipher);
     return create_dm_target(dm_name, "crypt", data_size, params);
 }
@@ -343,4 +343,4 @@ Result<void> dm_remove(const std::string& dm_name) {
     return Result<void>::ok();
 }
 
-} // namespace rauc
+} // namespace aegis

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(rauc-cpp VERSION 1.0.0 LANGUAGES CXX)
+project(aegis-cpp VERSION 1.0.0 LANGUAGES CXX)
 
 include(GNUInstallDirs)
 
@@ -8,11 +8,11 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(DBUS_SYSTEM_POLICY_DIR "/usr/share/dbus-1/system.d"
-    CACHE PATH "Install path for the RAUC D-Bus system bus policy")
+    CACHE PATH "Install path for the Aegis D-Bus system bus policy")
 set(DBUS_SYSTEM_SERVICES_DIR "/usr/share/dbus-1/system-services"
-    CACHE PATH "Install path for the RAUC D-Bus activation service")
+    CACHE PATH "Install path for the Aegis D-Bus activation service")
 set(SYSTEMD_SYSTEM_UNIT_DIR "/usr/lib/systemd/system"
-    CACHE PATH "Install path for the RAUC systemd service unit")
+    CACHE PATH "Install path for the Aegis systemd service unit")
 
 find_package(PkgConfig REQUIRED)
 find_package(OpenSSL REQUIRED)
@@ -35,13 +35,13 @@ configure_file(
 if(ENABLE_SERVICE)
     set(bindir "${CMAKE_INSTALL_FULL_BINDIR}")
     configure_file(
-        ${CMAKE_CURRENT_SOURCE_DIR}/packaging/systemd/system/rauc.service.in
-        ${CMAKE_CURRENT_BINARY_DIR}/rauc.service
+        ${CMAKE_CURRENT_SOURCE_DIR}/packaging/systemd/system/aegis.service.in
+        ${CMAKE_CURRENT_BINARY_DIR}/aegis.service
         @ONLY
     )
 endif()
 
-set(RAUC_SOURCES
+set(AEGIS_SOURCES
     src/main.cpp
     src/context.cpp
     src/config_file.cpp
@@ -63,16 +63,16 @@ set(RAUC_SOURCES
 )
 
 if(ENABLE_NETWORK)
-    list(APPEND RAUC_SOURCES src/network.cpp)
+    list(APPEND AEGIS_SOURCES src/network.cpp)
 endif()
 
 if(ENABLE_SERVICE)
-    list(APPEND RAUC_SOURCES src/service.cpp)
+    list(APPEND AEGIS_SOURCES src/service.cpp)
 endif()
 
-add_executable(rauc ${RAUC_SOURCES})
+add_executable(aegis ${AEGIS_SOURCES})
 
-target_include_directories(rauc PRIVATE
+target_include_directories(aegis PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_BINARY_DIR}
     ${GLIB2_INCLUDE_DIRS}
@@ -83,7 +83,7 @@ target_include_directories(rauc PRIVATE
     ${OPENSSL_INCLUDE_DIR}
 )
 
-target_link_libraries(rauc PRIVATE
+target_link_libraries(aegis PRIVATE
     ${GLIB2_LIBRARIES}
     ${GIO2_LIBRARIES}
     ${GIOUNIX_LIBRARIES}
@@ -94,17 +94,17 @@ target_link_libraries(rauc PRIVATE
     pthread
 )
 
-target_compile_definitions(rauc PRIVATE
+target_compile_definitions(aegis PRIVATE
     $<$<BOOL:${ENABLE_NETWORK}>:ENABLE_NETWORK=1>
     $<$<BOOL:${ENABLE_STREAMING}>:ENABLE_STREAMING=1>
     $<$<BOOL:${ENABLE_SERVICE}>:ENABLE_SERVICE=1>
 )
 
-install(TARGETS rauc RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(TARGETS aegis RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 if(ENABLE_SERVICE)
-    install(FILES packaging/dbus-1/system.d/de.pengutronix.rauc.conf
+    install(FILES packaging/dbus-1/system.d/de.pengutronix.aegis.conf
             DESTINATION ${DBUS_SYSTEM_POLICY_DIR})
-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/rauc.service
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/aegis.service
             DESTINATION ${SYSTEMD_SYSTEM_UNIT_DIR})
 endif()

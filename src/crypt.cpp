@@ -1,5 +1,5 @@
-#include "rauc/crypt.h"
-#include "rauc/utils.h"
+#include "aegis/crypt.h"
+#include "aegis/utils.h"
 
 #include <cstdio>
 #include <cstring>
@@ -7,7 +7,7 @@
 #include <openssl/rand.h>
 #include <vector>
 
-namespace rauc {
+namespace aegis {
 
 std::string generate_aes_key() {
     unsigned char key[32]; // AES-256
@@ -150,4 +150,4 @@ Result<void> crypt_decrypt(const std::string& input_path,
     return Result<void>::ok();
 }
 
-} // namespace rauc
+} // namespace aegis

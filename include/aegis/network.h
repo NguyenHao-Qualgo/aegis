@@ -1,12 +1,12 @@
 #pragma once
 
-#include "rauc/error.h"
+#include "aegis/error.h"
 
 #include <cstdint>
 #include <functional>
 #include <string>
 
-namespace rauc {
+namespace aegis {
 
 using DownloadProgress = std::function<void(uint64_t, uint64_t)>;
 
@@ -18,4 +18,4 @@ Result<void> download_bundle(const std::string& url,
 
 Result<uint64_t> check_bundle_url(const std::string& url);
 
-} // namespace rauc
+} // namespace aegis

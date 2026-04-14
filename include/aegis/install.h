@@ -1,16 +1,16 @@
 #pragma once
 
-#include "rauc/bundle.h"
-#include "rauc/error.h"
-#include "rauc/manifest.h"
-#include "rauc/slot.h"
-#include "rauc/update_handler.h"
+#include "aegis/bundle.h"
+#include "aegis/error.h"
+#include "aegis/manifest.h"
+#include "aegis/slot.h"
+#include "aegis/update_handler.h"
 
 #include <functional>
 #include <string>
 #include <vector>
 
-namespace rauc {
+namespace aegis {
 
 /// A single image-to-slot mapping
 struct InstallPlan {
@@ -47,4 +47,4 @@ Result<std::vector<InstallPlan>> make_install_plans(
 Result<void> install_bundle(const std::string& bundle_path,
                             InstallArgs& args);
 
-} // namespace rauc
+} // namespace aegis

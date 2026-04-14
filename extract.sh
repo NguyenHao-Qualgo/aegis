@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-BUNDLE="${1:-update.raucb}"
+BUNDLE="${1:-update.aegisb}"
 CAFILE="${2:-/home/hao-nna/uav-yocto-build/rauc-ca/ca.cert.pem}"
-OUT="${3:-manifest.raucm}"
+OUT="${3:-manifest.aegism}"
 
 TMP_CMS="$(mktemp)"
 cleanup() {

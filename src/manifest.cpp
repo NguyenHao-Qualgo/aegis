@@ -1,11 +1,11 @@
-#include "rauc/manifest.h"
-#include "rauc/utils.h"
+#include "aegis/manifest.h"
+#include "aegis/utils.h"
 
 #include <fstream>
 #include <map>
 #include <sstream>
 
-namespace rauc {
+namespace aegis {
 
 const char* to_string(BundleFormat fmt) {
     switch (fmt) {
@@ -20,7 +20,7 @@ BundleFormat bundle_format_from_string(const std::string& s) {
     if (s == "plain")  return BundleFormat::Plain;
     if (s == "verity") return BundleFormat::Verity;
     if (s == "crypt")  return BundleFormat::Crypt;
-    throw RaucError("Unknown bundle format: " + s);
+    throw AegisError("Unknown bundle format: " + s);
 }
 
 // Reuse the simple INI parser concept
@@ -118,7 +118,7 @@ Manifest parse_manifest(const std::string& path) {
 
 void write_manifest(const Manifest& manifest, const std::string& path) {
     std::ofstream f(path);
-    if (!f) throw RaucError("Cannot write manifest: " + path);
+    if (!f) throw AegisError("Cannot write manifest: " + path);
 
     f << "[update]\n";
     f << "compatible=" << manifest.compatible << "\n";
@@ -172,4 +172,4 @@ void write_manifest(const Manifest& manifest, const std::string& path) {
     }
 }
 
-} // namespace rauc
+} // namespace aegis

@@ -1,11 +1,11 @@
-#include "rauc/install.h"
-#include "rauc/bootchooser.h"
-#include "rauc/checksum.h"
-#include "rauc/context.h"
-#include "rauc/status_file.h"
-#include "rauc/utils.h"
+#include "aegis/install.h"
+#include "aegis/bootchooser.h"
+#include "aegis/checksum.h"
+#include "aegis/context.h"
+#include "aegis/status_file.h"
+#include "aegis/utils.h"
 
-namespace rauc {
+namespace aegis {
 
 Result<std::vector<InstallPlan>> make_install_plans(
     const Manifest& manifest,
@@ -51,12 +51,12 @@ static Result<void> run_handler(const std::string& handler_path,
     }
 
     std::vector<std::string> env = {
-        "RAUC_SYSTEM_COMPATIBLE=" + Context::instance().config().compatible,
-        "RAUC_MOUNT_PREFIX=" + Context::instance().mount_prefix(),
-        "RAUC_BUNDLE_MOUNT_POINT=" + bundle_mount_point,
-        "RAUC_UPDATE_SOURCE=" + bundle_mount_point,
-        "RAUC_BUNDLE_COMPATIBLE=" + manifest.compatible,
-        "RAUC_BUNDLE_VERSION=" + manifest.version,
+        "AEGIS_SYSTEM_COMPATIBLE=" + Context::instance().config().compatible,
+        "AEGIS_MOUNT_PREFIX=" + Context::instance().mount_prefix(),
+        "AEGIS_BUNDLE_MOUNT_POINT=" + bundle_mount_point,
+        "AEGIS_UPDATE_SOURCE=" + bundle_mount_point,
+        "AEGIS_BUNDLE_COMPATIBLE=" + manifest.compatible,
+        "AEGIS_BUNDLE_VERSION=" + manifest.version,
     };
 
     auto res = run_command({handler_path, action}, env);
@@ -233,4 +233,4 @@ Result<void> install_bundle(const std::string& bundle_path,
     return Result<void>::ok();
 }
 
-} // namespace rauc
+} // namespace aegis

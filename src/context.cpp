@@ -1,9 +1,9 @@
-#include "rauc/context.h"
-#include "rauc/slot.h"
-#include "rauc/status_file.h"
-#include "rauc/utils.h"
+#include "aegis/context.h"
+#include "aegis/slot.h"
+#include "aegis/status_file.h"
+#include "aegis/utils.h"
 
-namespace rauc {
+namespace aegis {
 
 Context& Context::instance() {
     static Context ctx;
@@ -59,4 +59,4 @@ void Context::init(const std::string& config_path,
              boot_slot_.c_str());
 }
 
-} // namespace rauc
+} // namespace aegis

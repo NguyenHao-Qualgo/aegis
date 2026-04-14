@@ -1,12 +1,12 @@
 #pragma once
 
-#include "rauc/error.h"
+#include "aegis/error.h"
 
 #include <cstdint>
 #include <string>
 #include <vector>
 
-namespace rauc {
+namespace aegis {
 
 /// Encrypt a bundle payload using AES-256-CBC (dm-crypt compatible)
 /// Writes encrypted data to output_path.
@@ -24,4 +24,4 @@ Result<void> crypt_decrypt(const std::string& input_path,
 /// Generate a random AES-256 key (hex-encoded, 64 chars)
 std::string generate_aes_key();
 
-} // namespace rauc
+} // namespace aegis

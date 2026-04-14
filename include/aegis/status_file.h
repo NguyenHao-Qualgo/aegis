@@ -1,12 +1,12 @@
 #pragma once
 
-#include "rauc/error.h"
-#include "rauc/slot.h"
+#include "aegis/error.h"
+#include "aegis/slot.h"
 
 #include <map>
 #include <string>
 
-namespace rauc {
+namespace aegis {
 
 Result<void> load_slot_status(Slot& slot, const std::string& data_directory);
 
@@ -20,4 +20,4 @@ Result<void> save_all_slot_status(const std::map<std::string, Slot>& slots,
 
 std::string current_timestamp();
 
-} // namespace rauc
+} // namespace aegis

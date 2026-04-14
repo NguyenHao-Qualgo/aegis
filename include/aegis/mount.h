@@ -1,10 +1,10 @@
 #pragma once
 
-#include "rauc/error.h"
+#include "aegis/error.h"
 
 #include <string>
 
-namespace rauc {
+namespace aegis {
 
 /// Mount a filesystem
 Result<void> mount(const std::string& source,
@@ -26,4 +26,4 @@ Result<std::string> mount_squashfs(const std::string& image_path,
 /// Unmount and clean up a squashfs mount
 Result<void> umount_squashfs(const std::string& mountpoint);
 
-} // namespace rauc
+} // namespace aegis

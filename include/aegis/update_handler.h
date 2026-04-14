@@ -1,13 +1,13 @@
 #pragma once
 
-#include "rauc/error.h"
-#include "rauc/manifest.h"
-#include "rauc/slot.h"
+#include "aegis/error.h"
+#include "aegis/manifest.h"
+#include "aegis/slot.h"
 
 #include <functional>
 #include <string>
 
-namespace rauc {
+namespace aegis {
 
 /// Progress callback: (percentage, message)
 using ProgressCallback = std::function<void(int, const std::string&)>;
@@ -61,4 +61,4 @@ Result<void> write_image_to_device(const std::string& source_path,
                                    const std::string& device_path,
                                    ProgressCallback progress = {});
 
-} // namespace rauc
+} // namespace aegis

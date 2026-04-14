@@ -1,10 +1,10 @@
-#include "rauc/network.h"
-#include "rauc/utils.h"
+#include "aegis/network.h"
+#include "aegis/utils.h"
 
 #include <curl/curl.h>
 #include <cstdio>
 
-namespace rauc {
+namespace aegis {
 
 struct DownloadState {
     FILE* file = nullptr;
@@ -96,4 +96,4 @@ Result<uint64_t> check_bundle_url(const std::string& url) {
     return Result<uint64_t>::ok(static_cast<uint64_t>(content_length));
 }
 
-} // namespace rauc
+} // namespace aegis

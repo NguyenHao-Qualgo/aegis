@@ -1,5 +1,5 @@
-#include "rauc/slot.h"
-#include "rauc/utils.h"
+#include "aegis/slot.h"
+#include "aegis/utils.h"
 
 #include <algorithm>
 #include <fstream>
@@ -7,9 +7,9 @@
 #include <sstream>
 #include <cstring>
 
-namespace rauc {
+namespace aegis {
 
-/// Parse /proc/cmdline to find RAUC_SLOT= or rauc.slot= parameter
+/// Parse /proc/cmdline to find AEGIS_SLOT= or aegis.slot= parameter.
 static std::string find_boot_slot_from_cmdline() {
     std::ifstream f("/proc/cmdline");
     if (!f) return {};
@@ -17,8 +17,8 @@ static std::string find_boot_slot_from_cmdline() {
     std::string cmdline;
     std::getline(f, cmdline);
 
-    // Look for rauc.slot=<bootname> or RAUC_SLOT=<bootname>
-    for (auto& prefix : {"rauc.slot=", "RAUC_SLOT="}) {
+    // Look for aegis.slot=<bootname> or AEGIS_SLOT=<bootname>.
+    for (auto& prefix : {"aegis.slot=", "AEGIS_SLOT="}) {
         auto pos = cmdline.find(prefix);
         if (pos != std::string::npos) {
             pos += std::strlen(prefix);
@@ -113,4 +113,4 @@ std::map<std::string, Slot*> get_target_group(
     return targets;
 }
 
-} // namespace rauc
+} // namespace aegis

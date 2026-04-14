@@ -1,17 +1,17 @@
-#include "rauc/bundle.h"
-#include "rauc/checksum.h"
-#include "rauc/context.h"
-#include "rauc/crypt.h"
-#include "rauc/mount.h"
-#include "rauc/utils.h"
-#include "rauc/verity_hash.h"
+#include "aegis/bundle.h"
+#include "aegis/checksum.h"
+#include "aegis/context.h"
+#include "aegis/crypt.h"
+#include "aegis/mount.h"
+#include "aegis/utils.h"
+#include "aegis/verity_hash.h"
 
 #include <cstring>
 #include <fstream>
 #include <sstream>
 #include <sys/mount.h>
 
-namespace rauc {
+namespace aegis {
 
 static Result<void> create_squashfs(const std::string& content_dir,
                                      const std::string& output_path,
@@ -35,9 +35,9 @@ Result<void> bundle_create(const BundleCreateParams& params) {
     LOG_INFO("Creating '%s' format bundle", to_string(params.format));
 
     // 1. Parse the manifest from the content directory
-    std::string manifest_path = params.content_dir + "/manifest.raucm";
+    std::string manifest_path = params.content_dir + "/manifest.aegism";
     if (!path_exists(manifest_path))
-        return Result<void>::err("No manifest.raucm in content directory");
+        return Result<void>::err("No manifest.aegism in content directory");
 
     auto manifest = parse_manifest(manifest_path);
     manifest.bundle_format = params.format;
@@ -250,7 +250,7 @@ Result<Bundle> bundle_open(const std::string& path,
         // Parse manifest from verified content
         std::string manifest_str(manifest_bytes.begin(), manifest_bytes.end());
         // Write to temp file for parsing
-        std::string tmp_manifest = "/tmp/rauc-manifest-" + random_hex(4) + ".raucm";
+        std::string tmp_manifest = "/tmp/aegis-manifest-" + random_hex(4) + ".aegism";
         write_text_file(tmp_manifest, manifest_str);
         bundle.manifest = parse_manifest(tmp_manifest);
         rm_rf(tmp_manifest);
@@ -406,7 +406,7 @@ Result<void> bundle_resign(const std::string& input_path,
     fclose(fin);
 
     // Re-sign the manifest with new keys
-    std::string tmp_manifest = "/tmp/rauc-resign-" + random_hex(4) + ".raucm";
+    std::string tmp_manifest = "/tmp/aegis-resign-" + random_hex(4) + ".aegism";
     write_manifest(bundle.manifest, tmp_manifest);
     auto manifest_content = read_file_bytes(tmp_manifest);
 
@@ -443,4 +443,4 @@ Result<Bundle> bundle_info(const std::string& path,
     return bundle_open(path, params);
 }
 
-} // namespace rauc
+} // namespace aegis

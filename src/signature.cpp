@@ -1,5 +1,5 @@
-#include "rauc/signature.h"
-#include "rauc/utils.h"
+#include "aegis/signature.h"
+#include "aegis/utils.h"
 
 #include <cstdio>
 #include <openssl/bio.h>
@@ -9,7 +9,7 @@
 #include <openssl/x509.h>
 #include <memory>
 
-namespace rauc {
+namespace aegis {
 
 static std::string openssl_error_string() {
     char buf[256];
@@ -222,4 +222,4 @@ Bytes cms_decrypt(const Bytes& data, const std::string& key_path,
     return Bytes(bptr->data, bptr->data + bptr->length);
 }
 
-} // namespace rauc
+} // namespace aegis

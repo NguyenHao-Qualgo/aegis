@@ -1,12 +1,12 @@
 #pragma once
 
-#include "rauc/error.h"
+#include "aegis/error.h"
 
 #include <string>
 #include <vector>
 #include <cstdint>
 
-namespace rauc {
+namespace aegis {
 
 /// Run a subprocess and capture stdout
 struct SubprocessResult {
@@ -60,9 +60,9 @@ enum class LogLevel { Debug, Info, Warning, Error };
 
 void log(LogLevel level, const char* fmt, ...);
 
-#define LOG_DEBUG(...)   ::rauc::log(::rauc::LogLevel::Debug,   __VA_ARGS__)
-#define LOG_INFO(...)    ::rauc::log(::rauc::LogLevel::Info,    __VA_ARGS__)
-#define LOG_WARNING(...) ::rauc::log(::rauc::LogLevel::Warning, __VA_ARGS__)
-#define LOG_ERROR(...)   ::rauc::log(::rauc::LogLevel::Error,   __VA_ARGS__)
+#define LOG_DEBUG(...)   ::aegis::log(::aegis::LogLevel::Debug,   __VA_ARGS__)
+#define LOG_INFO(...)    ::aegis::log(::aegis::LogLevel::Info,    __VA_ARGS__)
+#define LOG_WARNING(...) ::aegis::log(::aegis::LogLevel::Warning, __VA_ARGS__)
+#define LOG_ERROR(...)   ::aegis::log(::aegis::LogLevel::Error,   __VA_ARGS__)
 
-} // namespace rauc
+} // namespace aegis

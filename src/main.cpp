@@ -1,9 +1,9 @@
-#include "rauc/bundle.h"
-#include "rauc/context.h"
-#include "rauc/install.h"
-#include "rauc/mark.h"
-#include "rauc/service.h"
-#include "rauc/utils.h"
+#include "aegis/bundle.h"
+#include "aegis/context.h"
+#include "aegis/install.h"
+#include "aegis/mark.h"
+#include "aegis/service.h"
+#include "aegis/utils.h"
 #include "config.h"
 
 #include <cstring>
@@ -11,11 +11,11 @@
 #include <string>
 #include <vector>
 
-using namespace rauc;
+using namespace aegis;
 
 struct CliOptions {
     std::string command;
-    std::string config_path    = "/etc/rauc/system.conf";
+    std::string config_path    = "/etc/aegis/system.conf";
     std::string cert_path;
     std::string key_path;
     std::string keyring_path;
@@ -34,7 +34,7 @@ struct CliOptions {
 };
 
 static void print_usage() {
-    std::cerr << R"(Usage: rauc [OPTIONS] COMMAND [ARGS]
+    std::cerr << R"(Usage: aegis [OPTIONS] COMMAND [ARGS]
 
 Commands:
   bundle CONTENTDIR BUNDLEFILE    Create a bundle from content directory
@@ -50,7 +50,7 @@ Commands:
   mount BUNDLEFILE                Verify and mount a bundle
 
 Options:
-  --conf=PATH                     System config file (default: /etc/rauc/system.conf)
+  --conf=PATH                     System config file (default: /etc/aegis/system.conf)
   --cert=PATH                     Signing certificate
   --key=PATH                      Signing key
   --keyring=PATH                  Verification keyring
@@ -80,7 +80,7 @@ static CliOptions parse_args(int argc, char* argv[]) {
             std::exit(0);
         }
         if (arg == "--version") {
-            std::cout << "rauc-cpp " << RAUC_VERSION << "\n";
+            std::cout << "aegis-cpp " << AEGIS_VERSION << "\n";
             std::exit(0);
         }
 
@@ -126,7 +126,7 @@ static CliOptions parse_args(int argc, char* argv[]) {
 
 static int cmd_bundle(const CliOptions& opts) {
     if (opts.positional.size() < 2) {
-        std::cerr << "Usage: rauc bundle CONTENTDIR BUNDLEFILE\n";
+        std::cerr << "Usage: aegis bundle CONTENTDIR BUNDLEFILE\n";
         return 1;
     }
 
@@ -154,7 +154,7 @@ static int cmd_bundle(const CliOptions& opts) {
 
 static int cmd_install(const CliOptions& opts) {
     if (opts.positional.empty()) {
-        std::cerr << "Usage: rauc install BUNDLEFILE\n";
+        std::cerr << "Usage: aegis install BUNDLEFILE\n";
         return 1;
     }
 
@@ -184,7 +184,7 @@ static int cmd_install(const CliOptions& opts) {
 
 static int cmd_info(const CliOptions& opts) {
     if (opts.positional.empty()) {
-        std::cerr << "Usage: rauc info BUNDLEFILE\n";
+        std::cerr << "Usage: aegis info BUNDLEFILE\n";
         return 1;
     }
 
@@ -267,7 +267,7 @@ static int cmd_mark(const CliOptions& opts) {
         res = mark_bad(slot_id);
     } else if (opts.command == "mark-active") {
         if (slot_id.empty()) {
-            std::cerr << "Usage: rauc mark-active SLOTNAME\n";
+            std::cerr << "Usage: aegis mark-active SLOTNAME\n";
             return 1;
         }
         res = mark_active(slot_id);
@@ -282,7 +282,7 @@ static int cmd_mark(const CliOptions& opts) {
 
 static int cmd_extract(const CliOptions& opts) {
     if (opts.positional.size() < 2) {
-        std::cerr << "Usage: rauc extract BUNDLEFILE OUTPUTDIR\n";
+        std::cerr << "Usage: aegis extract BUNDLEFILE OUTPUTDIR\n";
         return 1;
     }
 
@@ -317,7 +317,7 @@ static int cmd_extract(const CliOptions& opts) {
 
 static int cmd_resign(const CliOptions& opts) {
     if (opts.positional.size() < 2) {
-        std::cerr << "Usage: rauc resign INBUNDLE OUTBUNDLE\n";
+        std::cerr << "Usage: aegis resign INBUNDLE OUTBUNDLE\n";
         return 1;
     }
 
@@ -359,7 +359,7 @@ static int cmd_service(const CliOptions& opts) {
 
 static int cmd_mount(const CliOptions& opts) {
     if (opts.positional.empty()) {
-        std::cerr << "Usage: rauc mount BUNDLEFILE\n";
+        std::cerr << "Usage: aegis mount BUNDLEFILE\n";
         return 1;
     }
 
@@ -413,7 +413,7 @@ int main(int argc, char* argv[]) {
         print_usage();
         return 1;
 
-    } catch (const RaucError& e) {
+    } catch (const AegisError& e) {
         std::cerr << "Fatal error: " << e.what() << "\n";
         return 1;
     } catch (const std::exception& e) {

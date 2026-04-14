@@ -1,10 +1,10 @@
-#include "rauc/mount.h"
-#include "rauc/utils.h"
+#include "aegis/mount.h"
+#include "aegis/utils.h"
 
 #include <sys/mount.h>
 #include <sys/stat.h>
 
-namespace rauc {
+namespace aegis {
 
 Result<void> mount(const std::string& source,
                    const std::string& mountpoint,
@@ -54,4 +54,4 @@ Result<void> umount_squashfs(const std::string& mountpoint) {
     return umount(mountpoint);
 }
 
-} // namespace rauc
+} // namespace aegis

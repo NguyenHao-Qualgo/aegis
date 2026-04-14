@@ -1,14 +1,12 @@
 #pragma once
 
-#include "rauc/config_file.h"
+#include "aegis/config_file.h"
 
 #include <memory>
 #include <string>
 
-namespace rauc {
+namespace aegis {
 
-/// Global singleton holding runtime state for RAUC.
-/// Replaces the GLib-based r_context() pattern from C RAUC.
 class Context {
 public:
     static Context& instance();
@@ -50,4 +48,4 @@ private:
     SystemConfig config_;
 };
 
-} // namespace rauc
+} // namespace aegis

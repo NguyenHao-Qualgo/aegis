@@ -1,13 +1,13 @@
 #pragma once
 
-#include "rauc/manifest.h"
-#include "rauc/slot.h"
+#include "aegis/manifest.h"
+#include "aegis/slot.h"
 
 #include <map>
 #include <string>
 #include <vector>
 
-namespace rauc {
+namespace aegis {
 
 /// Bootloader backends (stripped to u-boot + custom only)
 enum class Bootloader {
@@ -19,7 +19,7 @@ enum class Bootloader {
 Bootloader bootloader_from_string(const std::string& s);
 const char* to_string(Bootloader b);
 
-/// Parsed system configuration (/etc/rauc/system.conf)
+/// Parsed system configuration (/etc/aegis/system.conf)
 struct SystemConfig {
     // [system] section
     std::string compatible;
@@ -29,7 +29,7 @@ struct SystemConfig {
     std::string variant_dtb;
     std::string variant_file;
     std::string variant_name;
-    std::string mount_prefix = "/mnt/rauc/";
+    std::string mount_prefix = "/mnt/aegis/";
     bool        activate_installed = true;
     std::string statusfile;
     std::string data_directory;
@@ -63,4 +63,4 @@ struct SystemConfig {
 /// Parse system.conf from file
 SystemConfig parse_system_config(const std::string& path);
 
-} // namespace rauc
+} // namespace aegis

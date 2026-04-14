@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-namespace rauc {
+namespace aegis {
 
 /// Bundle format variants
 enum class BundleFormat {
@@ -61,4 +61,4 @@ Manifest parse_manifest(const std::string& path);
 /// Write a manifest to a file
 void write_manifest(const Manifest& manifest, const std::string& path);
 
-} // namespace rauc
+} // namespace aegis

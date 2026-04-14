@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <string>
 
-namespace rauc {
+namespace aegis {
 
 /// Parameters for verity hash tree computation
 struct VerityParams {
@@ -33,4 +33,4 @@ bool verify_verity_hash(const std::string& bundle_path,
 
 std::string generate_salt(size_t bytes = 32);
 
-} // namespace rauc
+} // namespace aegis

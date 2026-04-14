@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <string>
 
-namespace rauc {
+namespace aegis {
 
 /// Result of a checksum computation
 struct Checksum {
@@ -22,4 +22,4 @@ bool verify_checksum(const std::string& path,
                      const std::string& expected_digest,
                      uint64_t expected_size);
 
-} // namespace rauc
+} // namespace aegis

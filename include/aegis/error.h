@@ -6,23 +6,23 @@
 #include <optional>
 #include <system_error>
 
-namespace rauc {
+namespace aegis {
 
-/// Base exception for all RAUC errors
-class RaucError : public std::runtime_error {
+/// Base exception for all Aegis errors
+class AegisError : public std::runtime_error {
 public:
     using std::runtime_error::runtime_error;
 };
 
-class ConfigError    : public RaucError { using RaucError::RaucError; };
-class BundleError    : public RaucError { using RaucError::RaucError; };
-class SignatureError : public RaucError { using RaucError::RaucError; };
-class InstallError   : public RaucError { using RaucError::RaucError; };
-class SlotError      : public RaucError { using RaucError::RaucError; };
-class BootError      : public RaucError { using RaucError::RaucError; };
-class CryptError     : public RaucError { using RaucError::RaucError; };
-class MountError     : public RaucError { using RaucError::RaucError; };
-class ChecksumError  : public RaucError { using RaucError::RaucError; };
+class ConfigError    : public AegisError { using AegisError::AegisError; };
+class BundleError    : public AegisError { using AegisError::AegisError; };
+class SignatureError : public AegisError { using AegisError::AegisError; };
+class InstallError   : public AegisError { using AegisError::AegisError; };
+class SlotError      : public AegisError { using AegisError::AegisError; };
+class BootError      : public AegisError { using AegisError::AegisError; };
+class CryptError     : public AegisError { using AegisError::AegisError; };
+class MountError     : public AegisError { using AegisError::AegisError; };
+class ChecksumError  : public AegisError { using AegisError::AegisError; };
 
 /// Lightweight result type: holds either a value or an error string.
 template <typename T>
@@ -57,4 +57,4 @@ private:
     std::string error_;
 };
 
-} // namespace rauc
+} // namespace aegis

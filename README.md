@@ -1,6 +1,6 @@
-# rauc-cpp — Minimal C++ RAUC Reimplementation
+# aegis-cpp — Minimal C++ Update Service
 
-A clean, OOP reimplementation of [RAUC](https://rauc.io/) (Robust Auto-Update Controller) in C++17. Keeps critical functionality (bundle creation, dm-verity, dm-crypt, signature verification, slot management) while stripping bootloader support down to **U-Boot** and **Custom** backends only.
+A clean, OOP C++17 update service inspired by RAUC. It keeps the core functionality we care about here: bundle creation, dm-verity, dm-crypt, signature verification, slot management, and a D-Bus service interface.
 
 ## Architecture
 
@@ -45,7 +45,7 @@ A clean, OOP reimplementation of [RAUC](https://rauc.io/) (Robust Auto-Update Co
 
 1. **Strategy Pattern** — `IBootchooser` and `IUpdateHandler` are abstract interfaces with concrete implementations. Adding a new bootloader = one new class.
 
-2. **Singleton Context** — `Context::instance()` holds parsed config, runtime state, and booted slot info. Replaces RAUC's GLib-based `r_context()`.
+2. **Singleton Context** — `Context::instance()` holds parsed config, runtime state, and booted slot info. Replaces the original GLib-based context pattern.
 
 3. **Value-oriented Result<T>** — Error handling uses `Result<T>` instead of GLib GError. No exceptions for expected failures.
 
@@ -53,7 +53,7 @@ A clean, OOP reimplementation of [RAUC](https://rauc.io/) (Robust Auto-Update Co
 
 5. **Minimal dependencies** — Only OpenSSL, libcurl, and standard Linux headers. No GLib dependency at runtime (though build uses pkg-config for compatibility).
 
-## Removed from original RAUC
+## Removed From Original RAUC
 
 | Component | Status |
 |-----------|--------|
@@ -65,7 +65,7 @@ A clean, OOP reimplementation of [RAUC](https://rauc.io/) (Robust Auto-Update Co
 | GPT/MBR partition editing | **Removed** |
 | eMMC boot partition handling | Stub only |
 | GLib/GIO runtime dependency | **Removed** |
-| D-Bus service | Minimal `de.pengutronix.rauc.Installer` implementation |
+| D-Bus service | Minimal `de.pengutronix.aegis.Installer` implementation |
 | Adaptive updates | **Removed** |
 
 ## Kept / Reimplemented
@@ -116,40 +116,40 @@ cmake .. -DCMAKE_TOOLCHAIN_FILE=your-toolchain.cmake \
 
 ```bash
 # Create a verity bundle
-rauc --cert=sign.cert.pem --key=sign.key.pem \
+aegis --cert=sign.cert.pem --key=sign.key.pem \
      --bundle-format=verity \
-     bundle content-dir/ update.raucb
+     bundle content-dir/ update.aegisb
 
 # Create an encrypted (crypt) bundle
-rauc --cert=sign.cert.pem --key=sign.key.pem \
+aegis --cert=sign.cert.pem --key=sign.key.pem \
      --bundle-format=crypt \
      --recipient=device1.cert.pem \
      --recipient=device2.cert.pem \
-     bundle content-dir/ update-encrypted.raucb
+     bundle content-dir/ update-encrypted.aegisb
 
 # Install a bundle
-rauc --conf=/etc/rauc/system.conf install update.raucb
+aegis --conf=/etc/aegis/system.conf install update.aegisb
 
 # Show bundle info
-rauc --keyring=ca.cert.pem info update.raucb
+aegis --keyring=ca.cert.pem info update.aegisb
 
 # Show system status
-rauc status --detailed
+aegis status --detailed
 
 # Mark current slot as good
-rauc mark-good
+aegis mark-good
 
 # Run as service
-rauc service
+aegis service
 
 # Example D-Bus calls
-busctl introspect de.pengutronix.rauc / de.pengutronix.rauc.Installer
-busctl get-property de.pengutronix.rauc / de.pengutronix.rauc.Installer Operation
-busctl call de.pengutronix.rauc / de.pengutronix.rauc.Installer GetSlotStatus
+busctl introspect de.pengutronix.aegis / de.pengutronix.aegis.Installer
+busctl get-property de.pengutronix.aegis / de.pengutronix.aegis.Installer Operation
+busctl call de.pengutronix.aegis / de.pengutronix.aegis.Installer GetSlotStatus
 ```
 
-The service now exposes a minimal RAUC-like D-Bus object at `/` on bus name
-`de.pengutronix.rauc` with:
+The service now exposes a minimal Aegis D-Bus object at `/` on bus name
+`de.pengutronix.aegis` with:
 
 - methods: `InstallBundle`, `Install`, `Info`, `InspectBundle`, `Mark`, `GetSlotStatus`, `GetPrimary`
 - properties: `Operation`, `LastError`, `Progress`, `Compatible`, `Variant`, `BootSlot`
@@ -159,28 +159,28 @@ The service now exposes a minimal RAUC-like D-Bus object at `/` on bus name
 background installation thread finishes.
 
 For the real system bus, D-Bus policy must allow the process to own
-`de.pengutronix.rauc`. This repository now installs
-`packaging/dbus-1/system.d/de.pengutronix.rauc.conf` via CMake to
+`de.pengutronix.aegis`. This repository now installs
+`packaging/dbus-1/system.d/de.pengutronix.aegis.conf` via CMake to
 `/usr/share/dbus-1/system.d` by default, which matches the packaged layout
-used by RAUC on current systems.
+used by current systems.
 
 For D-Bus activation, this repository also installs
-`de.pengutronix.rauc.service` to `/usr/share/dbus-1/system-services` by
-default so `busctl introspect de.pengutronix.rauc / de.pengutronix.rauc.Installer`
+`de.pengutronix.aegis.service` to `/usr/share/dbus-1/system-services` by
+default so `busctl introspect de.pengutronix.aegis / de.pengutronix.aegis.Installer`
 can auto-start the daemon.
 
-For systemd-based targets, the build also installs `rauc.service` to
+For systemd-based targets, the build also installs `aegis.service` to
 `/usr/lib/systemd/system` by default. The unit uses `Type=dbus` with
-`BusName=de.pengutronix.rauc`, matching how packaged RAUC services are
+`BusName=de.pengutronix.aegis`, matching how systemd-integrated D-Bus services are
 typically integrated with the system bus.
 
-This implementation exposes the installer object at `/`. Real RAUC targets
-may expose slash-separated object paths such as `/de/pengutronix/rauc/Installer`,
+This implementation exposes the installer object at `/`. Some RAUC-derived targets
+may expose slash-separated object paths such as `/de/pengutronix/aegis/Installer`,
 so use `busctl introspect` on the target to confirm the path before scripting
 against it.
 
 For local development without touching the system bus, run the service with
-`RAUC_DBUS_BUS=session`.
+`AEGIS_DBUS_BUS=session`.
 
 ## system.conf Example
 
@@ -188,15 +188,15 @@ For local development without touching the system bus, run the service with
 [system]
 compatible=MyBoard v2
 bootloader=uboot
-mountprefix=/mnt/rauc/
-statusfile=/data/rauc.status
+mountprefix=/mnt/aegis/
+statusfile=/data/aegis.status
 
 [keyring]
-path=/etc/rauc/ca.cert.pem
+path=/etc/aegis/ca.cert.pem
 
 [handlers]
-pre-install=/usr/lib/rauc/pre-install.sh
-post-install=/usr/lib/rauc/post-install.sh
+pre-install=/usr/lib/aegis/pre-install.sh
+post-install=/usr/lib/aegis/post-install.sh
 
 [slot.rootfs.0]
 device=/dev/mmcblk0p2

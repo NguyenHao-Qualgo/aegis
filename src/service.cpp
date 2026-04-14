@@ -1,11 +1,11 @@
-#include "rauc/service.h"
-#include "rauc/bootchooser.h"
-#include "rauc/bundle.h"
-#include "rauc/context.h"
-#include "rauc/install.h"
-#include "rauc/mark.h"
-#include "rauc/signature.h"
-#include "rauc/utils.h"
+#include "aegis/service.h"
+#include "aegis/bootchooser.h"
+#include "aegis/bundle.h"
+#include "aegis/context.h"
+#include "aegis/install.h"
+#include "aegis/mark.h"
+#include "aegis/signature.h"
+#include "aegis/utils.h"
 
 #include <atomic>
 #include <csignal>
@@ -16,7 +16,7 @@
 #include <thread>
 #include <utility>
 
-namespace rauc {
+namespace aegis {
 
 static std::atomic<bool> g_running{false};
 
@@ -26,9 +26,9 @@ static void signal_handler(int /*sig*/) {
 
 namespace {
 
-constexpr const char* kServiceName = "de.pengutronix.rauc";
+constexpr const char* kServiceName = "de.pengutronix.aegis";
 constexpr const char* kObjectPath = "/";
-constexpr const char* kInstallerInterface = "de.pengutronix.rauc.Installer";
+constexpr const char* kInstallerInterface = "de.pengutronix.aegis.Installer";
 constexpr const char* kPropertiesInterface = "org.freedesktop.DBus.Properties";
 constexpr const char* kIntrospectableInterface = "org.freedesktop.DBus.Introspectable";
 
@@ -133,7 +133,7 @@ const char kIntrospectionXml[] =
     "      <arg name='invalidated_properties' type='as'/>"
     "    </signal>"
     "  </interface>"
-    "  <interface name='de.pengutronix.rauc.Installer'>"
+    "  <interface name='de.pengutronix.aegis.Installer'>"
     "    <method name='InstallBundle'>"
     "      <arg name='source' type='s' direction='in'/>"
     "      <arg name='args' type='a{sv}' direction='in'/>"
@@ -196,7 +196,7 @@ Result<void> InstallerService::connect_bus() {
     dbus_error_init(&error);
 
     DBusBusType bus_type = DBUS_BUS_SYSTEM;
-    if (const char* bus_env = std::getenv("RAUC_DBUS_BUS")) {
+    if (const char* bus_env = std::getenv("AEGIS_DBUS_BUS")) {
         if (std::string(bus_env) == "session")
             bus_type = DBUS_BUS_SESSION;
     }
@@ -216,15 +216,15 @@ Result<void> InstallerService::connect_bus() {
         if (bus_type == DBUS_BUS_SYSTEM) {
             return Result<void>::err(
                 "Failed to request bus name: " + msg +
-                ". Install packaging/dbus-1/system.d/de.pengutronix.rauc.conf "
-                "to your system D-Bus policy directory, then restart the RAUC "
+                ". Install packaging/dbus-1/system.d/de.pengutronix.aegis.conf "
+                "to your system D-Bus policy directory, then restart the Aegis "
                 "service or start a fresh boot/session. For development, set "
-                "RAUC_DBUS_BUS=session.");
+                "AEGIS_DBUS_BUS=session.");
         }
         return Result<void>::err("Failed to request bus name: " + msg);
     }
     if (request != DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER)
-        return Result<void>::err("Bus name de.pengutronix.rauc is already owned");
+        return Result<void>::err("Bus name de.pengutronix.aegis is already owned");
 
     if (!dbus_connection_register_object_path(connection_, kObjectPath,
                                               &kObjectPathVTable, this)) {
@@ -767,7 +767,7 @@ DBusMessage* InstallerService::handle_install(DBusMessage* message, bool allow_a
 
     auto result = start_install(source ? source : "", args);
     if (!result)
-        return error_reply(message, "de.pengutronix.rauc.Error.Failed",
+        return error_reply(message, "de.pengutronix.aegis.Error.Failed",
                            result.error());
 
     return dbus_message_new_method_return(message);
@@ -787,7 +787,7 @@ DBusMessage* InstallerService::handle_info(DBusMessage* message) {
 
     auto info = bundle_info(bundle_path ? bundle_path : "", params, false);
     if (!info)
-        return error_reply(message, "de.pengutronix.rauc.Error.Failed",
+        return error_reply(message, "de.pengutronix.aegis.Error.Failed",
                            info.error());
 
     DBusMessage* reply = dbus_message_new_method_return(message);
@@ -820,7 +820,7 @@ DBusMessage* InstallerService::handle_inspect_bundle(DBusMessage* message) {
 
     auto info = bundle_info(bundle_path ? bundle_path : "", params, false);
     if (!info)
-        return error_reply(message, "de.pengutronix.rauc.Error.Failed",
+        return error_reply(message, "de.pengutronix.aegis.Error.Failed",
                            info.error());
 
     DBusMessage* reply = dbus_message_new_method_return(message);
@@ -847,7 +847,7 @@ DBusMessage* InstallerService::handle_mark(DBusMessage* message) {
 
     auto* slot = resolve_slot_identifier(slot_identifier ? slot_identifier : "");
     if (!slot)
-        return error_reply(message, "de.pengutronix.rauc.Error.Failed",
+        return error_reply(message, "de.pengutronix.aegis.Error.Failed",
                            "Unable to resolve slot identifier");
 
     std::string message_text;
@@ -865,7 +865,7 @@ DBusMessage* InstallerService::handle_mark(DBusMessage* message) {
     }
 
     if (!result)
-        return error_reply(message, "de.pengutronix.rauc.Error.Failed",
+        return error_reply(message, "de.pengutronix.aegis.Error.Failed",
                            result.error());
 
     DBusMessage* reply = dbus_message_new_method_return(message);
@@ -953,7 +953,7 @@ DBusHandlerResult InstallerService::dispatch(DBusMessage* message) {
             reply = error_reply(message, DBUS_ERROR_UNKNOWN_METHOD, "Unsupported method");
         }
     } catch (const std::exception& e) {
-        reply = error_reply(message, "de.pengutronix.rauc.Error.Failed", e.what());
+        reply = error_reply(message, "de.pengutronix.aegis.Error.Failed", e.what());
     }
 
     if (reply) {
@@ -1015,7 +1015,7 @@ Result<void> service_run() {
 
     dbus_threads_init_default();
 
-    LOG_INFO("Starting RAUC service (compatible=%s, bootloader=%s)",
+    LOG_INFO("Starting Aegis service (compatible=%s, bootloader=%s)",
              ctx.config().compatible.c_str(),
              to_string(ctx.config().bootloader));
 
@@ -1029,7 +1029,7 @@ Result<void> service_run() {
     if (!result)
         return result;
 
-    LOG_INFO("RAUC service stopped");
+    LOG_INFO("Aegis service stopped");
     return Result<void>::ok();
 }
 
@@ -1037,4 +1037,4 @@ void service_stop() {
     g_running = false;
 }
 
-} // namespace rauc
+} // namespace aegis

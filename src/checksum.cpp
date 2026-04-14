@@ -1,10 +1,10 @@
-#include "rauc/checksum.h"
-#include "rauc/error.h"
+#include "aegis/checksum.h"
+#include "aegis/error.h"
 
 #include <cstdio>
 #include <openssl/evp.h>
 
-namespace rauc {
+namespace aegis {
 
 std::string sha256_hex(const void* data, size_t len) {
     unsigned char hash[EVP_MAX_MD_SIZE];
@@ -71,4 +71,4 @@ bool verify_checksum(const std::string& path,
            (expected_size == 0 || cs.size == expected_size);
 }
 
-} // namespace rauc
+} // namespace aegis

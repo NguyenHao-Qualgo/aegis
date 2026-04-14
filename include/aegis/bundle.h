@@ -1,15 +1,15 @@
 #pragma once
 
-#include "rauc/dm.h"
-#include "rauc/error.h"
-#include "rauc/manifest.h"
-#include "rauc/signature.h"
+#include "aegis/dm.h"
+#include "aegis/error.h"
+#include "aegis/manifest.h"
+#include "aegis/signature.h"
 
 #include <cstdint>
 #include <string>
 #include <vector>
 
-namespace rauc {
+namespace aegis {
 
 struct Bundle {
     std::string path;
@@ -63,4 +63,4 @@ Result<Bundle> bundle_info(const std::string& path,
                            const SigningParams& params,
                            bool no_verify = false);
 
-} // namespace rauc
+} // namespace aegis

@@ -1,5 +1,5 @@
-#include "rauc/status_file.h"
-#include "rauc/utils.h"
+#include "aegis/status_file.h"
+#include "aegis/utils.h"
 
 #include <chrono>
 #include <ctime>
@@ -8,7 +8,7 @@
 #include <map>
 #include <sstream>
 
-namespace rauc {
+namespace aegis {
 
 std::string current_timestamp() {
     auto now = std::chrono::system_clock::now();
@@ -174,4 +174,4 @@ Result<void> save_all_slot_status(const std::map<std::string, Slot>& slots,
     return Result<void>::ok();
 }
 
-} // namespace rauc
+} // namespace aegis

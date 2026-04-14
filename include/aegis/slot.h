@@ -5,7 +5,7 @@
 #include <memory>
 #include <string>
 
-namespace rauc {
+namespace aegis {
 
 /// Slot storage types
 enum class SlotType {
@@ -71,4 +71,4 @@ std::map<std::string, Slot*> get_target_group(
     std::map<std::string, Slot>& slots,
     const std::string& booted_slot_name);
 
-} // namespace rauc
+} // namespace aegis

@@ -1,11 +1,11 @@
 #pragma once
 
-#include "rauc/error.h"
+#include "aegis/error.h"
 
 #include <cstdint>
 #include <string>
 
-namespace rauc {
+namespace aegis {
 
 struct DmTarget {
     std::string dm_name;
@@ -37,4 +37,4 @@ DmTarget dm_crypt_setup(const std::string& data_device,
 
 Result<void> dm_remove(const std::string& dm_name);
 
-} // namespace rauc
+} // namespace aegis

@@ -1,12 +1,12 @@
-#include "rauc/config_file.h"
-#include "rauc/utils.h"
+#include "aegis/config_file.h"
+#include "aegis/utils.h"
 
 #include <algorithm>
 #include <fstream>
 #include <sstream>
 #include <stdexcept>
 
-namespace rauc {
+namespace aegis {
 
 Bootloader bootloader_from_string(const std::string& s) {
     if (s == "uboot")  return Bootloader::UBoot;
@@ -118,7 +118,7 @@ SystemConfig parse_system_config(const std::string& path) {
     if (auto it = ini.find("system"); it != ini.end()) {
         auto& s = it->second;
         cfg.compatible      = ini_get(s, "compatible");
-        cfg.mount_prefix     = ini_get(s, "mountprefix", "/mnt/rauc/");
+        cfg.mount_prefix     = ini_get(s, "mountprefix", "/mnt/aegis/");
         cfg.statusfile       = ini_get(s, "statusfile");
         cfg.data_directory   = ini_get(s, "data-directory");
         cfg.system_variant   = ini_get(s, "variant-name");
@@ -208,4 +208,4 @@ SystemConfig parse_system_config(const std::string& path) {
     return cfg;
 }
 
-} // namespace rauc
+} // namespace aegis

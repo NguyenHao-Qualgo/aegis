@@ -1,10 +1,10 @@
-#include "rauc/mark.h"
-#include "rauc/bootchooser.h"
-#include "rauc/context.h"
-#include "rauc/status_file.h"
-#include "rauc/utils.h"
+#include "aegis/mark.h"
+#include "aegis/bootchooser.h"
+#include "aegis/context.h"
+#include "aegis/status_file.h"
+#include "aegis/utils.h"
 
-namespace rauc {
+namespace aegis {
 
 static Slot* resolve_slot(const std::string& identifier) {
     auto& ctx = Context::instance();
@@ -120,4 +120,4 @@ Result<void> mark_active(const std::string& slot_identifier) {
     return Result<void>::ok();
 }
 
-} // namespace rauc
+} // namespace aegis

@@ -1,6 +1,6 @@
-#include "rauc/verity_hash.h"
-#include "rauc/checksum.h"
-#include "rauc/utils.h"
+#include "aegis/verity_hash.h"
+#include "aegis/checksum.h"
+#include "aegis/utils.h"
 
 #include <cstdio>
 #include <cstring>
@@ -8,12 +8,12 @@
 #include <openssl/rand.h>
 #include <vector>
 
-namespace rauc {
+namespace aegis {
 
 std::string generate_salt(size_t bytes) {
     std::vector<unsigned char> buf(bytes);
     if (RAND_bytes(buf.data(), static_cast<int>(bytes)) != 1)
-        throw RaucError("RAND_bytes failed for salt generation");
+        throw AegisError("RAND_bytes failed for salt generation");
 
     std::string hex;
     hex.reserve(bytes * 2);
@@ -60,7 +60,7 @@ VerityResult compute_verity_hash(const std::string& bundle_path,
     auto salt = hex_to_bytes(salt_str);
 
     FILE* f = fopen(bundle_path.c_str(), "r+b");
-    if (!f) throw RaucError("Cannot open bundle for verity: " + bundle_path);
+    if (!f) throw AegisError("Cannot open bundle for verity: " + bundle_path);
 
     // Compute number of data blocks
     uint64_t num_data_blocks = (data_size + block_size - 1) / block_size;
@@ -166,4 +166,4 @@ bool verify_verity_hash(const std::string& bundle_path,
     }
 }
 
-} // namespace rauc
+} // namespace aegis

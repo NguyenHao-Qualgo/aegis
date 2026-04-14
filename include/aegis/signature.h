@@ -1,12 +1,12 @@
 #pragma once
 
-#include "rauc/error.h"
+#include "aegis/error.h"
 
 #include <cstdint>
 #include <string>
 #include <vector>
 
-namespace rauc {
+namespace aegis {
 
 /// Opaque bytes wrapper
 using Bytes = std::vector<uint8_t>;
@@ -48,4 +48,4 @@ Bytes read_file_bytes(const std::string& path);
 /// Write bytes to a file
 void write_file_bytes(const std::string& path, const Bytes& data);
 
-} // namespace rauc
+} // namespace aegis

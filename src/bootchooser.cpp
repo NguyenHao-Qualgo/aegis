@@ -1,9 +1,9 @@
-#include "rauc/bootchooser.h"
-#include "rauc/utils.h"
+#include "aegis/bootchooser.h"
+#include "aegis/utils.h"
 
 #include <sstream>
 
-namespace rauc {
+namespace aegis {
 
 
 Result<std::string> UBootBootchooser::env_get(const std::string& key) {
@@ -169,4 +169,4 @@ std::unique_ptr<IBootchooser> create_bootchooser(const SystemConfig& config) {
     throw BootError("Unknown bootloader type");
 }
 
-} // namespace rauc
+} // namespace aegis

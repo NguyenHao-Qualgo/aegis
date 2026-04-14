@@ -1,4 +1,4 @@
-#include "rauc/utils.h"
+#include "aegis/utils.h"
 
 #include <cstdarg>
 #include <cstdio>
@@ -10,16 +10,16 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-namespace rauc {
+namespace aegis {
 
 SubprocessResult run_command(const std::vector<std::string>& argv,
                              const std::vector<std::string>& env) {
     int stdout_pipe[2], stderr_pipe[2];
     if (pipe(stdout_pipe) != 0 || pipe(stderr_pipe) != 0)
-        throw RaucError("pipe() failed");
+        throw AegisError("pipe() failed");
 
     pid_t pid = fork();
-    if (pid < 0) throw RaucError("fork() failed");
+    if (pid < 0) throw AegisError("fork() failed");
 
     if (pid == 0) {
         // Child
@@ -72,7 +72,7 @@ SubprocessResult run_command_checked(const std::vector<std::string>& argv,
     if (res.exit_code != 0) {
         std::string cmd;
         for (auto& a : argv) { cmd += a + " "; }
-        throw RaucError("Command failed (exit " + std::to_string(res.exit_code)
+        throw AegisError("Command failed (exit " + std::to_string(res.exit_code)
                         + "): " + cmd + "\n" + res.stderr_str);
     }
     return res;
@@ -86,7 +86,7 @@ bool path_exists(const std::string& path) {
 uint64_t file_size(const std::string& path) {
     struct stat st;
     if (stat(path.c_str(), &st) != 0)
-        throw RaucError("Cannot stat: " + path);
+        throw AegisError("Cannot stat: " + path);
     return static_cast<uint64_t>(st.st_size);
 }
 
@@ -116,7 +116,7 @@ Result<void> copy_file(const std::string& src, const std::string& dst) {
 
 std::string read_text_file(const std::string& path) {
     std::ifstream f(path);
-    if (!f) throw RaucError("Cannot read file: " + path);
+    if (!f) throw AegisError("Cannot read file: " + path);
     std::ostringstream ss;
     ss << f.rdbuf();
     return ss.str();
@@ -124,7 +124,7 @@ std::string read_text_file(const std::string& path) {
 
 void write_text_file(const std::string& path, const std::string& content) {
     std::ofstream f(path);
-    if (!f) throw RaucError("Cannot write file: " + path);
+    if (!f) throw AegisError("Cannot write file: " + path);
     f << content;
 }
 
@@ -178,4 +178,4 @@ void log(LogLevel level, const char* fmt, ...) {
     fprintf(out, "\n");
 }
 
-} // namespace rauc
+} // namespace aegis

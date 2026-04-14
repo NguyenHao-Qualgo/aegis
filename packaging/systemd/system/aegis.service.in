@@ -1,0 +1,12 @@
+[Unit]
+Description=Aegis Update Service
+After=dbus.service
+
+[Service]
+Type=dbus
+BusName=de.pengutronix.aegis
+ExecStart=@bindir@/aegis --mount=/run/aegis/mnt service
+RuntimeDirectory=aegis/mnt
+MountFlags=slave
+Restart=on-failure
+RestartSec=5min

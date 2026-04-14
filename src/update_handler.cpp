@@ -1,13 +1,13 @@
-#include "rauc/update_handler.h"
-#include "rauc/checksum.h"
-#include "rauc/mount.h"
-#include "rauc/utils.h"
+#include "aegis/update_handler.h"
+#include "aegis/checksum.h"
+#include "aegis/mount.h"
+#include "aegis/utils.h"
 
 #include <cstdio>
 #include <cstdio>
 #include <unistd.h>
 
-namespace rauc {
+namespace aegis {
 
 Result<void> write_image_to_device(const std::string& source_path,
                                    const std::string& device_path,
@@ -113,7 +113,7 @@ Result<void> TarUpdateHandler::install(const std::string& image_path,
              target_slot.device.c_str());
 
     // Mount target slot
-    std::string mp = "/mnt/rauc/slot-" + target_slot.name;
+    std::string mp = "/mnt/aegis/slot-" + target_slot.name;
     auto mount_res = mount(target_slot.device, mp, to_string(target_slot.type));
     if (!mount_res) return Result<void>::err("Cannot mount target: " + mount_res.error());
 
@@ -152,4 +152,4 @@ std::unique_ptr<IUpdateHandler> create_update_handler(SlotType type, bool is_tar
     return std::make_unique<RawUpdateHandler>();
 }
 
-} // namespace rauc
+} // namespace aegis

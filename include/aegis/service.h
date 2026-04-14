@@ -1,13 +1,13 @@
 #pragma once
 
-#include "rauc/error.h"
+#include "aegis/error.h"
 
 #include <string>
 
-namespace rauc {
+namespace aegis {
 
 Result<void> service_run();
 
 void service_stop();
 
-} // namespace rauc
+} // namespace aegis

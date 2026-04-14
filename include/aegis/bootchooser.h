@@ -1,13 +1,13 @@
 #pragma once
 
-#include "rauc/config_file.h"
-#include "rauc/error.h"
-#include "rauc/slot.h"
+#include "aegis/config_file.h"
+#include "aegis/error.h"
+#include "aegis/slot.h"
 
 #include <memory>
 #include <string>
 
-namespace rauc {
+namespace aegis {
 
 /// Abstract bootchooser backend interface.
 /// Only U-Boot and Custom are implemented (grub, barebox, efi removed).
@@ -73,4 +73,4 @@ public:
 /// Factory: create the appropriate bootchooser from config
 std::unique_ptr<IBootchooser> create_bootchooser(const SystemConfig& config);
 
-} // namespace rauc
+} // namespace aegis
