@@ -1,6 +1,6 @@
 #pragma once
 
-#include "aegis/commands.h"
+#include "aegis/cli/commands.h"
 
 #include <string>
 

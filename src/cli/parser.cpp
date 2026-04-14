@@ -1,4 +1,4 @@
-#include "aegis/cli_parser.h"
+#include "aegis/cli/cli_parser.h"
 
 #include <cstdlib>
 #include <iostream>

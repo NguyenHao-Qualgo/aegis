@@ -1,7 +1,7 @@
-#include "aegis/application.h"
+#include "aegis/cli/application.h"
 
-#include "aegis/cli_parser.h"
-#include "aegis/command_registry.h"
+#include "aegis/cli/cli_parser.h"
+#include "aegis/cli/command_registry.h"
 
 #include <iostream>
 

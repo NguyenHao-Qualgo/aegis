@@ -1,5 +1,4 @@
-#include "aegis/raw_update_handler.h"
-#include "aegis/checksum.h"
+#include "aegis/handlers/raw_handler.h"
 #include "aegis/utils.h"
 
 #include <cstdio>
@@ -56,23 +55,6 @@ Result<void> write_image_to_device(const std::string& source_path,
 
     LOG_INFO("Wrote %lu bytes to %s", written, device_path.c_str());
     return Result<void>::ok();
-}
-
-Result<void> RawUpdateHandler::install(const std::string& image_path,
-                                       const ManifestImage& image,
-                                       Slot& target_slot,
-                                       ProgressCallback progress) {
-    LOG_INFO("Installing raw image %s -> %s", image.filename.c_str(),
-             target_slot.device.c_str());
-
-    if (!image.sha256.empty()) {
-        if (!verify_checksum(image_path, image.sha256, image.size)) {
-            return Result<void>::err("Checksum verification failed for " + image.filename);
-        }
-        LOG_INFO("Checksum verified for %s", image.filename.c_str());
-    }
-
-    return write_image_to_device(image_path, target_slot.device, progress);
 }
 
 } // namespace aegis

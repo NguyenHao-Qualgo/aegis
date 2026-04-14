@@ -56,27 +56,28 @@ set(AEGIS_SOURCES
     src/slot.cpp
     src/bootchooser.cpp
     src/install.cpp
-    src/update_handler.cpp
-    src/raw_update_handler.cpp
-    src/filesystem_image_update_handler.cpp
-    src/archive_update_handler.cpp
+    src/handlers/update_handler.cpp
+    src/handlers/block_handler.cpp
+    src/handlers/raw_handler.cpp
+    src/handlers/fs_image_handler.cpp
+    src/handlers/archive_handler.cpp
     src/mount.cpp
     src/mark.cpp
     src/status_file.cpp
     src/utils.cpp
-    src/app_context.cpp
-    src/application.cpp
-    src/cli_parser.cpp
-    src/command_registry.cpp
-    src/commands.cpp
-    src/aegis_dbus_client.cpp
+    src/cli/app_context.cpp
+    src/cli/application.cpp
+    src/cli/parser.cpp
+    src/cli/registry.cpp
+    src/cli/commands.cpp
+    src/dbus/client.cpp
 )
 
 if(ENABLE_SERVICE)
     list(APPEND AEGIS_SOURCES
-    src/aegis_service.cpp
-    src/dbus_message_builder.cpp
-    src/service_state.cpp
+    src/dbus/service.cpp
+    src/dbus/message_builder.cpp
+    src/dbus/service_state.cpp
     )
 endif()
 

@@ -1,12 +1,12 @@
-#include "aegis/commands.h"
+#include "aegis/cli/commands.h"
 
-#include "aegis/app_context.h"
-#include "aegis/aegis_dbus_client.h"
+#include "aegis/cli/app_context.h"
+#include "aegis/dbus/client.h"
 
 #include "aegis/bundle.h"
 #include "aegis/context.h"
 #include "aegis/mark.h"
-#include "aegis/aegis_service.h"
+#include "aegis/dbus/service.h"
 #include "aegis/utils.h"
 
 #include <iostream>

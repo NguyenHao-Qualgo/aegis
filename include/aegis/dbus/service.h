@@ -1,7 +1,7 @@
 #pragma once
 
 #include "aegis/error.h"
-#include "aegis/service_state.h"
+#include "aegis/dbus/service_state.h"
 
 #include <dbus/dbus.h>
 #include <string>

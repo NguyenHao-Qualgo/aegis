@@ -1,4 +1,4 @@
-#include "aegis/dbus_message_builder.h"
+#include "aegis/dbus/message_builder.h"
 #include "aegis/context.h"
 #include "aegis/utils.h"
 

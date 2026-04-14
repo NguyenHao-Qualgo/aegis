@@ -4,7 +4,7 @@
 #include "aegis/error.h"
 #include "aegis/manifest.h"
 #include "aegis/slot.h"
-#include "aegis/update_handler.h"
+#include "aegis/handlers/update_handler.h"
 
 #include <functional>
 #include <string>

@@ -1,4 +1,4 @@
-#include "aegis/aegis_dbus_client.h"
+#include "aegis/dbus/client.h"
 
 #include <string>
 

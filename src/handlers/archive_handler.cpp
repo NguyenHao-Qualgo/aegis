@@ -1,4 +1,4 @@
-#include "aegis/archive_update_handler.h"
+#include "aegis/handlers/archive_handler.h"
 #include "aegis/context.h"
 #include "aegis/mount.h"
 #include "aegis/utils.h"
@@ -135,10 +135,10 @@ Result<void> extract_archive_to_directory(const std::string& archive_path,
 
 } // namespace
 
-Result<void> ArchiveUpdateHandler::install(const std::string& image_path,
-                                           const ManifestImage& image,
-                                           Slot& target_slot,
-                                           ProgressCallback /*progress*/) {
+Result<void> MountedArchiveUpdateHandler::install(const std::string& image_path,
+                                                  const ManifestImage& image,
+                                                  Slot& target_slot,
+                                                  ProgressCallback /*progress*/) {
     LOG_INFO("Extracting tar %s -> %s", image.filename.c_str(),
              target_slot.device.c_str());
 

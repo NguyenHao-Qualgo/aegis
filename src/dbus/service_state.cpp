@@ -1,4 +1,4 @@
-#include "aegis/service_state.h"
+#include "aegis/dbus/service_state.h"
 
 namespace aegis {
 

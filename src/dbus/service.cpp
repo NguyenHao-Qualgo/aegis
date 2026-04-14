@@ -1,9 +1,9 @@
-#include "aegis/aegis_service.h"
+#include "aegis/dbus/service.h"
 
 #include "aegis/bootchooser.h"
 #include "aegis/bundle.h"
 #include "aegis/context.h"
-#include "aegis/dbus_message_builder.h"
+#include "aegis/dbus/message_builder.h"
 #include "aegis/install.h"
 #include "aegis/mark.h"
 #include "aegis/signature.h"

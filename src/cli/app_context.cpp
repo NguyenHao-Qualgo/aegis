@@ -1,4 +1,4 @@
-#include "aegis/app_context.h"
+#include "aegis/cli/app_context.h"
 #include "aegis/context.h"
 
 namespace aegis {

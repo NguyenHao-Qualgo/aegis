@@ -1,5 +1,5 @@
-#include "aegis/command_registry.h"
-#include "aegis/commands.h"
+#include "aegis/cli/command_registry.h"
+#include "aegis/cli/commands.h"
 
 namespace aegis {
 
