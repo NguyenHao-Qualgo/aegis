@@ -1,4 +1,4 @@
-#include "aegis/installer_service.h"
+#include "aegis/aegis_service.h"
 
 #include "aegis/bootchooser.h"
 #include "aegis/bundle.h"
@@ -112,7 +112,7 @@ constexpr const char* kProperties[] = {
 
 DBusObjectPathVTable kObjectPathVTable = {
     nullptr,
-    &InstallerService::handle_message,
+    &AegisService::handle_message,
     nullptr,
     nullptr,
     nullptr,
@@ -121,14 +121,14 @@ DBusObjectPathVTable kObjectPathVTable = {
 
 } // namespace
 
-DBusHandlerResult InstallerService::handle_message(DBusConnection*,
+DBusHandlerResult AegisService::handle_message(DBusConnection*,
                                                    DBusMessage* message,
                                                    void* user_data) {
-    auto* service = static_cast<InstallerService*>(user_data);
+    auto* service = static_cast<AegisService*>(user_data);
     return service->dispatch(message);
 }
 
-Result<void> InstallerService::connect_bus() {
+Result<void> AegisService::connect_bus() {
     DBusError error;
     dbus_error_init(&error);
 
@@ -174,13 +174,13 @@ Result<void> InstallerService::connect_bus() {
     return Result<void>::ok();
 }
 
-void InstallerService::join_worker_if_needed() {
+void AegisService::join_worker_if_needed() {
     if (install_thread_.joinable() && !state_.install_running()) {
         install_thread_.join();
     }
 }
 
-Result<void> InstallerService::start_install(const std::string& source,
+Result<void> AegisService::start_install(const std::string& source,
                                              const InstallArgs& args) {
     if (source.empty()) {
         return Result<void>::err("Bundle source must not be empty");
@@ -224,7 +224,7 @@ Result<void> InstallerService::start_install(const std::string& source,
     return Result<void>::ok();
 }
 
-std::string InstallerService::variant() const {
+std::string AegisService::variant() const {
     auto& cfg = Context::instance().config();
     if (!cfg.system_variant.empty()) return cfg.system_variant;
     if (!cfg.variant_name.empty()) return cfg.variant_name;
@@ -232,7 +232,7 @@ std::string InstallerService::variant() const {
     return {};
 }
 
-Slot* InstallerService::resolve_slot_identifier(const std::string& identifier) const {
+Slot* AegisService::resolve_slot_identifier(const std::string& identifier) const {
     auto& slots = Context::instance().config().slots;
 
     auto find_booted = [&]() -> Slot* {
@@ -276,25 +276,25 @@ Slot* InstallerService::resolve_slot_identifier(const std::string& identifier) c
     return nullptr;
 }
 
-Slot* InstallerService::get_primary_slot() const {
+Slot* AegisService::get_primary_slot() const {
     auto& ctx = Context::instance();
     auto bootchooser = create_bootchooser(ctx.config());
     return bootchooser->get_primary(ctx.config().slots);
 }
 
-DBusMessage* InstallerService::error_reply(DBusMessage* message,
+DBusMessage* AegisService::error_reply(DBusMessage* message,
                                            const char* name,
                                            const std::string& text) const {
     return DbusMessageBuilder::make_error_reply(message, name, text);
 }
 
-void InstallerService::send_message(DBusMessage* message) const {
+void AegisService::send_message(DBusMessage* message) const {
     if (!connection_ || !message) return;
     dbus_connection_send(connection_, message, nullptr);
     dbus_connection_flush(connection_);
 }
 
-void InstallerService::emit_completed(int result) const {
+void AegisService::emit_completed(int result) const {
     DBusMessage* signal = dbus_message_new_signal(kObjectPath, kInstallerInterface, "Completed");
     if (!signal) return;
     dbus_message_append_args(signal, DBUS_TYPE_INT32, &result, DBUS_TYPE_INVALID);
@@ -302,7 +302,7 @@ void InstallerService::emit_completed(int result) const {
     dbus_message_unref(signal);
 }
 
-bool InstallerService::append_property_variant(DBusMessageIter* iter,
+bool AegisService::append_property_variant(DBusMessageIter* iter,
                                                const std::string& property) const {
     auto& ctx = Context::instance();
 
@@ -334,7 +334,7 @@ bool InstallerService::append_property_variant(DBusMessageIter* iter,
     return false;
 }
 
-void InstallerService::emit_properties_changed(
+void AegisService::emit_properties_changed(
     const std::vector<std::string>& property_names) const {
     if (!connection_) return;
 
@@ -368,11 +368,11 @@ void InstallerService::emit_properties_changed(
     dbus_message_unref(signal);
 }
 
-DBusMessage* InstallerService::handle_introspect(DBusMessage* message) {
+DBusMessage* AegisService::handle_introspect(DBusMessage* message) {
     return DbusMessageBuilder::make_introspect_reply(message, kIntrospectionXml);
 }
 
-DBusMessage* InstallerService::handle_properties(DBusMessage* message) {
+DBusMessage* AegisService::handle_properties(DBusMessage* message) {
     if (dbus_message_is_method_call(message, kPropertiesInterface, "Get")) {
         const char* interface_name = nullptr;
         const char* property_name = nullptr;
@@ -435,7 +435,7 @@ DBusMessage* InstallerService::handle_properties(DBusMessage* message) {
     return error_reply(message, DBUS_ERROR_UNKNOWN_METHOD, "Unknown properties method");
 }
 
-DBusMessage* InstallerService::handle_install(DBusMessage* message, bool allow_args) {
+DBusMessage* AegisService::handle_install(DBusMessage* message, bool allow_args) {
     DBusMessageIter iter;
     if (!dbus_message_iter_init(message, &iter)) {
         return error_reply(message, DBUS_ERROR_INVALID_ARGS, "Missing bundle source");
@@ -499,7 +499,7 @@ DBusMessage* InstallerService::handle_install(DBusMessage* message, bool allow_a
     return dbus_message_new_method_return(message);
 }
 
-DBusMessage* InstallerService::handle_info(DBusMessage* message) {
+DBusMessage* AegisService::handle_info(DBusMessage* message) {
     const char* bundle_path = nullptr;
     if (!dbus_message_get_args(message, nullptr,
                                DBUS_TYPE_STRING, &bundle_path,
@@ -527,7 +527,7 @@ DBusMessage* InstallerService::handle_info(DBusMessage* message) {
     return reply;
 }
 
-DBusMessage* InstallerService::handle_inspect_bundle(DBusMessage* message) {
+DBusMessage* AegisService::handle_inspect_bundle(DBusMessage* message) {
     DBusMessageIter iter;
     if (!dbus_message_iter_init(message, &iter)) {
         return error_reply(message, DBUS_ERROR_INVALID_ARGS, "Missing bundle path");
@@ -559,7 +559,7 @@ DBusMessage* InstallerService::handle_inspect_bundle(DBusMessage* message) {
     return reply;
 }
 
-DBusMessage* InstallerService::handle_mark(DBusMessage* message) {
+DBusMessage* AegisService::handle_mark(DBusMessage* message) {
     const char* state = nullptr;
     const char* slot_identifier = nullptr;
     if (!dbus_message_get_args(message, nullptr,
@@ -606,7 +606,7 @@ DBusMessage* InstallerService::handle_mark(DBusMessage* message) {
     return reply;
 }
 
-DBusMessage* InstallerService::handle_get_slot_status(DBusMessage* message) {
+DBusMessage* AegisService::handle_get_slot_status(DBusMessage* message) {
     DBusMessage* reply = dbus_message_new_method_return(message);
     if (!reply) return nullptr;
 
@@ -631,7 +631,7 @@ DBusMessage* InstallerService::handle_get_slot_status(DBusMessage* message) {
     return reply;
 }
 
-DBusMessage* InstallerService::handle_get_primary(DBusMessage* message) {
+DBusMessage* AegisService::handle_get_primary(DBusMessage* message) {
     DBusMessage* reply = dbus_message_new_method_return(message);
     if (!reply) return nullptr;
 
@@ -642,7 +642,7 @@ DBusMessage* InstallerService::handle_get_primary(DBusMessage* message) {
     return reply;
 }
 
-DBusMessage* InstallerService::handle_installer(DBusMessage* message) {
+DBusMessage* AegisService::handle_installer(DBusMessage* message) {
     if (dbus_message_is_method_call(message, kInstallerInterface, "InstallBundle"))
         return handle_install(message, true);
     if (dbus_message_is_method_call(message, kInstallerInterface, "Install"))
@@ -661,7 +661,7 @@ DBusMessage* InstallerService::handle_installer(DBusMessage* message) {
     return error_reply(message, DBUS_ERROR_UNKNOWN_METHOD, "Unknown installer method");
 }
 
-DBusHandlerResult InstallerService::dispatch(DBusMessage* message) {
+DBusHandlerResult AegisService::dispatch(DBusMessage* message) {
     DBusMessage* reply = nullptr;
 
     try {
@@ -686,7 +686,7 @@ DBusHandlerResult InstallerService::dispatch(DBusMessage* message) {
     return DBUS_HANDLER_RESULT_HANDLED;
 }
 
-void InstallerService::maybe_run_autoinstall() {
+void AegisService::maybe_run_autoinstall() {
     auto& ctx = Context::instance();
     if (ctx.config().autoinstall_path.empty() ||
         !path_exists(ctx.config().autoinstall_path)) {
@@ -704,7 +704,7 @@ void InstallerService::maybe_run_autoinstall() {
     }
 }
 
-Result<void> InstallerService::run() {
+Result<void> AegisService::run() {
     auto connect_result = connect_bus();
     if (!connect_result) {
         return connect_result;
@@ -730,7 +730,7 @@ Result<void> InstallerService::run() {
     return Result<void>::ok();
 }
 
-void InstallerService::stop() {
+void AegisService::stop() {
     g_running = false;
 }
 
@@ -751,7 +751,7 @@ Result<void> service_run() {
 
     g_running = true;
 
-    InstallerService service;
+    AegisService service;
     auto result = service.run();
     if (!result) {
         return result;

@@ -14,7 +14,7 @@ struct InstallArgs;
 struct Slot;
 class Bundle;
 
-class InstallerService {
+class AegisService {
 public:
     Result<void> run();
     void stop();

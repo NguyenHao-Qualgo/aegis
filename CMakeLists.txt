@@ -22,6 +22,7 @@ pkg_check_modules(GIO2     REQUIRED gio-2.0)
 pkg_check_modules(GIOUNIX  REQUIRED gio-unix-2.0)
 pkg_check_modules(CURL     REQUIRED libcurl)
 pkg_check_modules(DBUS     REQUIRED dbus-1)
+pkg_check_modules(ARCHIVE  REQUIRED libarchive)
 
 option(ENABLE_NETWORK   "Enable network/HTTP bundle streaming" OFF)
 option(ENABLE_STREAMING "Enable HTTP streaming support"        OFF)
@@ -70,7 +71,7 @@ set(AEGIS_SOURCES
 
 if(ENABLE_SERVICE)
     list(APPEND AEGIS_SOURCES
-    src/installer_service.cpp
+    src/aegis_service.cpp
     src/dbus_message_builder.cpp
     src/service_state.cpp
     )
@@ -86,6 +87,7 @@ target_include_directories(aegis PRIVATE
     ${GIOUNIX_INCLUDE_DIRS}
     ${CURL_INCLUDE_DIRS}
     ${DBUS_INCLUDE_DIRS}
+    ${ARCHIVE_INCLUDE_DIRS}
     ${OPENSSL_INCLUDE_DIR}
 )
 
@@ -95,6 +97,7 @@ target_link_libraries(aegis PRIVATE
     ${GIOUNIX_LIBRARIES}
     ${CURL_LIBRARIES}
     ${DBUS_LIBRARIES}
+    ${ARCHIVE_LIBRARIES}
     OpenSSL::SSL
     OpenSSL::Crypto
     pthread
