@@ -1,19 +1,20 @@
 #include "aegis/utils.h"
 
-#include <boost/process.hpp>
-#include <boost/process/environment.hpp>
-
 #include <cstdarg>
 #include <cstdio>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
+#include <spawn.h>
 #include <random>
 #include <sstream>
 #include <system_error>
+#include <sys/wait.h>
+#include <unistd.h>
 
-namespace bp = boost::process;
 namespace fs = std::filesystem;
+
+extern char **environ;
 
 namespace aegis {
 namespace {
@@ -33,8 +34,11 @@ bool contains_slash(const std::string& s) {
     return s.find('/') != std::string::npos;
 }
 
-bp::environment make_environment(const std::vector<std::string>& env_overrides) {
-    bp::environment env = boost::this_process::environment();
+std::vector<std::string> build_environment(const std::vector<std::string>& env_overrides) {
+    std::vector<std::string> envp;
+    for (char** current = environ; current && *current; ++current) {
+        envp.emplace_back(*current);
+    }
 
     for (const auto& item : env_overrides) {
         auto pos = item.find('=');
@@ -43,19 +47,38 @@ bp::environment make_environment(const std::vector<std::string>& env_overrides) 
         }
 
         const std::string key = item.substr(0, pos);
-        const std::string value = item.substr(pos + 1);
-        env[key] = value;
+        bool replaced = false;
+        for (auto& existing : envp) {
+            if (existing.rfind(key + "=", 0) == 0) {
+                existing = item;
+                replaced = true;
+                break;
+            }
+        }
+        if (!replaced) {
+            envp.push_back(item);
+        }
     }
 
-    return env;
+    return envp;
 }
 
-void read_stream_into(bp::ipstream& stream, std::string& out) {
-    std::string line;
-    while (std::getline(stream, line)) {
-        out += line;
-        out += '\n';
+std::string read_fd_into_string(int fd) {
+    std::string out;
+    char buffer[4096];
+    while (true) {
+        ssize_t n = ::read(fd, buffer, sizeof(buffer));
+        if (n == 0)
+            break;
+        if (n < 0) {
+            if (errno == EINTR)
+                continue;
+            break;
+        }
+        out.append(buffer, static_cast<size_t>(n));
     }
+    ::close(fd);
+    return out;
 }
 
 } // namespace
@@ -74,40 +97,76 @@ SubprocessResult run_command(const std::vector<std::string>& argv,
         throw AegisError("Command does not exist: " + argv[0]);
     }
 
-    std::vector<std::string> args;
-    if (argv.size() > 1) {
-        args.assign(argv.begin() + 1, argv.end());
+    int stdout_pipe[2];
+    int stderr_pipe[2];
+    if (::pipe(stdout_pipe) != 0 || ::pipe(stderr_pipe) != 0) {
+        throw AegisError("Failed to create pipes for command: " + join_command(argv) +
+                         ": " + std::string(std::strerror(errno)));
     }
 
-    bp::ipstream stdout_stream;
-    bp::ipstream stderr_stream;
-    std::error_code ec;
+    std::vector<std::string> env_strings = build_environment(env);
+    std::vector<char*> envp;
+    envp.reserve(env_strings.size() + 1);
+    for (auto& item : env_strings) {
+        envp.push_back(item.data());
+    }
+    envp.push_back(nullptr);
 
-    bp::child child_proc(
-        argv[0],
-        bp::args(args),
-        make_environment(env),
-        bp::std_out > stdout_stream,
-        bp::std_err > stderr_stream,
-        ec
-    );
+    std::vector<char*> exec_argv;
+    exec_argv.reserve(argv.size() + 1);
+    for (const auto& arg : argv) {
+        exec_argv.push_back(const_cast<char*>(arg.c_str()));
+    }
+    exec_argv.push_back(nullptr);
 
-    if (ec) {
+    pid_t pid = ::fork();
+    if (pid < 0) {
+        ::close(stdout_pipe[0]);
+        ::close(stdout_pipe[1]);
+        ::close(stderr_pipe[0]);
+        ::close(stderr_pipe[1]);
         throw AegisError("Failed to start command: " + join_command(argv) +
-                         ": " + ec.message());
+                         ": " + std::string(std::strerror(errno)));
     }
+
+    if (pid == 0) {
+        ::dup2(stdout_pipe[1], STDOUT_FILENO);
+        ::dup2(stderr_pipe[1], STDERR_FILENO);
+        ::close(stdout_pipe[0]);
+        ::close(stdout_pipe[1]);
+        ::close(stderr_pipe[0]);
+        ::close(stderr_pipe[1]);
+
+        if (contains_slash(argv[0])) {
+            ::execve(argv[0].c_str(), exec_argv.data(), envp.data());
+        } else {
+            ::execvpe(argv[0].c_str(), exec_argv.data(), envp.data());
+        }
+        _exit(errno == ENOENT ? 127 : 126);
+    }
+
+    ::close(stdout_pipe[1]);
+    ::close(stderr_pipe[1]);
 
     SubprocessResult result;
-    read_stream_into(stdout_stream, result.stdout_str);
-    read_stream_into(stderr_stream, result.stderr_str);
+    result.stdout_str = read_fd_into_string(stdout_pipe[0]);
+    result.stderr_str = read_fd_into_string(stderr_pipe[0]);
 
-    child_proc.wait(ec);
-    if (ec) {
-        throw AegisError("Failed to wait for command: " + join_command(argv) +
-                         ": " + ec.message());
+    int status = 0;
+    while (::waitpid(pid, &status, 0) < 0) {
+        if (errno != EINTR) {
+            throw AegisError("Failed to wait for command: " + join_command(argv) +
+                             ": " + std::string(std::strerror(errno)));
+        }
     }
 
-    result.exit_code = child_proc.exit_code();
+    if (WIFEXITED(status)) {
+        result.exit_code = WEXITSTATUS(status);
+    } else if (WIFSIGNALED(status)) {
+        result.exit_code = 128 + WTERMSIG(status);
+    } else {
+        result.exit_code = -1;
+    }
     return result;
 }
 
