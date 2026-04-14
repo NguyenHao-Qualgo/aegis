@@ -69,7 +69,11 @@ set(AEGIS_SOURCES
 )
 
 if(ENABLE_SERVICE)
-    list(APPEND AEGIS_SOURCES src/service.cpp)
+    list(APPEND AEGIS_SOURCES
+    src/installer_service.cpp
+    src/dbus_message_builder.cpp
+    src/service_state.cpp
+    )
 endif()
 
 add_executable(aegis ${AEGIS_SOURCES})

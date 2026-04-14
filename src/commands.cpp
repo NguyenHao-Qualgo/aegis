@@ -6,7 +6,7 @@
 #include "aegis/bundle.h"
 #include "aegis/context.h"
 #include "aegis/mark.h"
-#include "aegis/service.h"
+#include "aegis/installer_service.h"
 #include "aegis/utils.h"
 
 #include <iostream>

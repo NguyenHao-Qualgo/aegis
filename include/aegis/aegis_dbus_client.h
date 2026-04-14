@@ -1,6 +1,7 @@
 #pragma once
 
 #include "aegis/utils.h"
+#include "aegis/progress_info.h"
 
 #include <dbus/dbus.h>
 #include <cstdint>
@@ -9,12 +10,6 @@
 #include <vector>
 
 namespace aegis {
-
-struct ProgressInfo {
-    int percentage = 0;
-    std::string message = "idle";
-    int depth = 0;
-};
 
 struct SlotStatusView {
     std::string name;
