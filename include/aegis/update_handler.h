@@ -24,34 +24,6 @@ public:
                                  ProgressCallback progress = {}) = 0;
 };
 
-/// Raw dd-style image writer (for type=raw, nand, nor, boot-emmc, etc.)
-class RawUpdateHandler : public IUpdateHandler {
-public:
-    Result<void> install(const std::string& image_path,
-                         const ManifestImage& image,
-                         Slot& target_slot,
-                         ProgressCallback progress = {}) override;
-};
-
-/// Filesystem copy handler (ext4, vfat, ubifs)
-/// Mounts both source and target, copies files
-class FileCopyUpdateHandler : public IUpdateHandler {
-public:
-    Result<void> install(const std::string& image_path,
-                         const ManifestImage& image,
-                         Slot& target_slot,
-                         ProgressCallback progress = {}) override;
-};
-
-/// Tar extraction handler (extracts tar into mounted slot)
-class TarUpdateHandler : public IUpdateHandler {
-public:
-    Result<void> install(const std::string& image_path,
-                         const ManifestImage& image,
-                         Slot& target_slot,
-                         ProgressCallback progress = {}) override;
-};
-
 /// Factory: select the correct handler for a given slot type
 std::unique_ptr<IUpdateHandler> create_update_handler(SlotType type,
                                                       bool is_tar = false);

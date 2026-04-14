@@ -7,6 +7,25 @@
 
 namespace aegis {
 
+namespace {
+
+bool has_suffix(const std::string& value, const std::string& suffix) {
+    return value.size() >= suffix.size() &&
+           value.compare(value.size() - suffix.size(), suffix.size(), suffix) == 0;
+}
+
+bool is_archive_payload(const std::string& filename) {
+    return has_suffix(filename, ".tar") ||
+           has_suffix(filename, ".tar.gz") ||
+           has_suffix(filename, ".tgz") ||
+           has_suffix(filename, ".tar.xz") ||
+           has_suffix(filename, ".txz") ||
+           has_suffix(filename, ".tar.bz2") ||
+           has_suffix(filename, ".tbz2");
+}
+
+} // namespace
+
 Result<std::vector<InstallPlan>> make_install_plans(
     const Manifest& manifest,
     std::map<std::string, Slot*>& target_group) {
@@ -173,7 +192,8 @@ Result<void> install_bundle(const std::string& bundle_path,
 
         std::string image_path = bundle.mount_point + "/" + plan.image->filename;
 
-        auto handler = create_update_handler(plan.target_slot->type);
+        auto handler = create_update_handler(plan.target_slot->type,
+                                             is_archive_payload(plan.image->filename));
         auto install_res = handler->install(image_path, *plan.image,
                                              *plan.target_slot, args.progress);
         if (!install_res) {

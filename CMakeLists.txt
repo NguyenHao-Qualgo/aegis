@@ -57,6 +57,9 @@ set(AEGIS_SOURCES
     src/bootchooser.cpp
     src/install.cpp
     src/update_handler.cpp
+    src/raw_update_handler.cpp
+    src/filesystem_image_update_handler.cpp
+    src/archive_update_handler.cpp
     src/mount.cpp
     src/mark.cpp
     src/status_file.cpp
