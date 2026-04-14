@@ -12,13 +12,15 @@ CommandRegistry::CommandRegistry()
       extract_(std::make_unique<ExtractCommand>()),
       resign_(std::make_unique<ResignCommand>()),
       service_(std::make_unique<ServiceCommand>()),
-      mount_(std::make_unique<MountCommand>()) {}
+      mount_(std::make_unique<MountCommand>()),
+      version_(std::make_unique<VersionCommand>()) {}
 
 ICommand* CommandRegistry::find(const std::string& name) {
     if (name == "bundle") return bundle_.get();
     if (name == "install") return install_.get();
     if (name == "info") return info_.get();
     if (name == "status") return status_.get();
+    if (name == "version") return version_.get();
     if (name == "mark-good" || name == "mark-bad" || name == "mark-active") return mark_.get();
     if (name == "extract") return extract_.get();
     if (name == "resign") return resign_.get();

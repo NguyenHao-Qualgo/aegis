@@ -65,7 +65,7 @@ set(AEGIS_SOURCES
     src/cli_parser.cpp
     src/command_registry.cpp
     src/commands.cpp
-    src/installer_dbus_client.cpp
+    src/aegis_dbus_client.cpp
 )
 
 if(ENABLE_SERVICE)

@@ -1,7 +1,7 @@
 #include "aegis/commands.h"
 
 #include "aegis/app_context.h"
-#include "aegis/installer_dbus_client.h"
+#include "aegis/aegis_dbus_client.h"
 
 #include "aegis/bundle.h"
 #include "aegis/context.h"
@@ -58,7 +58,7 @@ int InstallCommand::execute(const CliOptions& opts) {
         return 1;
     }
 
-    InstallerDbusClient client;
+    AegisDbusClient client;
 
     auto res = client.connect_system_bus();
     if (!res) {
@@ -87,7 +87,7 @@ int InstallCommand::execute(const CliOptions& opts) {
     }
 
     if (completion.value() != 0) {
-        auto last_error = client.get_last_error();
+        auto last_error = client.get_property_string("LastError");
         if (last_error && !last_error.value().empty()) {
             std::cerr << "Error: " << last_error.value() << "\n";
         } else {
@@ -136,34 +136,121 @@ int InfoCommand::execute(const CliOptions& opts) {
 }
 
 int StatusCommand::execute(const CliOptions& opts) {
-    AppContext::init_runtime(opts);
+    AegisDbusClient client;
 
-    auto& ctx = Context::instance();
-    auto& config = ctx.config();
+    auto conn = client.connect_system_bus();
+    if (!conn) {
+        std::cerr << "Error: " << conn.error() << "\n";
+        return 1;
+    }
+
+    auto compatible = client.get_property_string("Compatible");
+    auto variant = client.get_property_string("Variant");
+    auto boot_slot = client.get_property_string("BootSlot");
+    auto bootloader = client.get_property_string("Bootloader");
+    auto primary = client.get_primary();
+    auto slots = client.get_slot_status();
+
+    if (!compatible) {
+        std::cerr << "Error: " << compatible.error() << "\n";
+        return 1;
+    }
+    if (!variant) {
+        std::cerr << "Error: " << variant.error() << "\n";
+        return 1;
+    }
+    if (!boot_slot) {
+        std::cerr << "Error: " << boot_slot.error() << "\n";
+        return 1;
+    }
+    if (!bootloader) {
+        std::cerr << "Error: " << bootloader.error() << "\n";
+        return 1;
+    }
+    if (!primary) {
+        std::cerr << "Error: " << primary.error() << "\n";
+        return 1;
+    }
+    if (!slots) {
+        std::cerr << "Error: " << slots.error() << "\n";
+        return 1;
+    }
 
     std::cout << "=== System Info ===\n"
-              << "Compatible:    " << config.compatible << "\n"
-              << "Bootloader:    " << to_string(config.bootloader) << "\n"
-              << "Boot slot:     " << ctx.boot_slot() << "\n"
+              << "Compatible:    " << compatible.value() << "\n"
+              << "Variant:       " << variant.value() << "\n"
+              << "Bootloader:    " << bootloader.value() << "\n"
+              << "Boot slot:     " << boot_slot.value() << "\n"
+              << "Primary slot:  " << primary.value() << "\n"
               << "\n=== Slot Status ===\n";
 
-    for (auto& [name, slot] : config.slots) {
-        std::cout << "\n  Slot " << name
-                  << (slot.is_booted ? " [BOOTED]" : "") << ":\n"
-                  << "    device:     " << slot.device << "\n"
-                  << "    type:       " << to_string(slot.type) << "\n"
-                  << "    bootname:   " << slot.bootname << "\n";
+    for (const auto& slot : slots.value()) {
+        bool is_booted = false;
+        bool is_primary = false;
+
+        auto it_booted = slot.bool_fields.find("booted");
+        if (it_booted != slot.bool_fields.end()) {
+            is_booted = it_booted->second;
+        }
+
+        auto it_primary = slot.bool_fields.find("primary");
+        if (it_primary != slot.bool_fields.end()) {
+            is_primary = it_primary->second;
+        }
+
+        std::cout << "\n  Slot " << slot.name;
+        if (is_booted) std::cout << " [BOOTED]";
+        if (is_primary) std::cout << " [PRIMARY]";
+        std::cout << ":\n";
+
+        auto print_s = [&](const char* key, const char* label) {
+            auto it = slot.string_fields.find(key);
+            if (it != slot.string_fields.end()) {
+                std::cout << "    " << label << ": " << it->second << "\n";
+            }
+        };
+
+        print_s("device", "device");
+        print_s("type", "type");
+        print_s("bootname", "bootname");
+        print_s("class", "class");
+        print_s("state", "state");
 
         if (opts.detailed) {
-            auto& s = slot.status;
-            std::cout << "    status:     " << s.status << "\n"
-                      << "    version:    " << s.bundle_version << "\n"
-                      << "    compatible: " << s.bundle_compatible << "\n"
-                      << "    sha256:     " << s.checksum_sha256 << "\n"
-                      << "    installed:  " << s.installed_timestamp
-                      << " (count=" << s.installed_count << ")\n"
-                      << "    activated:  " << s.activated_timestamp
-                      << " (count=" << s.activated_count << ")\n";
+            print_s("bundle.compatible", "bundle.compatible");
+            print_s("bundle.version", "bundle.version");
+            print_s("bundle.description", "bundle.description");
+            print_s("bundle.build", "bundle.build");
+            print_s("bundle.hash", "bundle.hash");
+            print_s("sha256", "sha256");
+            print_s("installed.timestamp", "installed.timestamp");
+            print_s("activated.timestamp", "activated.timestamp");
+
+            auto print_u32 = [&](const char* key, const char* label) {
+                auto it = slot.u32_fields.find(key);
+                if (it != slot.u32_fields.end()) {
+                    std::cout << "    " << label << ": " << it->second << "\n";
+                }
+            };
+
+            auto print_u64 = [&](const char* key, const char* label) {
+                auto it = slot.u64_fields.find(key);
+                if (it != slot.u64_fields.end()) {
+                    std::cout << "    " << label << ": " << it->second << "\n";
+                }
+            };
+
+            auto print_i32 = [&](const char* key, const char* label) {
+                auto it = slot.i32_fields.find(key);
+                if (it != slot.i32_fields.end()) {
+                    std::cout << "    " << label << ": " << it->second << "\n";
+                }
+            };
+
+            print_i32("index", "index");
+            print_u64("size", "size");
+            print_u32("installed.count", "installed.count");
+            print_u32("activated.count", "activated.count");
         }
     }
 
@@ -171,28 +258,39 @@ int StatusCommand::execute(const CliOptions& opts) {
 }
 
 int MarkCommand::execute(const CliOptions& opts) {
-    AppContext::init_runtime(opts);
+    AegisDbusClient client;
+
+    auto conn = client.connect_system_bus();
+    if (!conn) {
+        std::cerr << "Error: " << conn.error() << "\n";
+        return 1;
+    }
 
     std::string slot_id = opts.positional.empty() ? "" : opts.positional[0];
+    std::string state;
 
-    Result<void> res = Result<void>::err("Unknown mark command");
     if (opts.command == "mark-good") {
-        res = mark_good(slot_id);
+        state = "good";
     } else if (opts.command == "mark-bad") {
-        res = mark_bad(slot_id);
+        state = "bad";
     } else if (opts.command == "mark-active") {
         if (slot_id.empty()) {
             std::cerr << "Usage: aegis mark-active SLOTNAME\n";
             return 1;
         }
-        res = mark_active(slot_id);
+        state = "active";
+    } else {
+        std::cerr << "Error: unknown mark command\n";
+        return 1;
     }
 
+    auto res = client.mark(state, slot_id);
     if (!res) {
         std::cerr << "Error: " << res.error() << "\n";
         return 1;
     }
 
+    std::cout << res.value().message << "\n";
     return 0;
 }
 
@@ -295,6 +393,25 @@ int MountCommand::execute(const CliOptions& opts) {
     }
 
     std::cout << bundle.mount_point << "\n";
+    return 0;
+}
+
+int VersionCommand::execute(const CliOptions&) {
+    AegisDbusClient client;
+
+    auto conn = client.connect_system_bus();
+    if (!conn) {
+        std::cerr << "Error: " << conn.error() << "\n";
+        return 1;
+    }
+
+    auto version = client.get_property_string("ServiceVersion");
+    if (!version) {
+        std::cerr << "Error: " << version.error() << "\n";
+        return 1;
+    }
+
+    std::cout << version.value() << "\n";
     return 0;
 }
 

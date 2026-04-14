@@ -1,5 +1,4 @@
 #include "aegis/cli_parser.h"
-#include "config.h"
 
 #include <cstdlib>
 #include <iostream>
@@ -21,7 +20,8 @@ Commands:
   extract BUNDLEFILE OUTPUTDIR    Extract bundle contents
   resign INBUNDLE OUTBUNDLE       Resign bundle with new keys
   service                         Run as D-Bus service
-  mount BUNDLEFILE                Verify and mount a bundle
+  mount BUNDLEFILE                Verify and mount a 
+  version                         Show service version
 
 Options:
   --conf=PATH                     System config file (default: /etc/aegis/system.conf)
@@ -39,12 +39,7 @@ Options:
   --no-verify                     Skip signature verification (info only)
   --recipient=CERTPATH            Encryption recipient (crypt format, repeatable)
   --help                          Show this help
-  --version                       Show version
 )";
-}
-
-void CliParser::print_version() {
-    std::cout << "aegis-cpp " << AEGIS_VERSION << "\n";
 }
 
 ParseResult CliParser::parse(int argc, char* argv[]) const {
@@ -56,12 +51,6 @@ ParseResult CliParser::parse(int argc, char* argv[]) const {
 
         if (arg == "--help" || arg == "-h") {
             print_usage();
-            result.action = ParseAction::ExitSuccess;
-            return result;
-        }
-
-        if (arg == "--version") {
-            print_version();
             result.action = ParseAction::ExitSuccess;
             return result;
         }

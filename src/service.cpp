@@ -6,6 +6,7 @@
 #include "aegis/mark.h"
 #include "aegis/signature.h"
 #include "aegis/utils.h"
+#include "config.h"
 
 #include <atomic>
 #include <csignal>
@@ -172,6 +173,8 @@ const char kIntrospectionXml[] =
     "    <property name='Compatible' type='s' access='read'/>"
     "    <property name='Variant' type='s' access='read'/>"
     "    <property name='BootSlot' type='s' access='read'/>"
+    "    <property name='ServiceVersion' type='s' access='read'/>"
+    "    <property name='Bootloader' type='s' access='read'/>"
     "  </interface>"
     "</node>";
 
@@ -538,6 +541,25 @@ bool InstallerService::append_property_variant(DBusMessageIter* iter,
         return true;
     }
 
+    if (property == "ServiceVersion") {
+        DBusMessageIter variant;
+        const char* str = AEGIS_VERSION;
+        dbus_message_iter_open_container(iter, DBUS_TYPE_VARIANT, "s", &variant);
+        dbus_message_iter_append_basic(&variant, DBUS_TYPE_STRING, &str);
+        dbus_message_iter_close_container(iter, &variant);
+        return true;
+    }
+
+    if (property == "Bootloader") {
+        DBusMessageIter variant;
+        std::string value = to_string(ctx.config().bootloader);
+        const char* str = value.c_str();
+        dbus_message_iter_open_container(iter, DBUS_TYPE_VARIANT, "s", &variant);
+        dbus_message_iter_append_basic(&variant, DBUS_TYPE_STRING, &str);
+        dbus_message_iter_close_container(iter, &variant);
+        return true;
+    }
+
     return false;
 }
 
@@ -694,11 +716,17 @@ DBusMessage* InstallerService::handle_properties(DBusMessage* message) {
         dbus_message_iter_open_container(&iter, DBUS_TYPE_ARRAY, "{sv}", &array);
 
         for (const auto& property :
-             {"Operation", "LastError", "Progress", "Compatible", "Variant", "BootSlot"}) {
+            {"Operation",
+            "LastError",
+            "Progress",
+            "Compatible",
+            "Variant",
+            "BootSlot",
+            "ServiceVersion",
+            "Bootloader"}) {
             DBusMessageIter entry;
             const char* key = property;
-            dbus_message_iter_open_container(&array, DBUS_TYPE_DICT_ENTRY, nullptr,
-                                             &entry);
+            dbus_message_iter_open_container(&array, DBUS_TYPE_DICT_ENTRY, nullptr, &entry);
             dbus_message_iter_append_basic(&entry, DBUS_TYPE_STRING, &key);
             append_property_variant(&entry, property);
             dbus_message_iter_close_container(&array, &entry);

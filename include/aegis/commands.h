@@ -60,5 +60,10 @@ public:
     int execute(const CliOptions& opts) override;
 };
 
+class VersionCommand : public ICommand {
+public:
+    int execute(const CliOptions& opts) override;
+};
+
 
 } // namespace aegis

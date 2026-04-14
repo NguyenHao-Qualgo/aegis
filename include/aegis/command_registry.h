@@ -22,6 +22,7 @@ private:
     CommandPtr resign_;
     CommandPtr service_;
     CommandPtr mount_;
+    CommandPtr version_;
 };
 
 } // namespace aegis
