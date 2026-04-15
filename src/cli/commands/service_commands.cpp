@@ -118,7 +118,6 @@ class StatusPrinter {
         }
     }
 
-  private:
     bool detailed_;
 };
 
@@ -266,7 +265,7 @@ int ServiceCommand::execute(const CliOptions& opts) {
     return 0;
 }
 
-int VersionCommand::execute(const CliOptions&) {
+int VersionCommand::execute(const CliOptions& /*opts*/) {
     AegisDbusClient client;
     if (!connect_client(client, false)) {
         std::cout << AEGIS_BUILD_VERSION << "\n";

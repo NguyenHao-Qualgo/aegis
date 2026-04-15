@@ -53,7 +53,6 @@ class AegisService {
     void emit_properties_changed(const std::vector<std::string>& property_names) const;
     bool append_property_variant(DBusMessageIter* iter, const std::string& property) const;
 
-  private:
     DBusConnection* connection_ = nullptr;
     std::thread install_thread_;
     ServiceState state_;

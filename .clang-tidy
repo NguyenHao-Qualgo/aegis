@@ -5,13 +5,25 @@ Checks: >
   performance-*,
   readability-*,
   -modernize-use-trailing-return-type,
+  -modernize-use-using,
+  -modernize-macro-to-enum,
+  -modernize-avoid-c-arrays,
+  -modernize-redundant-void-arg,
+  -bugprone-reserved-identifier,
+  -bugprone-macro-parentheses,
+  -bugprone-multi-level-implicit-pointer-conversion,
   -readability-magic-numbers,
   -readability-identifier-length,
   -readability-function-cognitive-complexity,
-  -readability-convert-member-functions-to-static
+  -readability-convert-member-functions-to-static,
+  -readability-avoid-unconditional-preprocessor-if,
+  -readability-implicit-bool-conversion,
+  -readability-redundant-access-specifiers,
+  -performance-enum-size
 WarningsAsErrors: ''
 HeaderFilterRegex: '^(.*\/)?(include|src)\/'
 FormatStyle: file
+SystemHeaders: false
 CheckOptions:
   - key: modernize-pass-by-value.IncludeStyle
     value: llvm

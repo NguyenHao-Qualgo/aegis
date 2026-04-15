@@ -60,7 +60,7 @@ struct Slot {
     bool is_booted = false;
 
     /// Unique identifier: class.index
-    std::string full_name() const {
+    [[nodiscard]] std::string full_name() const {
         return slot_class + "." + std::to_string(index);
     }
 };

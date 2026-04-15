@@ -52,16 +52,16 @@ template <typename T> class Result {
         return Result{{}, std::move(msg)};
     }
 
-    explicit operator bool() const {
+    [[nodiscard]] explicit operator bool() const {
         return error_.empty();
     }
-    const T& value() const {
+    [[nodiscard]] const T& value() const {
         return value_;
     }
     T& value() {
         return value_;
     }
-    const std::string& error() const {
+    [[nodiscard]] const std::string& error() const {
         return error_;
     }
 
@@ -81,10 +81,10 @@ template <> class Result<void> {
         return Result{std::move(msg)};
     }
 
-    explicit operator bool() const {
+    [[nodiscard]] explicit operator bool() const {
         return error_.empty();
     }
-    const std::string& error() const {
+    [[nodiscard]] const std::string& error() const {
         return error_;
     }
 

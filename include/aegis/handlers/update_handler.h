@@ -25,7 +25,7 @@ class UpdateHandler {
     virtual Result<void> install(const std::string& image_path, const ManifestImage& image,
                                  Slot& target_slot, ProgressCallback progress = {}) = 0;
 
-    virtual const char* name() const = 0;
+    [[nodiscard]] virtual const char* name() const = 0;
 };
 
 class UpdateHandlerFactory {

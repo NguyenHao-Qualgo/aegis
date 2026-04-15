@@ -17,41 +17,43 @@ class Context {
               const std::string& override_boot_slot = {}, const std::string& mount_prefix = {});
 
     /// Accessors
-    const SystemConfig& config() const {
+    [[nodiscard]] const SystemConfig& config() const {
         return config_;
     }
     SystemConfig& config() {
         return config_;
     }
 
-    const std::string& config_path() const {
+    [[nodiscard]] const std::string& config_path() const {
         return config_path_;
     }
-    const std::string& cert_path() const {
+    [[nodiscard]] const std::string& cert_path() const {
         return cert_path_;
     }
-    const std::string& key_path() const {
+    [[nodiscard]] const std::string& key_path() const {
         return key_path_;
     }
-    const std::string& keyring_path() const {
+    [[nodiscard]] const std::string& keyring_path() const {
         return keyring_path_;
     }
-    const std::string& boot_slot() const {
+    [[nodiscard]] const std::string& boot_slot() const {
         return boot_slot_;
     }
-    const std::string& mount_prefix() const {
+    [[nodiscard]] const std::string& mount_prefix() const {
         return mount_prefix_;
     }
 
-    bool is_initialized() const {
+    [[nodiscard]] bool is_initialized() const {
         return initialized_;
     }
 
-  private:
+  public:
     Context() = default;
     ~Context() = default;
     Context(const Context&) = delete;
     Context& operator=(const Context&) = delete;
+
+  private:
 
     bool initialized_ = false;
     std::string config_path_;
