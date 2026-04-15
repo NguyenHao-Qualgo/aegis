@@ -11,7 +11,6 @@ CommandRegistry::CommandRegistry() {
     register_command({"version"}, std::make_unique<VersionCommand>());
     register_command({"mark-good", "mark-bad", "mark-active"}, std::make_unique<MarkCommand>());
     register_command({"extract"}, std::make_unique<ExtractCommand>());
-    register_command({"resign"}, std::make_unique<ResignCommand>());
     register_command({"service"}, std::make_unique<ServiceCommand>());
     register_command({"mount"}, std::make_unique<MountCommand>());
 }

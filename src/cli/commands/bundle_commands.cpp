@@ -115,34 +115,6 @@ int ExtractCommand::execute(const CliOptions& opts) {
     return 0;
 }
 
-int ResignCommand::execute(const CliOptions& opts) {
-    if (!require_positional(opts, 2, "aegis resign INBUNDLE OUTBUNDLE")) {
-        return 1;
-    }
-
-    SigningParams old_params;
-    old_params.keyring_path = opts.keyring_path;
-    old_params.no_check_time = opts.no_check_time;
-
-    SigningParams new_params;
-    new_params.cert_path = opts.cert_path;
-    new_params.key_path = opts.key_path;
-
-    if (new_params.cert_path.empty() || new_params.key_path.empty()) {
-        std::cerr << "Error: --cert and --key required for resign\n";
-        return 1;
-    }
-
-    auto result = bundle_resign(opts.positional[0], opts.positional[1], old_params, new_params);
-    if (!result) {
-        std::cerr << "Error: " << result.error() << "\n";
-        return 1;
-    }
-
-    std::cout << "Bundle resigned: " << opts.positional[1] << "\n";
-    return 0;
-}
-
 int MountCommand::execute(const CliOptions& opts) {
     if (!require_positional(opts, 1, "aegis mount BUNDLEFILE")) {
         return 1;

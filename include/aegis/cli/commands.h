@@ -45,11 +45,6 @@ class ExtractCommand : public ICommand {
     int execute(const CliOptions& opts) override;
 };
 
-class ResignCommand : public ICommand {
-  public:
-    int execute(const CliOptions& opts) override;
-};
-
 class ServiceCommand : public ICommand {
   public:
     int execute(const CliOptions& opts) override;

@@ -11,7 +11,7 @@ A clean, OOP C++17 update service inspired by RAUC. It keeps the core functional
 ├───────┬────────┬────────┬────────┬───────┬──────────────┤
 │bundle │install │ info   │ status │ mark  │   service    │
 │create │        │extract │        │good   │   (D-Bus)    │
-│resign │        │        │        │bad    │              │
+│       │        │        │        │bad    │              │
 │       │        │        │        │active │              │
 └───┬───┴───┬────┴───┬────┴───┬────┴───┬───┴──────┬───────┘
     │       │        │        │        │          │

@@ -20,7 +20,7 @@ Environment overrides:
   VERSION        Manifest version string (default: 1.0.0)
   DESCRIPTION    Manifest description (default: Simple Aegis bundle)
   SLOT_CLASS     Manifest slot class (default: rootfs)
-  BUNDLE_FORMAT  Bundle format: plain, verity, crypt (default: verity)
+  BUNDLE_FORMAT  Bundle format: verity, crypt (default: verity)
 EOF
 }
 

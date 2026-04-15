@@ -18,7 +18,6 @@ Commands:
   mark-bad [SLOTNAME]             Mark slot as bad
   mark-active SLOTNAME            Set slot as primary boot target
   extract BUNDLEFILE OUTPUTDIR    Extract bundle contents
-  resign INBUNDLE OUTBUNDLE       Resign bundle with new keys
   service                         Run as D-Bus service
   mount BUNDLEFILE                Verify and mount a 
   version                         Show service version
@@ -30,13 +29,10 @@ Options:
   --keyring=PATH                  Verification keyring
   --override-boot-slot=BOOTNAME   Override booted slot detection
   --mount=PATH                    Mount prefix
-  --bundle-format=FORMAT          Bundle format: plain, verity, crypt (default: verity)
+  --bundle-format=FORMAT          Bundle format: verity, crypt (default: verity)
   --mksquashfs-args=ARGS          Extra mksquashfs arguments
   --output-format=FMT             Output format: readable, shell, json
   --detailed                      Show detailed status
-  --ignore-compatible             Skip compatible check
-  --no-check-time                 Ignore certificate expiry
-  --no-verify                     Skip signature verification (info only)
   --recipient=CERTPATH            Encryption recipient (crypt format, repeatable)
   --help                          Show this help
 )";
@@ -91,18 +87,6 @@ ParseResult CliParser::parse(int argc, char* argv[]) const {
 
         if (arg == "--detailed") {
             opts.detailed = true;
-            continue;
-        }
-        if (arg == "--ignore-compatible") {
-            opts.ignore_compat = true;
-            continue;
-        }
-        if (arg == "--no-check-time") {
-            opts.no_check_time = true;
-            continue;
-        }
-        if (arg == "--no-verify") {
-            opts.no_verify = true;
             continue;
         }
 

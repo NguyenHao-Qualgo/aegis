@@ -9,8 +9,6 @@ namespace aegis {
 
 const char* to_string(BundleFormat fmt) {
     switch (fmt) {
-    case BundleFormat::Plain:
-        return "plain";
     case BundleFormat::Verity:
         return "verity";
     case BundleFormat::Crypt:
@@ -20,8 +18,6 @@ const char* to_string(BundleFormat fmt) {
 }
 
 BundleFormat bundle_format_from_string(const std::string& s) {
-    if (s == "plain")
-        return BundleFormat::Plain;
     if (s == "verity")
         return BundleFormat::Verity;
     if (s == "crypt")
@@ -88,7 +84,7 @@ Manifest parse_manifest(const std::string& path) {
 
     // [bundle]
     if (auto it = ini.find("bundle"); it != ini.end()) {
-        auto fmt = get(it->second, "format", "plain");
+        auto fmt = get(it->second, "format", "verity");
         m.bundle_format = bundle_format_from_string(fmt);
         m.verity_hash = get(it->second, "verity-hash");
         m.verity_salt = get(it->second, "verity-salt");

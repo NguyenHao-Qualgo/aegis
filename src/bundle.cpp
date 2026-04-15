@@ -66,26 +66,7 @@ Result<void> bundle_create(const BundleCreateParams& params) {
     uint64_t sqfs_size = file_size(squashfs_path);
     LOG_INFO("SquashFS payload: %lu bytes", sqfs_size);
 
-    if (params.format == BundleFormat::Plain) {
-        // Plain format: squashfs + appended CMS signature
-        // Sign the entire squashfs
-        SigningParams sign_params;
-        sign_params.cert_path = params.cert_path;
-        sign_params.key_path = params.key_path;
-
-        auto sig = cms_sign_file(squashfs_path, sqfs_size, sign_params);
-
-        // Write: squashfs | signature | signature_size(uint64_t)
-        copy_file(squashfs_path, params.output_path);
-        FILE* f = fopen(params.output_path.c_str(), "ab");
-        if (!f)
-            return Result<void>::err("Cannot open output bundle");
-        fwrite(sig.data(), 1, sig.size(), f);
-        uint64_t sig_size = sig.size();
-        fwrite(&sig_size, sizeof(sig_size), 1, f);
-        fclose(f);
-
-    } else if (params.format == BundleFormat::Verity) {
+    if (params.format == BundleFormat::Verity) {
         // Verity format: squashfs + hash_tree, CMS contains manifest with verity metadata
         copy_file(squashfs_path, params.output_path);
 
@@ -281,13 +262,7 @@ Result<void> bundle_mount(Bundle& bundle) {
     }
 
     try {
-        if (bundle.format == BundleFormat::Plain) {
-            auto mp = mount_squashfs(bundle.path, mount_prefix);
-            if (!mp)
-                return Result<void>::err(mp.error());
-            bundle.mount_point = mp.value();
-
-        } else if (bundle.format == BundleFormat::Verity) {
+        if (bundle.format == BundleFormat::Verity) {
             const uint64_t data_size = payload_size - bundle.manifest.bundle_verity_size;
 
             bundle.loop = loop_setup(bundle.path, 0, payload_size);
@@ -363,53 +338,6 @@ Result<void> bundle_extract(const Bundle& bundle, const std::string& dest_dir) {
         return Result<void>::err("Extract failed: " + res.stderr_str);
 
     LOG_INFO("Bundle extracted to %s", dest_dir.c_str());
-    return Result<void>::ok();
-}
-
-Result<void> bundle_resign(const std::string& input_path, const std::string& output_path,
-                           const SigningParams& old_params, const SigningParams& new_params) {
-    // Open with old keys
-    auto bundle_res = bundle_open(input_path, old_params);
-    if (!bundle_res)
-        return Result<void>::err(bundle_res.error());
-
-    auto& bundle = bundle_res.value();
-    LOG_INFO("Resigning '%s' format bundle", to_string(bundle.format));
-
-    // Extract payload (everything before signature)
-    uint64_t payload_size = 0;
-    extract_bundle_signature(input_path, payload_size);
-
-    // Copy payload to output
-    FILE* fin = fopen(input_path.c_str(), "rb");
-    FILE* fout = fopen(output_path.c_str(), "wb");
-    if (!fin || !fout)
-        return Result<void>::err("Cannot open files for resign");
-
-    std::vector<uint8_t> buf(65536);
-    uint64_t remaining = payload_size;
-    while (remaining > 0) {
-        size_t rd =
-            fread(buf.data(), 1, std::min(static_cast<uint64_t>(buf.size()), remaining), fin);
-        fwrite(buf.data(), 1, rd, fout);
-        remaining -= rd;
-    }
-    fclose(fin);
-
-    // Re-sign the manifest with new keys
-    std::string tmp_manifest = "/tmp/aegis-resign-" + random_hex(4) + ".aegism";
-    write_manifest(bundle.manifest, tmp_manifest);
-    auto manifest_content = read_file_bytes(tmp_manifest);
-
-    auto sig = cms_sign(manifest_content, new_params);
-    fwrite(sig.data(), 1, sig.size(), fout);
-    uint64_t sig_size = sig.size();
-    fwrite(&sig_size, sizeof(sig_size), 1, fout);
-    fclose(fout);
-
-    rm_rf(tmp_manifest);
-
-    LOG_INFO("Bundle resigned: %s", output_path.c_str());
     return Result<void>::ok();
 }
 

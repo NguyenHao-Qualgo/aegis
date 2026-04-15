@@ -9,7 +9,7 @@ namespace aegis {
 
 /// Bundle format variants
 enum class BundleFormat {
-    Plain,  ///< Legacy: squashfs + appended CMS
+    Plain,  /// doesn't support verification
     Verity, ///< dm-verity protected squashfs
     Crypt,  ///< dm-verity + dm-crypt encrypted
 };

@@ -16,7 +16,7 @@ struct Bundle {
     uint64_t size = 0;
 
     Manifest manifest;
-    BundleFormat format = BundleFormat::Plain;
+    BundleFormat format = BundleFormat::Verity;
     bool verified = false;
 
     bool mounted = false;
@@ -52,9 +52,6 @@ Result<void> bundle_mount(Bundle& bundle);
 Result<void> bundle_unmount(Bundle& bundle);
 
 Result<void> bundle_extract(const Bundle& bundle, const std::string& dest_dir);
-
-Result<void> bundle_resign(const std::string& input_path, const std::string& output_path,
-                           const SigningParams& old_params, const SigningParams& new_params);
 
 Result<Bundle> bundle_info(const std::string& path, const SigningParams& params,
                            bool no_verify = false);
