@@ -3,8 +3,7 @@
 
 namespace aegis {
 
-CommandRegistry::CommandRegistry()
-{
+CommandRegistry::CommandRegistry() {
     register_command({"bundle"}, std::make_unique<BundleCommand>());
     register_command({"install"}, std::make_unique<InstallCommand>());
     register_command({"info"}, std::make_unique<InfoCommand>());
@@ -17,7 +16,8 @@ CommandRegistry::CommandRegistry()
     register_command({"mount"}, std::make_unique<MountCommand>());
 }
 
-void CommandRegistry::register_command(std::initializer_list<const char*> names, CommandPtr command) {
+void CommandRegistry::register_command(std::initializer_list<const char*> names,
+                                       CommandPtr command) {
     ICommand* raw_command = command.get();
     owned_commands_.push_back(std::move(command));
     for (const char* name : names) {

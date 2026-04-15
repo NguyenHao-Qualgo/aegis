@@ -2,17 +2,18 @@
 #include "aegis/utils.h"
 
 #include <algorithm>
+#include <cstring>
 #include <fstream>
 #include <set>
 #include <sstream>
-#include <cstring>
 
 namespace aegis {
 
 /// Parse /proc/cmdline to find AEGIS_SLOT= or aegis.slot= parameter.
 static std::string find_boot_slot_from_cmdline() {
     std::ifstream f("/proc/cmdline");
-    if (!f) return {};
+    if (!f)
+        return {};
 
     std::string cmdline;
     std::getline(f, cmdline);
@@ -32,14 +33,16 @@ static std::string find_boot_slot_from_cmdline() {
 /// Try to determine the booted root device from /proc/mounts
 static std::string find_root_device() {
     std::ifstream f("/proc/mounts");
-    if (!f) return {};
+    if (!f)
+        return {};
 
     std::string line;
     while (std::getline(f, line)) {
         std::istringstream iss(line);
         std::string dev, mount, fstype;
         iss >> dev >> mount >> fstype;
-        if (mount == "/") return dev;
+        if (mount == "/")
+            return dev;
     }
     return {};
 }
@@ -58,7 +61,7 @@ std::string detect_booted_slot(const std::map<std::string, Slot>& slots) {
         for (auto& [name, slot] : slots) {
             if (slot.device == root_dev) {
                 LOG_DEBUG("Booted slot from root device match: %s (device=%s)",
-                         slot.bootname.c_str(), root_dev.c_str());
+                          slot.bootname.c_str(), root_dev.c_str());
                 return slot.bootname.empty() ? slot.name : slot.bootname;
             }
         }
@@ -68,9 +71,8 @@ std::string detect_booted_slot(const std::map<std::string, Slot>& slots) {
     return {};
 }
 
-std::map<std::string, Slot*> get_target_group(
-    std::map<std::string, Slot>& slots,
-    const std::string& booted_slot_name) {
+std::map<std::string, Slot*> get_target_group(std::map<std::string, Slot>& slots,
+                                              const std::string& booted_slot_name) {
     // Find the booted slot
     Slot* booted = nullptr;
     for (auto& [name, slot] : slots) {
@@ -91,13 +93,14 @@ std::map<std::string, Slot*> get_target_group(
     // Collect inactive slots grouped by class
     std::map<std::string, Slot*> targets;
     for (auto& [name, slot] : slots) {
-        if (slot.readonly) continue;
-        if (slot.is_booted) continue;
+        if (slot.readonly)
+            continue;
+        if (slot.is_booted)
+            continue;
 
         // Skip slots in the same group as the booted slot
         bool is_active = false;
-        if (booted && slot.slot_class == booted->slot_class &&
-            slot.index == booted->index) {
+        if (booted && slot.slot_class == booted->slot_class && slot.index == booted->index) {
             is_active = true;
         }
         // Also skip child slots whose parent is in the active group

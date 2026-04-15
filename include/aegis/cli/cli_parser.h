@@ -5,7 +5,7 @@
 namespace aegis {
 
 class CliParser {
-public:
+  public:
     ParseResult parse(int argc, char* argv[]) const;
     static void print_usage();
     static void print_version();

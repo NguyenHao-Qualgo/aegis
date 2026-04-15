@@ -9,12 +9,12 @@
 namespace aegis {
 
 class InstallerWorkflow {
-public:
+  public:
     explicit InstallerWorkflow(InstallArgs& args);
 
     Result<void> install(const std::string& bundle_path);
 
-private:
+  private:
     Result<void> open_bundle(const std::string& bundle_path);
     Result<void> verify_compatibility() const;
     Result<void> determine_install_plans();
@@ -27,7 +27,7 @@ private:
     void save_status() const;
     void notify(const std::string& message) const;
 
-private:
+  private:
     InstallArgs& args_;
     Bundle bundle_;
     std::map<std::string, Slot*> target_group_;

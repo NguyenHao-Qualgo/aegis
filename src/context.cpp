@@ -10,15 +10,12 @@ Context& Context::instance() {
     return ctx;
 }
 
-void Context::init(const std::string& config_path,
-                   const std::string& cert_path,
-                   const std::string& key_path,
-                   const std::string& keyring_path,
-                   const std::string& override_boot_slot,
-                   const std::string& mount_prefix) {
-    config_path_  = config_path;
-    cert_path_    = cert_path;
-    key_path_     = key_path;
+void Context::init(const std::string& config_path, const std::string& cert_path,
+                   const std::string& key_path, const std::string& keyring_path,
+                   const std::string& override_boot_slot, const std::string& mount_prefix) {
+    config_path_ = config_path;
+    cert_path_ = cert_path;
+    key_path_ = key_path;
 
     // Parse system configuration
     if (!config_path_.empty() && path_exists(config_path_)) {
@@ -54,9 +51,7 @@ void Context::init(const std::string& config_path,
 
     initialized_ = true;
     LOG_INFO("Context initialized: compatible=%s, bootloader=%s, boot_slot=%s",
-             config_.compatible.c_str(),
-             to_string(config_.bootloader),
-             boot_slot_.c_str());
+             config_.compatible.c_str(), to_string(config_.bootloader), boot_slot_.c_str());
 }
 
 } // namespace aegis

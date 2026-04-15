@@ -26,39 +26,31 @@ static void signal_handler(int /*sig*/) {
 
 namespace {
 DBusObjectPathVTable kObjectPathVTable = {
-    nullptr,
-    &AegisService::handle_message,
-    nullptr,
-    nullptr,
-    nullptr,
-    nullptr
-};
+    nullptr, &AegisService::handle_message, nullptr, nullptr, nullptr, nullptr};
 
 } // namespace
 
-DBusHandlerResult AegisService::handle_message(DBusConnection*,
-                                                   DBusMessage* message,
-                                                   void* user_data) {
+DBusHandlerResult AegisService::handle_message(DBusConnection*, DBusMessage* message,
+                                               void* user_data) {
     auto* service = static_cast<AegisService*>(user_data);
     return service->dispatch(message);
 }
 
 Result<void> AegisService::load_introspection_xml() {
     const char* configured_path = std::getenv("AEGIS_DBUS_INTROSPECTION_XML");
-    std::string path = configured_path && *configured_path
-        ? configured_path
-        : AEGIS_DBUS_INTROSPECTION_XML_PATH;
+    std::string path =
+        configured_path && *configured_path ? configured_path : AEGIS_DBUS_INTROSPECTION_XML_PATH;
 
     try {
         introspection_xml_ = read_text_file(path);
     } catch (const std::exception& e) {
-        return Result<void>::err(
-            "Failed to load D-Bus introspection XML from '" + path + "': " + e.what());
+        return Result<void>::err("Failed to load D-Bus introspection XML from '" + path +
+                                 "': " + e.what());
     }
 
     if (introspection_xml_.empty()) {
-        return Result<void>::err(
-            "Failed to load D-Bus introspection XML from '" + path + "': file is empty");
+        return Result<void>::err("Failed to load D-Bus introspection XML from '" + path +
+                                 "': file is empty");
     }
 
     return Result<void>::ok();
@@ -82,8 +74,8 @@ Result<void> AegisService::connect_bus() {
         return Result<void>::err("Failed to connect to D-Bus bus: " + msg);
     }
 
-    int request = dbus_bus_request_name(connection_, dbus::kServiceName,
-                                        DBUS_NAME_FLAG_DO_NOT_QUEUE, &error);
+    int request =
+        dbus_bus_request_name(connection_, dbus::kServiceName, DBUS_NAME_FLAG_DO_NOT_QUEUE, &error);
     if (dbus_error_is_set(&error)) {
         std::string msg = error.message ? error.message : "Unknown D-Bus error";
         dbus_error_free(&error);
@@ -102,8 +94,8 @@ Result<void> AegisService::connect_bus() {
         return Result<void>::err("Bus name de.pengutronix.aegis is already owned");
     }
 
-    if (!dbus_connection_register_object_path(connection_, dbus::kObjectPath,
-                                              &kObjectPathVTable, this)) {
+    if (!dbus_connection_register_object_path(connection_, dbus::kObjectPath, &kObjectPathVTable,
+                                              this)) {
         return Result<void>::err("Failed to register D-Bus object path '/'");
     }
 
@@ -116,8 +108,7 @@ void AegisService::join_worker_if_needed() {
     }
 }
 
-Result<void> AegisService::start_install(const std::string& source,
-                                             const InstallArgs& args) {
+Result<void> AegisService::start_install(const std::string& source, const InstallArgs& args) {
     if (source.empty()) {
         return Result<void>::err("Bundle source must not be empty");
     }
@@ -162,9 +153,12 @@ Result<void> AegisService::start_install(const std::string& source,
 
 std::string AegisService::variant() const {
     auto& cfg = Context::instance().config();
-    if (!cfg.system_variant.empty()) return cfg.system_variant;
-    if (!cfg.variant_name.empty()) return cfg.variant_name;
-    if (!cfg.variant_file.empty()) return cfg.variant_file;
+    if (!cfg.system_variant.empty())
+        return cfg.system_variant;
+    if (!cfg.variant_name.empty())
+        return cfg.variant_name;
+    if (!cfg.variant_file.empty())
+        return cfg.variant_file;
     return {};
 }
 
@@ -173,7 +167,8 @@ Slot* AegisService::resolve_slot_identifier(const std::string& identifier) const
 
     auto find_booted = [&]() -> Slot* {
         for (auto& [_, slot] : slots) {
-            if (slot.is_booted) return &slot;
+            if (slot.is_booted)
+                return &slot;
         }
         return nullptr;
     };
@@ -184,17 +179,20 @@ Slot* AegisService::resolve_slot_identifier(const std::string& identifier) const
 
     if (identifier == "other") {
         auto* booted = find_booted();
-        if (!booted) return nullptr;
+        if (!booted)
+            return nullptr;
 
         for (auto& [_, slot] : slots) {
-            if (slot.name == booted->name) continue;
+            if (slot.name == booted->name)
+                continue;
             if (slot.slot_class == booted->slot_class && slot.index != booted->index) {
                 return &slot;
             }
         }
 
         for (auto& [_, slot] : slots) {
-            if (!slot.is_booted) return &slot;
+            if (!slot.is_booted)
+                return &slot;
         }
         return nullptr;
     }
@@ -218,28 +216,30 @@ Slot* AegisService::get_primary_slot() const {
     return bootchooser->get_primary(ctx.config().slots);
 }
 
-DBusMessage* AegisService::error_reply(DBusMessage* message,
-                                           const char* name,
-                                           const std::string& text) const {
+DBusMessage* AegisService::error_reply(DBusMessage* message, const char* name,
+                                       const std::string& text) const {
     return DbusMessageBuilder::make_error_reply(message, name, text);
 }
 
 void AegisService::send_message(DBusMessage* message) const {
-    if (!connection_ || !message) return;
+    if (!connection_ || !message)
+        return;
     dbus_connection_send(connection_, message, nullptr);
     dbus_connection_flush(connection_);
 }
 
 void AegisService::emit_completed(int result) const {
-    DBusMessage* signal = dbus_message_new_signal(dbus::kObjectPath, dbus::kInstallerInterface, "Completed");
-    if (!signal) return;
+    DBusMessage* signal =
+        dbus_message_new_signal(dbus::kObjectPath, dbus::kInstallerInterface, "Completed");
+    if (!signal)
+        return;
     dbus_message_append_args(signal, DBUS_TYPE_INT32, &result, DBUS_TYPE_INVALID);
     send_message(signal);
     dbus_message_unref(signal);
 }
 
 bool AegisService::append_property_variant(DBusMessageIter* iter,
-                                               const std::string& property) const {
+                                           const std::string& property) const {
     auto& ctx = Context::instance();
 
     if (property == "Operation") {
@@ -270,13 +270,14 @@ bool AegisService::append_property_variant(DBusMessageIter* iter,
     return false;
 }
 
-void AegisService::emit_properties_changed(
-    const std::vector<std::string>& property_names) const {
-    if (!connection_) return;
+void AegisService::emit_properties_changed(const std::vector<std::string>& property_names) const {
+    if (!connection_)
+        return;
 
-    DBusMessage* signal = dbus_message_new_signal(dbus::kObjectPath, dbus::kPropertiesInterface,
-                                                  "PropertiesChanged");
-    if (!signal) return;
+    DBusMessage* signal =
+        dbus_message_new_signal(dbus::kObjectPath, dbus::kPropertiesInterface, "PropertiesChanged");
+    if (!signal)
+        return;
 
     DBusMessageIter iter, changed, invalidated;
     const char* iface = dbus::kInstallerInterface;
@@ -312,11 +313,10 @@ DBusMessage* AegisService::handle_properties(DBusMessage* message) {
     if (dbus_message_is_method_call(message, dbus::kPropertiesInterface, "Get")) {
         const char* interface_name = nullptr;
         const char* property_name = nullptr;
-        if (!dbus_message_get_args(message, nullptr,
-                                   DBUS_TYPE_STRING, &interface_name,
-                                   DBUS_TYPE_STRING, &property_name,
-                                   DBUS_TYPE_INVALID)) {
-            return error_reply(message, DBUS_ERROR_INVALID_ARGS, "Expected interface and property name");
+        if (!dbus_message_get_args(message, nullptr, DBUS_TYPE_STRING, &interface_name,
+                                   DBUS_TYPE_STRING, &property_name, DBUS_TYPE_INVALID)) {
+            return error_reply(message, DBUS_ERROR_INVALID_ARGS,
+                               "Expected interface and property name");
         }
 
         if (std::string(interface_name) != dbus::kInstallerInterface) {
@@ -324,7 +324,8 @@ DBusMessage* AegisService::handle_properties(DBusMessage* message) {
         }
 
         DBusMessage* reply = dbus_message_new_method_return(message);
-        if (!reply) return nullptr;
+        if (!reply)
+            return nullptr;
 
         DBusMessageIter iter;
         dbus_message_iter_init_append(reply, &iter);
@@ -338,8 +339,7 @@ DBusMessage* AegisService::handle_properties(DBusMessage* message) {
 
     if (dbus_message_is_method_call(message, dbus::kPropertiesInterface, "GetAll")) {
         const char* interface_name = nullptr;
-        if (!dbus_message_get_args(message, nullptr,
-                                   DBUS_TYPE_STRING, &interface_name,
+        if (!dbus_message_get_args(message, nullptr, DBUS_TYPE_STRING, &interface_name,
                                    DBUS_TYPE_INVALID)) {
             return error_reply(message, DBUS_ERROR_INVALID_ARGS, "Expected interface name");
         }
@@ -349,7 +349,8 @@ DBusMessage* AegisService::handle_properties(DBusMessage* message) {
         }
 
         DBusMessage* reply = dbus_message_new_method_return(message);
-        if (!reply) return nullptr;
+        if (!reply)
+            return nullptr;
 
         DBusMessageIter iter, array;
         dbus_message_iter_init_append(reply, &iter);
@@ -437,8 +438,7 @@ DBusMessage* AegisService::handle_install(DBusMessage* message, bool allow_args)
 
 DBusMessage* AegisService::handle_info(DBusMessage* message) {
     const char* bundle_path = nullptr;
-    if (!dbus_message_get_args(message, nullptr,
-                               DBUS_TYPE_STRING, &bundle_path,
+    if (!dbus_message_get_args(message, nullptr, DBUS_TYPE_STRING, &bundle_path,
                                DBUS_TYPE_INVALID)) {
         return error_reply(message, DBUS_ERROR_INVALID_ARGS, "Expected bundle path");
     }
@@ -452,13 +452,12 @@ DBusMessage* AegisService::handle_info(DBusMessage* message) {
     }
 
     DBusMessage* reply = dbus_message_new_method_return(message);
-    if (!reply) return nullptr;
+    if (!reply)
+        return nullptr;
 
     const char* compatible = info.value().manifest.compatible.c_str();
     const char* version = info.value().manifest.version.c_str();
-    dbus_message_append_args(reply,
-                             DBUS_TYPE_STRING, &compatible,
-                             DBUS_TYPE_STRING, &version,
+    dbus_message_append_args(reply, DBUS_TYPE_STRING, &compatible, DBUS_TYPE_STRING, &version,
                              DBUS_TYPE_INVALID);
     return reply;
 }
@@ -485,7 +484,8 @@ DBusMessage* AegisService::handle_inspect_bundle(DBusMessage* message) {
     }
 
     DBusMessage* reply = dbus_message_new_method_return(message);
-    if (!reply) return nullptr;
+    if (!reply)
+        return nullptr;
 
     DBusMessageIter reply_iter, dict;
     dbus_message_iter_init_append(reply, &reply_iter);
@@ -498,10 +498,8 @@ DBusMessage* AegisService::handle_inspect_bundle(DBusMessage* message) {
 DBusMessage* AegisService::handle_mark(DBusMessage* message) {
     const char* state = nullptr;
     const char* slot_identifier = nullptr;
-    if (!dbus_message_get_args(message, nullptr,
-                               DBUS_TYPE_STRING, &state,
-                               DBUS_TYPE_STRING, &slot_identifier,
-                               DBUS_TYPE_INVALID)) {
+    if (!dbus_message_get_args(message, nullptr, DBUS_TYPE_STRING, &state, DBUS_TYPE_STRING,
+                               &slot_identifier, DBUS_TYPE_INVALID)) {
         return error_reply(message, DBUS_ERROR_INVALID_ARGS, "Expected state and slot identifier");
     }
 
@@ -531,20 +529,20 @@ DBusMessage* AegisService::handle_mark(DBusMessage* message) {
     }
 
     DBusMessage* reply = dbus_message_new_method_return(message);
-    if (!reply) return nullptr;
+    if (!reply)
+        return nullptr;
 
     const char* slot_name = slot->name.c_str();
     const char* msg = message_text.c_str();
-    dbus_message_append_args(reply,
-                             DBUS_TYPE_STRING, &slot_name,
-                             DBUS_TYPE_STRING, &msg,
+    dbus_message_append_args(reply, DBUS_TYPE_STRING, &slot_name, DBUS_TYPE_STRING, &msg,
                              DBUS_TYPE_INVALID);
     return reply;
 }
 
 DBusMessage* AegisService::handle_get_slot_status(DBusMessage* message) {
     DBusMessage* reply = dbus_message_new_method_return(message);
-    if (!reply) return nullptr;
+    if (!reply)
+        return nullptr;
 
     auto* primary_slot = get_primary_slot();
 
@@ -569,7 +567,8 @@ DBusMessage* AegisService::handle_get_slot_status(DBusMessage* message) {
 
 DBusMessage* AegisService::handle_get_primary(DBusMessage* message) {
     DBusMessage* reply = dbus_message_new_method_return(message);
-    if (!reply) return nullptr;
+    if (!reply)
+        return nullptr;
 
     auto* primary = get_primary_slot();
     std::string value = primary ? primary->name : "";
@@ -624,8 +623,7 @@ DBusHandlerResult AegisService::dispatch(DBusMessage* message) {
 
 void AegisService::maybe_run_autoinstall() {
     auto& ctx = Context::instance();
-    if (ctx.config().autoinstall_path.empty() ||
-        !path_exists(ctx.config().autoinstall_path)) {
+    if (ctx.config().autoinstall_path.empty() || !path_exists(ctx.config().autoinstall_path)) {
         return;
     }
 
@@ -684,8 +682,7 @@ Result<void> service_run() {
     dbus_threads_init_default();
 
     LOG_INFO("Starting Aegis service (compatible=%s, bootloader=%s)",
-             ctx.config().compatible.c_str(),
-             to_string(ctx.config().bootloader));
+             ctx.config().compatible.c_str(), to_string(ctx.config().bootloader));
 
     std::signal(SIGINT, signal_handler);
     std::signal(SIGTERM, signal_handler);

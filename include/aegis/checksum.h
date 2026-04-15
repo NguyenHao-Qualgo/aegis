@@ -7,8 +7,8 @@ namespace aegis {
 
 /// Result of a checksum computation
 struct Checksum {
-    std::string digest;  ///< hex-encoded SHA-256
-    uint64_t    size = 0;
+    std::string digest; ///< hex-encoded SHA-256
+    uint64_t size = 0;
 };
 
 /// Compute SHA-256 of a file
@@ -18,8 +18,7 @@ Checksum compute_checksum(const std::string& path);
 std::string sha256_hex(const void* data, size_t len);
 
 /// Verify a file's checksum against expected values
-bool verify_checksum(const std::string& path,
-                     const std::string& expected_digest,
+bool verify_checksum(const std::string& path, const std::string& expected_digest,
                      uint64_t expected_size);
 
 } // namespace aegis

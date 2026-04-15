@@ -36,14 +36,14 @@ static std::vector<uint8_t> hex_to_bytes(const std::string& hex) {
 /// Encrypt file using AES-256-CBC with zero IV (dm-crypt plain64 mode).
 /// dm-crypt operates on 512-byte sectors; each sector's IV is derived from
 /// its sector number in plain64 mode.
-std::string crypt_encrypt(const std::string& input_path,
-                          const std::string& output_path,
+std::string crypt_encrypt(const std::string& input_path, const std::string& output_path,
                           uint64_t data_size) {
     auto hex_key = generate_aes_key();
     auto key_bytes = hex_to_bytes(hex_key);
 
     FILE* fin = fopen(input_path.c_str(), "rb");
-    if (!fin) throw CryptError("Cannot open input: " + input_path);
+    if (!fin)
+        throw CryptError("Cannot open input: " + input_path);
 
     FILE* fout = fopen(output_path.c_str(), "wb");
     if (!fout) {
@@ -62,7 +62,8 @@ std::string crypt_encrypt(const std::string& input_path,
     while (remaining > 0) {
         size_t to_read = std::min(static_cast<uint64_t>(sector_size), remaining);
         size_t rd = fread(sector_buf.data(), 1, to_read, fin);
-        if (rd < to_read) std::memset(sector_buf.data() + rd, 0, to_read - rd);
+        if (rd < to_read)
+            std::memset(sector_buf.data() + rd, 0, to_read - rd);
         // Pad to full sector
         if (to_read < sector_size)
             std::memset(sector_buf.data() + to_read, 0, sector_size - to_read);
@@ -94,16 +95,15 @@ std::string crypt_encrypt(const std::string& input_path,
     return hex_key;
 }
 
-Result<void> crypt_decrypt(const std::string& input_path,
-                           const std::string& output_path,
-                           const std::string& hex_key,
-                           uint64_t data_size) {
+Result<void> crypt_decrypt(const std::string& input_path, const std::string& output_path,
+                           const std::string& hex_key, uint64_t data_size) {
     auto key_bytes = hex_to_bytes(hex_key);
     if (key_bytes.size() != 32)
         return Result<void>::err("Invalid AES-256 key length");
 
     FILE* fin = fopen(input_path.c_str(), "rb");
-    if (!fin) return Result<void>::err("Cannot open encrypted input: " + input_path);
+    if (!fin)
+        return Result<void>::err("Cannot open encrypted input: " + input_path);
 
     FILE* fout = fopen(output_path.c_str(), "wb");
     if (!fout) {
@@ -122,7 +122,8 @@ Result<void> crypt_decrypt(const std::string& input_path,
     while (remaining > 0) {
         size_t to_read = std::min(static_cast<uint64_t>(sector_size), remaining);
         size_t rd = fread(sector_buf.data(), 1, sector_size, fin);
-        if (rd < sector_size) std::memset(sector_buf.data() + rd, 0, sector_size - rd);
+        if (rd < sector_size)
+            std::memset(sector_buf.data() + rd, 0, sector_size - rd);
 
         uint8_t iv[16] = {};
         for (int i = 0; i < 8; ++i)

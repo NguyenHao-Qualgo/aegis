@@ -1,10 +1,10 @@
 #pragma once
 
-#include "aegis/utils.h"
 #include "aegis/progress_info.h"
+#include "aegis/utils.h"
 
-#include <dbus/dbus.h>
 #include <cstdint>
+#include <dbus/dbus.h>
 #include <map>
 #include <string>
 #include <vector>
@@ -26,7 +26,7 @@ struct MarkResult {
 };
 
 class AegisDbusClient {
-public:
+  public:
     AegisDbusClient();
     ~AegisDbusClient();
 
@@ -46,7 +46,7 @@ public:
     Result<std::vector<SlotStatusView>> get_slot_status();
     Result<MarkResult> mark(const std::string& state, const std::string& slot_identifier);
 
-private:
+  private:
     Result<DBusMessage*> call_method(DBusMessage* message);
     Result<DBusMessage*> call_properties_get(const char* property_name);
 

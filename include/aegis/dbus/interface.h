@@ -11,14 +11,8 @@ inline constexpr const char* kPropertiesInterface = "org.freedesktop.DBus.Proper
 inline constexpr const char* kIntrospectableInterface = "org.freedesktop.DBus.Introspectable";
 
 inline constexpr std::array kInstallerProperties = {
-    "Operation",
-    "LastError",
-    "Progress",
-    "Compatible",
-    "Variant",
-    "BootSlot",
-    "ServiceVersion",
-    "Bootloader",
+    "Operation", "LastError", "Progress",       "Compatible",
+    "Variant",   "BootSlot",  "ServiceVersion", "Bootloader",
 };
 
 } // namespace aegis::dbus

@@ -4,14 +4,12 @@
 
 namespace aegis {
 
-DBusMessage* DbusMessageBuilder::make_error_reply(DBusMessage* message,
-                                                  const char* name,
+DBusMessage* DbusMessageBuilder::make_error_reply(DBusMessage* message, const char* name,
                                                   const std::string& text) {
     return dbus_message_new_error(message, name, text.c_str());
 }
 
-void DbusMessageBuilder::append_dict_entry_string(DBusMessageIter* dict,
-                                                  const char* key,
+void DbusMessageBuilder::append_dict_entry_string(DBusMessageIter* dict, const char* key,
                                                   const std::string& value) {
     DBusMessageIter entry, variant;
     const char* c_key = key;
@@ -24,8 +22,7 @@ void DbusMessageBuilder::append_dict_entry_string(DBusMessageIter* dict,
     dbus_message_iter_close_container(dict, &entry);
 }
 
-void DbusMessageBuilder::append_dict_entry_bool(DBusMessageIter* dict,
-                                                const char* key,
+void DbusMessageBuilder::append_dict_entry_bool(DBusMessageIter* dict, const char* key,
                                                 bool value) {
     DBusMessageIter entry, variant;
     const char* c_key = key;
@@ -38,8 +35,7 @@ void DbusMessageBuilder::append_dict_entry_bool(DBusMessageIter* dict,
     dbus_message_iter_close_container(dict, &entry);
 }
 
-void DbusMessageBuilder::append_dict_entry_u32(DBusMessageIter* dict,
-                                               const char* key,
+void DbusMessageBuilder::append_dict_entry_u32(DBusMessageIter* dict, const char* key,
                                                uint32_t value) {
     DBusMessageIter entry, variant;
     const char* c_key = key;
@@ -52,8 +48,7 @@ void DbusMessageBuilder::append_dict_entry_u32(DBusMessageIter* dict,
     dbus_message_iter_close_container(dict, &entry);
 }
 
-void DbusMessageBuilder::append_dict_entry_u64(DBusMessageIter* dict,
-                                               const char* key,
+void DbusMessageBuilder::append_dict_entry_u64(DBusMessageIter* dict, const char* key,
                                                uint64_t value) {
     DBusMessageIter entry, variant;
     const char* c_key = key;
@@ -66,8 +61,7 @@ void DbusMessageBuilder::append_dict_entry_u64(DBusMessageIter* dict,
     dbus_message_iter_close_container(dict, &entry);
 }
 
-void DbusMessageBuilder::append_dict_entry_i32(DBusMessageIter* dict,
-                                               const char* key,
+void DbusMessageBuilder::append_dict_entry_i32(DBusMessageIter* dict, const char* key,
                                                int32_t value) {
     DBusMessageIter entry, variant;
     const char* c_key = key;
@@ -106,8 +100,7 @@ bool DbusMessageBuilder::append_progress_property(DBusMessageIter* iter,
     return true;
 }
 
-void DbusMessageBuilder::append_slot_dict(DBusMessageIter* dict,
-                                          const Slot& slot,
+void DbusMessageBuilder::append_slot_dict(DBusMessageIter* dict, const Slot& slot,
                                           const Slot* primary_slot) {
     append_dict_entry_string(dict, "class", slot.slot_class);
     append_dict_entry_i32(dict, "index", slot.index);
@@ -143,8 +136,7 @@ void DbusMessageBuilder::append_slot_dict(DBusMessageIter* dict,
     append_dict_entry_u32(dict, "activated.count", slot.status.activated_count);
 }
 
-void DbusMessageBuilder::append_inspect_dict(DBusMessageIter* dict,
-                                             const Bundle& bundle) {
+void DbusMessageBuilder::append_inspect_dict(DBusMessageIter* dict, const Bundle& bundle) {
     append_dict_entry_string(dict, "compatible", bundle.manifest.compatible);
     append_dict_entry_string(dict, "version", bundle.manifest.version);
     append_dict_entry_string(dict, "description", bundle.manifest.description);

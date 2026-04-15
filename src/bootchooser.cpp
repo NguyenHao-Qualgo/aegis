@@ -5,7 +5,6 @@
 
 namespace aegis {
 
-
 Result<std::string> UBootBootchooser::env_get(const std::string& key) {
     auto res = run_command({"fw_printenv", "-n", key});
     if (res.exit_code != 0)
@@ -16,8 +15,7 @@ Result<std::string> UBootBootchooser::env_get(const std::string& key) {
     return Result<std::string>::ok(std::move(val));
 }
 
-Result<void> UBootBootchooser::env_set(const std::string& key,
-                                        const std::string& value) {
+Result<void> UBootBootchooser::env_set(const std::string& key, const std::string& value) {
     auto res = run_command({"fw_setenv", key, value});
     if (res.exit_code != 0)
         return Result<void>::err("fw_setenv failed for " + key + "=" + value);
@@ -60,24 +58,28 @@ Result<void> UBootBootchooser::set_primary(Slot& slot) {
     }
 
     auto res = env_set("BOOT_ORDER", new_order);
-    if (!res) return res;
+    if (!res)
+        return res;
 
     // Reset boot count
     res = env_set(slot.bootname + "_OK", "0");
-    if (!res) return res;
+    if (!res)
+        return res;
     res = env_set(slot.bootname + "_TRY", "0");
     return res;
 }
 
 Result<bool> UBootBootchooser::get_state(const Slot& slot) {
     auto ok_result = env_get(slot.bootname + "_OK");
-    if (!ok_result) return Result<bool>::err(ok_result.error());
+    if (!ok_result)
+        return Result<bool>::err(ok_result.error());
     return Result<bool>::ok(ok_result.value() == "1");
 }
 
 Result<void> UBootBootchooser::set_state(Slot& slot, bool good) {
     auto res = env_set(slot.bootname + "_OK", good ? "1" : "0");
-    if (!res) return res;
+    if (!res)
+        return res;
     if (good) {
         res = env_set(slot.bootname + "_TRY", "0");
     }
@@ -88,11 +90,11 @@ CustomBootchooser::CustomBootchooser(std::string backend_script)
     : backend_script_(std::move(backend_script)) {}
 
 Result<std::string> CustomBootchooser::run_backend(const std::string& command,
-                                                    const std::string& bootname) {
+                                                   const std::string& bootname) {
     auto res = run_command({backend_script_, command, bootname});
     if (res.exit_code != 0)
-        return Result<std::string>::err("Custom backend '" + command + "' failed: "
-                                        + res.stderr_str);
+        return Result<std::string>::err("Custom backend '" + command +
+                                        "' failed: " + res.stderr_str);
     auto val = res.stdout_str;
     while (!val.empty() && (val.back() == '\n' || val.back() == '\r'))
         val.pop_back();
@@ -100,18 +102,18 @@ Result<std::string> CustomBootchooser::run_backend(const std::string& command,
 }
 
 Result<void> CustomBootchooser::run_backend_set(const std::string& command,
-                                                 const std::string& bootname,
-                                                 const std::string& value) {
+                                                const std::string& bootname,
+                                                const std::string& value) {
     auto res = run_command({backend_script_, command, bootname, value});
     if (res.exit_code != 0)
-        return Result<void>::err("Custom backend '" + command + "' set failed: "
-                                 + res.stderr_str);
+        return Result<void>::err("Custom backend '" + command + "' set failed: " + res.stderr_str);
     return Result<void>::ok();
 }
 
 Slot* CustomBootchooser::get_primary(std::map<std::string, Slot>& slots) {
     auto res = run_backend("get-primary", "");
-    if (!res) return nullptr;
+    if (!res)
+        return nullptr;
     for (auto& [name, slot] : slots) {
         if (slot.bootname == res.value())
             return &slot;
@@ -125,7 +127,8 @@ Result<void> CustomBootchooser::set_primary(Slot& slot) {
 
 Result<bool> CustomBootchooser::get_state(const Slot& slot) {
     auto res = run_backend("get-state", slot.bootname);
-    if (!res) return Result<bool>::err(res.error());
+    if (!res)
+        return Result<bool>::err(res.error());
     return Result<bool>::ok(res.value() == "good");
 }
 
@@ -135,7 +138,8 @@ Result<void> CustomBootchooser::set_state(Slot& slot, bool good) {
 
 Slot* NoopBootchooser::get_primary(std::map<std::string, Slot>& slots) {
     for (auto& [name, slot] : slots) {
-        if (slot.is_booted) return &slot;
+        if (slot.is_booted)
+            return &slot;
     }
     return nullptr;
 }
@@ -150,21 +154,19 @@ Result<bool> NoopBootchooser::get_state(const Slot& slot) {
 }
 
 Result<void> NoopBootchooser::set_state(Slot& slot, bool good) {
-    LOG_INFO("noop bootchooser: ignoring set_state %s for %s",
-             good ? "good" : "bad", slot.name.c_str());
+    LOG_INFO("noop bootchooser: ignoring set_state %s for %s", good ? "good" : "bad",
+             slot.name.c_str());
     return Result<void>::ok();
 }
 
-
 std::unique_ptr<IBootchooser> create_bootchooser(const SystemConfig& config) {
     switch (config.bootloader) {
-        case Bootloader::UBoot:
-            return std::make_unique<UBootBootchooser>();
-        case Bootloader::Custom:
-            return std::make_unique<CustomBootchooser>(
-                config.handler_bootloader_custom_backend);
-        case Bootloader::Noop:
-            return std::make_unique<NoopBootchooser>();
+    case Bootloader::UBoot:
+        return std::make_unique<UBootBootchooser>();
+    case Bootloader::Custom:
+        return std::make_unique<CustomBootchooser>(config.handler_bootloader_custom_backend);
+    case Bootloader::Noop:
+        return std::make_unique<NoopBootchooser>();
     }
     throw BootError("Unknown bootloader type");
 }

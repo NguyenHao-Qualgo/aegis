@@ -43,14 +43,13 @@ Result<void> AegisDbusClient::subscribe_completed() {
     DBusError error;
     dbus_error_init(&error);
 
-    dbus_bus_add_match(
-        connection_,
-        "type='signal',"
-        "sender='de.pengutronix.aegis',"
-        "path='/',"
-        "interface='de.pengutronix.aegis.Installer',"
-        "member='Completed'",
-        &error);
+    dbus_bus_add_match(connection_,
+                       "type='signal',"
+                       "sender='de.pengutronix.aegis',"
+                       "path='/',"
+                       "interface='de.pengutronix.aegis.Installer',"
+                       "member='Completed'",
+                       &error);
 
     dbus_connection_flush(connection_);
 
@@ -74,7 +73,8 @@ Result<DBusMessage*> AegisDbusClient::call_method(DBusMessage* message) {
     DBusError error;
     dbus_error_init(&error);
 
-    DBusMessage* reply = dbus_connection_send_with_reply_and_block(connection_, message, -1, &error);
+    DBusMessage* reply =
+        dbus_connection_send_with_reply_and_block(connection_, message, -1, &error);
     dbus_message_unref(message);
 
     if (!reply) {
@@ -87,17 +87,15 @@ Result<DBusMessage*> AegisDbusClient::call_method(DBusMessage* message) {
 }
 
 Result<DBusMessage*> AegisDbusClient::call_properties_get(const char* property_name) {
-    DBusMessage* message = dbus_message_new_method_call(
-        dbus::kServiceName, dbus::kObjectPath, dbus::kPropertiesInterface, "Get");
+    DBusMessage* message = dbus_message_new_method_call(dbus::kServiceName, dbus::kObjectPath,
+                                                        dbus::kPropertiesInterface, "Get");
     if (!message) {
         return Result<DBusMessage*>::err("Failed to allocate D-Bus property request");
     }
 
     const char* iface = dbus::kInstallerInterface;
     const char* prop = property_name;
-    if (!dbus_message_append_args(message,
-                                  DBUS_TYPE_STRING, &iface,
-                                  DBUS_TYPE_STRING, &prop,
+    if (!dbus_message_append_args(message, DBUS_TYPE_STRING, &iface, DBUS_TYPE_STRING, &prop,
                                   DBUS_TYPE_INVALID)) {
         dbus_message_unref(message);
         return Result<DBusMessage*>::err("Failed to encode D-Bus property request");
@@ -191,9 +189,10 @@ Result<ProgressInfo> AegisDbusClient::get_progress() {
     return Result<ProgressInfo>::ok(info);
 }
 
-Result<void> AegisDbusClient::install_bundle(const std::string& bundle_path, bool ignore_compatible) {
-    DBusMessage* message = dbus_message_new_method_call(
-        dbus::kServiceName, dbus::kObjectPath, dbus::kInstallerInterface, "InstallBundle");
+Result<void> AegisDbusClient::install_bundle(const std::string& bundle_path,
+                                             bool ignore_compatible) {
+    DBusMessage* message = dbus_message_new_method_call(dbus::kServiceName, dbus::kObjectPath,
+                                                        dbus::kInstallerInterface, "InstallBundle");
     if (!message) {
         return Result<void>::err("Failed to allocate D-Bus install message");
     }
@@ -255,9 +254,8 @@ Result<int> AegisDbusClient::wait_for_completed() {
             DBusError error;
             dbus_error_init(&error);
 
-            bool ok = dbus_message_get_args(message, &error,
-                                            DBUS_TYPE_INT32, &result,
-                                            DBUS_TYPE_INVALID);
+            bool ok =
+                dbus_message_get_args(message, &error, DBUS_TYPE_INT32, &result, DBUS_TYPE_INVALID);
             dbus_message_unref(message);
 
             if (!ok) {
@@ -274,8 +272,8 @@ Result<int> AegisDbusClient::wait_for_completed() {
 }
 
 Result<std::string> AegisDbusClient::get_primary() {
-    DBusMessage* message = dbus_message_new_method_call(
-        dbus::kServiceName, dbus::kObjectPath, dbus::kInstallerInterface, "GetPrimary");
+    DBusMessage* message = dbus_message_new_method_call(dbus::kServiceName, dbus::kObjectPath,
+                                                        dbus::kInstallerInterface, "GetPrimary");
     if (!message) {
         return Result<std::string>::err("Failed to allocate GetPrimary message");
     }
@@ -288,9 +286,7 @@ Result<std::string> AegisDbusClient::get_primary() {
     DBusMessage* reply = reply_res.value();
     const char* value = nullptr;
 
-    if (!dbus_message_get_args(reply, nullptr,
-                               DBUS_TYPE_STRING, &value,
-                               DBUS_TYPE_INVALID)) {
+    if (!dbus_message_get_args(reply, nullptr, DBUS_TYPE_STRING, &value, DBUS_TYPE_INVALID)) {
         dbus_message_unref(reply);
         return Result<std::string>::err("Invalid GetPrimary reply");
     }
@@ -302,8 +298,8 @@ Result<std::string> AegisDbusClient::get_primary() {
 
 Result<MarkResult> AegisDbusClient::mark(const std::string& state,
                                          const std::string& slot_identifier) {
-    DBusMessage* message = dbus_message_new_method_call(
-        dbus::kServiceName, dbus::kObjectPath, dbus::kInstallerInterface, "Mark");
+    DBusMessage* message = dbus_message_new_method_call(dbus::kServiceName, dbus::kObjectPath,
+                                                        dbus::kInstallerInterface, "Mark");
     if (!message) {
         return Result<MarkResult>::err("Failed to allocate Mark message");
     }
@@ -311,9 +307,7 @@ Result<MarkResult> AegisDbusClient::mark(const std::string& state,
     const char* state_c = state.c_str();
     const char* slot_c = slot_identifier.c_str();
 
-    if (!dbus_message_append_args(message,
-                                  DBUS_TYPE_STRING, &state_c,
-                                  DBUS_TYPE_STRING, &slot_c,
+    if (!dbus_message_append_args(message, DBUS_TYPE_STRING, &state_c, DBUS_TYPE_STRING, &slot_c,
                                   DBUS_TYPE_INVALID)) {
         dbus_message_unref(message);
         return Result<MarkResult>::err("Failed to encode Mark request");
@@ -328,9 +322,7 @@ Result<MarkResult> AegisDbusClient::mark(const std::string& state,
 
     const char* slot_name = nullptr;
     const char* msg = nullptr;
-    if (!dbus_message_get_args(reply, nullptr,
-                               DBUS_TYPE_STRING, &slot_name,
-                               DBUS_TYPE_STRING, &msg,
+    if (!dbus_message_get_args(reply, nullptr, DBUS_TYPE_STRING, &slot_name, DBUS_TYPE_STRING, &msg,
                                DBUS_TYPE_INVALID)) {
         dbus_message_unref(reply);
         return Result<MarkResult>::err("Invalid Mark reply");
@@ -345,8 +337,8 @@ Result<MarkResult> AegisDbusClient::mark(const std::string& state,
 }
 
 Result<std::vector<SlotStatusView>> AegisDbusClient::get_slot_status() {
-    DBusMessage* message = dbus_message_new_method_call(
-        dbus::kServiceName, dbus::kObjectPath, dbus::kInstallerInterface, "GetSlotStatus");
+    DBusMessage* message = dbus_message_new_method_call(dbus::kServiceName, dbus::kObjectPath,
+                                                        dbus::kInstallerInterface, "GetSlotStatus");
     if (!message) {
         return Result<std::vector<SlotStatusView>>::err("Failed to allocate GetSlotStatus message");
     }

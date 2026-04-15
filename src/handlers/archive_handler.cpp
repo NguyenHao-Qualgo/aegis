@@ -14,8 +14,7 @@ namespace aegis {
 
 namespace {
 
-Result<void> copy_archive_data(struct archive* reader,
-                               struct archive* writer,
+Result<void> copy_archive_data(struct archive* reader, struct archive* writer,
                                const char* entry_name) {
     while (true) {
         const void* buffer = nullptr;
@@ -55,7 +54,9 @@ Result<void> extract_archive_to_directory(const std::string& archive_path,
 
     struct CwdGuard {
         explicit CwdGuard(std::string path) : path_(std::move(path)) {}
-        ~CwdGuard() { ::chdir(path_.c_str()); }
+        ~CwdGuard() {
+            ::chdir(path_.c_str());
+        }
         std::string path_;
     } cwd_guard(cwd);
 
@@ -83,15 +84,10 @@ Result<void> extract_archive_to_directory(const std::string& archive_path,
     archive_read_support_format_tar(reader.value);
     archive_read_support_filter_all(reader.value);
     archive_write_disk_set_options(
-        writer.value,
-        ARCHIVE_EXTRACT_TIME |
-        ARCHIVE_EXTRACT_PERM |
-        ARCHIVE_EXTRACT_ACL |
-        ARCHIVE_EXTRACT_FFLAGS |
-        ARCHIVE_EXTRACT_XATTR |
-        ARCHIVE_EXTRACT_SECURE_NODOTDOT |
-        ARCHIVE_EXTRACT_SECURE_SYMLINKS |
-        ARCHIVE_EXTRACT_SECURE_NOABSOLUTEPATHS);
+        writer.value, ARCHIVE_EXTRACT_TIME | ARCHIVE_EXTRACT_PERM | ARCHIVE_EXTRACT_ACL |
+                          ARCHIVE_EXTRACT_FFLAGS | ARCHIVE_EXTRACT_XATTR |
+                          ARCHIVE_EXTRACT_SECURE_NODOTDOT | ARCHIVE_EXTRACT_SECURE_SYMLINKS |
+                          ARCHIVE_EXTRACT_SECURE_NOABSOLUTEPATHS);
     archive_write_disk_set_standard_lookup(writer.value);
 
     int rc = archive_read_open_filename(reader.value, archive_path.c_str(), 10240);
@@ -136,14 +132,12 @@ Result<void> extract_archive_to_directory(const std::string& archive_path,
 } // namespace
 
 Result<void> MountedArchiveUpdateHandler::install(const std::string& image_path,
-                                                  const ManifestImage& image,
-                                                  Slot& target_slot,
+                                                  const ManifestImage& image, Slot& target_slot,
                                                   ProgressCallback /*progress*/) {
-    LOG_INFO("Extracting tar %s -> %s", image.filename.c_str(),
-             target_slot.device.c_str());
+    LOG_INFO("Extracting tar %s -> %s", image.filename.c_str(), target_slot.device.c_str());
 
-    std::string mount_point = create_mount_point(Context::instance().mount_prefix(),
-                                                 "slot-" + target_slot.name);
+    std::string mount_point =
+        create_mount_point(Context::instance().mount_prefix(), "slot-" + target_slot.name);
     auto mount_res = mount(target_slot.device, mount_point, to_string(target_slot.type));
     if (!mount_res)
         return Result<void>::err("Cannot mount target: " + mount_res.error());

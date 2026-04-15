@@ -12,7 +12,8 @@ static Slot* resolve_slot(const std::string& identifier) {
 
     auto find_booted = [&]() -> Slot* {
         for (auto& [name, slot] : slots) {
-            if (slot.is_booted) return &slot;
+            if (slot.is_booted)
+                return &slot;
         }
         return nullptr;
     };
@@ -20,13 +21,15 @@ static Slot* resolve_slot(const std::string& identifier) {
     if (identifier.empty()) {
         // Default: the booted slot
         auto* slot = find_booted();
-        if (slot) return slot;
+        if (slot)
+            return slot;
         throw SlotError("Cannot determine booted slot");
     }
 
     if (identifier == "booted") {
         auto* slot = find_booted();
-        if (slot) return slot;
+        if (slot)
+            return slot;
         throw SlotError("Cannot determine booted slot");
     }
 
@@ -36,13 +39,15 @@ static Slot* resolve_slot(const std::string& identifier) {
             throw SlotError("Cannot determine booted slot");
 
         for (auto& [name, slot] : slots) {
-            if (slot.name == booted->name) continue;
+            if (slot.name == booted->name)
+                continue;
             if (slot.slot_class == booted->slot_class && slot.index != booted->index)
                 return &slot;
         }
 
         for (auto& [name, slot] : slots) {
-            if (!slot.is_booted) return &slot;
+            if (!slot.is_booted)
+                return &slot;
         }
 
         throw SlotError("Cannot determine other slot");
@@ -50,11 +55,13 @@ static Slot* resolve_slot(const std::string& identifier) {
 
     // Try by name
     auto it = slots.find(identifier);
-    if (it != slots.end()) return &it->second;
+    if (it != slots.end())
+        return &it->second;
 
     // Try by bootname
     for (auto& [name, slot] : slots) {
-        if (slot.bootname == identifier) return &slot;
+        if (slot.bootname == identifier)
+            return &slot;
     }
 
     throw SlotError("Slot not found: " + identifier);
@@ -66,7 +73,8 @@ Result<void> mark_good(const std::string& slot_identifier) {
 
     auto bootchooser = create_bootchooser(ctx.config());
     auto res = bootchooser->set_state(*slot, true);
-    if (!res) return res;
+    if (!res)
+        return res;
 
     slot->status.status = "ok";
     slot->status.activated_timestamp = current_timestamp();
@@ -87,7 +95,8 @@ Result<void> mark_bad(const std::string& slot_identifier) {
 
     auto bootchooser = create_bootchooser(ctx.config());
     auto res = bootchooser->set_state(*slot, false);
-    if (!res) return res;
+    if (!res)
+        return res;
 
     slot->status.status = "bad";
 
@@ -106,7 +115,8 @@ Result<void> mark_active(const std::string& slot_identifier) {
 
     auto bootchooser = create_bootchooser(ctx.config());
     auto res = bootchooser->set_primary(*slot);
-    if (!res) return res;
+    if (!res)
+        return res;
 
     slot->status.activated_timestamp = current_timestamp();
     slot->status.activated_count++;

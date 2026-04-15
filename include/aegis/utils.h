@@ -9,7 +9,7 @@
 namespace aegis {
 
 struct SubprocessResult {
-    int         exit_code = -1;
+    int exit_code = -1;
     std::string stdout_str;
     std::string stderr_str;
 };
@@ -46,9 +46,9 @@ enum class LogLevel { Debug, Info, Warning, Error };
 
 void log(LogLevel level, const char* fmt, ...);
 
-#define LOG_DEBUG(...)   ::aegis::log(::aegis::LogLevel::Debug,   __VA_ARGS__)
-#define LOG_INFO(...)    ::aegis::log(::aegis::LogLevel::Info,    __VA_ARGS__)
+#define LOG_DEBUG(...) ::aegis::log(::aegis::LogLevel::Debug, __VA_ARGS__)
+#define LOG_INFO(...) ::aegis::log(::aegis::LogLevel::Info, __VA_ARGS__)
 #define LOG_WARNING(...) ::aegis::log(::aegis::LogLevel::Warning, __VA_ARGS__)
-#define LOG_ERROR(...)   ::aegis::log(::aegis::LogLevel::Error,   __VA_ARGS__)
+#define LOG_ERROR(...) ::aegis::log(::aegis::LogLevel::Error, __VA_ARGS__)
 
 } // namespace aegis

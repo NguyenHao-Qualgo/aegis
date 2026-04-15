@@ -10,12 +10,12 @@
 namespace aegis {
 
 class CommandRegistry {
-public:
+  public:
     CommandRegistry();
 
     ICommand* find(const std::string& name);
 
-private:
+  private:
     void register_command(std::initializer_list<const char*> names, CommandPtr command);
 
     std::vector<CommandPtr> owned_commands_;

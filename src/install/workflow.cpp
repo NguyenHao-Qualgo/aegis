@@ -10,25 +10,24 @@ namespace aegis {
 namespace {
 
 class BundleMountGuard {
-public:
+  public:
     explicit BundleMountGuard(Bundle& bundle) : bundle_(bundle) {}
-    ~BundleMountGuard() { bundle_unmount(bundle_); }
+    ~BundleMountGuard() {
+        bundle_unmount(bundle_);
+    }
 
-private:
+  private:
     Bundle& bundle_;
 };
 
-Result<void> check_compatible(const Manifest& manifest,
-                              const SystemConfig& config,
-                              bool ignore) {
+Result<void> check_compatible(const Manifest& manifest, const SystemConfig& config, bool ignore) {
     if (ignore) {
         LOG_WARNING("Ignoring compatible check (forced)");
         return Result<void>::ok();
     }
     if (manifest.compatible != config.compatible) {
-        return Result<void>::err(
-            "Bundle compatible '" + manifest.compatible +
-            "' does not match system compatible '" + config.compatible + "'");
+        return Result<void>::err("Bundle compatible '" + manifest.compatible +
+                                 "' does not match system compatible '" + config.compatible + "'");
     }
     return Result<void>::ok();
 }
@@ -121,7 +120,8 @@ Result<void> InstallerWorkflow::open_bundle(const std::string& bundle_path) {
 }
 
 Result<void> InstallerWorkflow::verify_compatibility() const {
-    return check_compatible(bundle_.manifest, Context::instance().config(), args_.ignore_compatible);
+    return check_compatible(bundle_.manifest, Context::instance().config(),
+                            args_.ignore_compatible);
 }
 
 Result<void> InstallerWorkflow::determine_install_plans() {
@@ -143,9 +143,8 @@ Result<void> InstallerWorkflow::determine_install_plans() {
 Result<void> InstallerWorkflow::check_slot_devices() const {
     for (const auto& plan : plans_) {
         if (!path_exists(plan.target_slot->device)) {
-            return Result<void>::err(
-                "Destination device '" + plan.target_slot->device +
-                "' for slot '" + plan.target_slot->name + "' not found");
+            return Result<void>::err("Destination device '" + plan.target_slot->device +
+                                     "' for slot '" + plan.target_slot->name + "' not found");
         }
     }
     return Result<void>::ok();
@@ -173,8 +172,7 @@ Result<void> InstallerWorkflow::run_hook(const std::string& handler_path,
     auto result = run_command({handler_path, action}, env);
     if (result.exit_code != 0) {
         return Result<void>::err("Handler '" + action + "' failed (exit " +
-                                 std::to_string(result.exit_code) + "): " +
-                                 result.stderr_str);
+                                 std::to_string(result.exit_code) + "): " + result.stderr_str);
     }
 
     return Result<void>::ok();
@@ -194,9 +192,8 @@ Result<void> InstallerWorkflow::install_images() {
 
     for (int index = 0; index < total; ++index) {
         auto& plan = plans_[index];
-        notify("Installing image " + std::to_string(index + 1) + "/" +
-               std::to_string(total) + ": " + plan.image->filename +
-               " -> " + plan.target_slot->name);
+        notify("Installing image " + std::to_string(index + 1) + "/" + std::to_string(total) +
+               ": " + plan.image->filename + " -> " + plan.target_slot->name);
 
         std::string image_path = bundle_.mount_point + "/" + plan.image->filename;
         auto payload_kind = UpdateHandlerFactory::classify_payload(plan.image->filename);
@@ -204,9 +201,8 @@ Result<void> InstallerWorkflow::install_images() {
         auto install_result =
             handler->install(image_path, *plan.image, *plan.target_slot, args_.progress);
         if (!install_result) {
-            return Result<void>::err("Failed to install " + plan.image->filename +
-                                     " to " + plan.target_slot->name +
-                                     ": " + install_result.error());
+            return Result<void>::err("Failed to install " + plan.image->filename + " to " +
+                                     plan.target_slot->name + ": " + install_result.error());
         }
 
         update_slot_status(plan);
@@ -247,8 +243,8 @@ Result<void> InstallerWorkflow::activate_installed_slots() {
         notify("Activating slot " + plan.target_slot->name);
         auto activate_result = bootchooser_->set_primary(*plan.target_slot);
         if (!activate_result) {
-            return Result<void>::err("Failed to activate " + plan.target_slot->name +
-                                     ": " + activate_result.error());
+            return Result<void>::err("Failed to activate " + plan.target_slot->name + ": " +
+                                     activate_result.error());
         }
         bootchooser_->set_state(*plan.target_slot, true);
 

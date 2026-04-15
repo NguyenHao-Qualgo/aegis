@@ -5,16 +5,16 @@
 #include <cstring>
 #include <filesystem>
 #include <fstream>
-#include <spawn.h>
 #include <random>
+#include <spawn.h>
 #include <sstream>
-#include <system_error>
 #include <sys/wait.h>
+#include <system_error>
 #include <unistd.h>
 
 namespace fs = std::filesystem;
 
-extern char **environ;
+extern char** environ;
 
 namespace aegis {
 namespace {
@@ -100,8 +100,8 @@ SubprocessResult run_command(const std::vector<std::string>& argv,
     int stdout_pipe[2];
     int stderr_pipe[2];
     if (::pipe(stdout_pipe) != 0 || ::pipe(stderr_pipe) != 0) {
-        throw AegisError("Failed to create pipes for command: " + join_command(argv) +
-                         ": " + std::string(std::strerror(errno)));
+        throw AegisError("Failed to create pipes for command: " + join_command(argv) + ": " +
+                         std::string(std::strerror(errno)));
     }
 
     std::vector<std::string> env_strings = build_environment(env);
@@ -125,8 +125,8 @@ SubprocessResult run_command(const std::vector<std::string>& argv,
         ::close(stdout_pipe[1]);
         ::close(stderr_pipe[0]);
         ::close(stderr_pipe[1]);
-        throw AegisError("Failed to start command: " + join_command(argv) +
-                         ": " + std::string(std::strerror(errno)));
+        throw AegisError("Failed to start command: " + join_command(argv) + ": " +
+                         std::string(std::strerror(errno)));
     }
 
     if (pid == 0) {
@@ -155,8 +155,8 @@ SubprocessResult run_command(const std::vector<std::string>& argv,
     int status = 0;
     while (::waitpid(pid, &status, 0) < 0) {
         if (errno != EINTR) {
-            throw AegisError("Failed to wait for command: " + join_command(argv) +
-                             ": " + std::string(std::strerror(errno)));
+            throw AegisError("Failed to wait for command: " + join_command(argv) + ": " +
+                             std::string(std::strerror(errno)));
         }
     }
 
@@ -174,10 +174,9 @@ SubprocessResult run_command_checked(const std::vector<std::string>& argv,
                                      const std::vector<std::string>& env) {
     auto res = run_command(argv, env);
     if (res.exit_code != 0) {
-        throw AegisError(
-            "Command failed (exit " + std::to_string(res.exit_code) + "): " +
-            join_command(argv) +
-            (res.stderr_str.empty() ? "" : "\n" + res.stderr_str));
+        throw AegisError("Command failed (exit " + std::to_string(res.exit_code) +
+                         "): " + join_command(argv) +
+                         (res.stderr_str.empty() ? "" : "\n" + res.stderr_str));
     }
     return res;
 }
@@ -228,8 +227,8 @@ Result<void> copy_file(const std::string& src, const std::string& dst) {
     std::error_code ec;
     fs::copy_file(fs::path(src), fs::path(dst), fs::copy_options::overwrite_existing, ec);
     if (ec) {
-        return Result<void>::err("Failed to copy file from " + src + " to " + dst +
-                                 ": " + ec.message());
+        return Result<void>::err("Failed to copy file from " + src + " to " + dst + ": " +
+                                 ec.message());
     }
     return Result<void>::ok();
 }
@@ -301,10 +300,18 @@ void log(LogLevel level, const char* fmt, ...) {
     FILE* out = stderr;
 
     switch (level) {
-        case LogLevel::Debug:   prefix = "[DEBUG] "; break;
-        case LogLevel::Info:    prefix = "[INFO]  "; break;
-        case LogLevel::Warning: prefix = "[WARN]  "; break;
-        case LogLevel::Error:   prefix = "[ERROR] "; break;
+    case LogLevel::Debug:
+        prefix = "[DEBUG] ";
+        break;
+    case LogLevel::Info:
+        prefix = "[INFO]  ";
+        break;
+    case LogLevel::Warning:
+        prefix = "[WARN]  ";
+        break;
+    case LogLevel::Error:
+        prefix = "[ERROR] ";
+        break;
     }
 
     std::fprintf(out, "%s", prefix);

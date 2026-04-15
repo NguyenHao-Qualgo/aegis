@@ -27,10 +27,7 @@ struct CliOptions {
     std::vector<std::string> encryption_recipients;
 };
 
-enum class ParseAction {
-    Run,
-    ExitSuccess
-};
+enum class ParseAction { Run, ExitSuccess };
 
 struct ParseResult {
     ParseAction action = ParseAction::Run;

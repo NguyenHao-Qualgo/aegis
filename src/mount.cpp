@@ -6,17 +6,20 @@
 
 namespace aegis {
 
-Result<void> mount(const std::string& source,
-                   const std::string& mountpoint,
-                   const std::string& fstype,
-                   unsigned long flags,
-                   const std::string& options) {
+Result<void> mount(const std::string& source, const std::string& mountpoint,
+                   const std::string& fstype, unsigned long flags, const std::string& options) {
     mkdir_p(mountpoint);
 
     // Use the mount command for better compatibility
     std::vector<std::string> cmd = {"mount"};
-    if (!fstype.empty()) { cmd.push_back("-t"); cmd.push_back(fstype); }
-    if (!options.empty()) { cmd.push_back("-o"); cmd.push_back(options); }
+    if (!fstype.empty()) {
+        cmd.push_back("-t");
+        cmd.push_back(fstype);
+    }
+    if (!options.empty()) {
+        cmd.push_back("-o");
+        cmd.push_back(options);
+    }
     cmd.push_back(source);
     cmd.push_back(mountpoint);
 
@@ -42,11 +45,11 @@ std::string create_mount_point(const std::string& prefix, const std::string& nam
     return path;
 }
 
-Result<std::string> mount_squashfs(const std::string& image_path,
-                                   const std::string& mount_prefix) {
+Result<std::string> mount_squashfs(const std::string& image_path, const std::string& mount_prefix) {
     auto mp = create_mount_point(mount_prefix, "bundle");
     auto res = mount(image_path, mp, "squashfs", MS_RDONLY);
-    if (!res) return Result<std::string>::err(res.error());
+    if (!res)
+        return Result<std::string>::err(res.error());
     return Result<std::string>::ok(std::move(mp));
 }
 

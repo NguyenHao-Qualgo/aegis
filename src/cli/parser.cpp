@@ -63,16 +63,26 @@ ParseResult CliParser::parse(int argc, char* argv[]) const {
             return false;
         };
 
-        if (try_opt("--conf=", opts.config_path)) continue;
-        if (try_opt("--cert=", opts.cert_path)) continue;
-        if (try_opt("--key=", opts.key_path)) continue;
-        if (try_opt("--keyring=", opts.keyring_path)) continue;
-        if (try_opt("--override-boot-slot=", opts.override_boot_slot)) continue;
-        if (try_opt("--mount=", opts.mount_prefix)) continue;
-        if (try_opt("--bundle-format=", opts.bundle_format)) continue;
-        if (try_opt("--mksquashfs-args=", opts.mksquashfs_args)) continue;
-        if (try_opt("--output-format=", opts.output_format)) continue;
-        if (try_opt("--handler-args=", opts.handler_args)) continue;
+        if (try_opt("--conf=", opts.config_path))
+            continue;
+        if (try_opt("--cert=", opts.cert_path))
+            continue;
+        if (try_opt("--key=", opts.key_path))
+            continue;
+        if (try_opt("--keyring=", opts.keyring_path))
+            continue;
+        if (try_opt("--override-boot-slot=", opts.override_boot_slot))
+            continue;
+        if (try_opt("--mount=", opts.mount_prefix))
+            continue;
+        if (try_opt("--bundle-format=", opts.bundle_format))
+            continue;
+        if (try_opt("--mksquashfs-args=", opts.mksquashfs_args))
+            continue;
+        if (try_opt("--output-format=", opts.output_format))
+            continue;
+        if (try_opt("--handler-args=", opts.handler_args))
+            continue;
 
         if (arg.rfind("--recipient=", 0) == 0) {
             opts.encryption_recipients.push_back(arg.substr(12));

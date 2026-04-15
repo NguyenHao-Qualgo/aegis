@@ -8,7 +8,7 @@
 namespace aegis {
 
 class ServiceState {
-public:
+  public:
     void start_installing();
     void finish_install(int result, std::string last_error);
     void update_progress(int percentage, std::string message, int depth);
@@ -18,7 +18,7 @@ public:
     std::string last_error() const;
     ProgressInfo progress() const;
 
-private:
+  private:
     mutable std::mutex mutex_;
     bool install_running_ = false;
     std::string operation_ = "idle";

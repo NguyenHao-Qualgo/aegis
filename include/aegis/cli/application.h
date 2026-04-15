@@ -3,7 +3,7 @@
 namespace aegis {
 
 class Application {
-public:
+  public:
     int run(int argc, char* argv[]);
 };
 

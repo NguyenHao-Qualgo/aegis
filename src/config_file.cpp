@@ -9,73 +9,107 @@
 namespace aegis {
 
 Bootloader bootloader_from_string(const std::string& s) {
-    if (s == "uboot")  return Bootloader::UBoot;
-    if (s == "custom") return Bootloader::Custom;
-    if (s == "noop")   return Bootloader::Noop;
+    if (s == "uboot")
+        return Bootloader::UBoot;
+    if (s == "custom")
+        return Bootloader::Custom;
+    if (s == "noop")
+        return Bootloader::Noop;
     throw ConfigError("Unknown bootloader type: " + s);
 }
 
 const char* to_string(Bootloader b) {
     switch (b) {
-        case Bootloader::UBoot:  return "uboot";
-        case Bootloader::Custom: return "custom";
-        case Bootloader::Noop:   return "noop";
+    case Bootloader::UBoot:
+        return "uboot";
+    case Bootloader::Custom:
+        return "custom";
+    case Bootloader::Noop:
+        return "noop";
     }
     return "unknown";
 }
 
 SlotType slot_type_from_string(const std::string& s) {
-    if (s == "raw")               return SlotType::Raw;
-    if (s == "ext4")              return SlotType::Ext4;
-    if (s == "vfat")              return SlotType::Vfat;
-    if (s == "ubifs")             return SlotType::Ubifs;
-    if (s == "ubivol")            return SlotType::Ubivol;
-    if (s == "nand")              return SlotType::Nand;
-    if (s == "nor")               return SlotType::Nor;
-    if (s == "jffs2")             return SlotType::Jffs2;
-    if (s == "boot-emmc")         return SlotType::BootEmmc;
-    if (s == "boot-mbr-switch")   return SlotType::BootMbrSwitch;
-    if (s == "boot-gpt-switch")   return SlotType::BootGptSwitch;
-    if (s == "boot-raw-fallback") return SlotType::BootRawFallback;
+    if (s == "raw")
+        return SlotType::Raw;
+    if (s == "ext4")
+        return SlotType::Ext4;
+    if (s == "vfat")
+        return SlotType::Vfat;
+    if (s == "ubifs")
+        return SlotType::Ubifs;
+    if (s == "ubivol")
+        return SlotType::Ubivol;
+    if (s == "nand")
+        return SlotType::Nand;
+    if (s == "nor")
+        return SlotType::Nor;
+    if (s == "jffs2")
+        return SlotType::Jffs2;
+    if (s == "boot-emmc")
+        return SlotType::BootEmmc;
+    if (s == "boot-mbr-switch")
+        return SlotType::BootMbrSwitch;
+    if (s == "boot-gpt-switch")
+        return SlotType::BootGptSwitch;
+    if (s == "boot-raw-fallback")
+        return SlotType::BootRawFallback;
     throw ConfigError("Unknown slot type: " + s);
 }
 
 const char* to_string(SlotType t) {
     switch (t) {
-        case SlotType::Raw:             return "raw";
-        case SlotType::Ext4:            return "ext4";
-        case SlotType::Vfat:            return "vfat";
-        case SlotType::Ubifs:           return "ubifs";
-        case SlotType::Ubivol:          return "ubivol";
-        case SlotType::Nand:            return "nand";
-        case SlotType::Nor:             return "nor";
-        case SlotType::Jffs2:           return "jffs2";
-        case SlotType::BootEmmc:        return "boot-emmc";
-        case SlotType::BootMbrSwitch:   return "boot-mbr-switch";
-        case SlotType::BootGptSwitch:   return "boot-gpt-switch";
-        case SlotType::BootRawFallback: return "boot-raw-fallback";
+    case SlotType::Raw:
+        return "raw";
+    case SlotType::Ext4:
+        return "ext4";
+    case SlotType::Vfat:
+        return "vfat";
+    case SlotType::Ubifs:
+        return "ubifs";
+    case SlotType::Ubivol:
+        return "ubivol";
+    case SlotType::Nand:
+        return "nand";
+    case SlotType::Nor:
+        return "nor";
+    case SlotType::Jffs2:
+        return "jffs2";
+    case SlotType::BootEmmc:
+        return "boot-emmc";
+    case SlotType::BootMbrSwitch:
+        return "boot-mbr-switch";
+    case SlotType::BootGptSwitch:
+        return "boot-gpt-switch";
+    case SlotType::BootRawFallback:
+        return "boot-raw-fallback";
     }
     return "unknown";
 }
 
 using IniSection = std::map<std::string, std::string>;
-using IniFile    = std::map<std::string, IniSection>;
+using IniFile = std::map<std::string, IniSection>;
 
 static IniFile parse_ini(const std::string& path) {
     IniFile ini;
     std::ifstream f(path);
-    if (!f) throw ConfigError("Cannot open config file: " + path);
+    if (!f)
+        throw ConfigError("Cannot open config file: " + path);
 
     std::string line, current_section;
     while (std::getline(f, line)) {
         // Trim
         auto start = line.find_first_not_of(" \t\r\n");
-        if (start == std::string::npos) continue;
+        if (start == std::string::npos)
+            continue;
         line = line.substr(start);
         auto end = line.find_last_not_of(" \t\r\n");
-        if (end != std::string::npos) line = line.substr(0, end + 1);
+        if (end != std::string::npos)
+            line = line.substr(0, end + 1);
 
-        if (line.empty() || line[0] == '#' || line[0] == ';') continue;
+        if (line.empty() || line[0] == '#' || line[0] == ';')
+            continue;
 
         if (line.front() == '[' && line.back() == ']') {
             current_section = line.substr(1, line.size() - 2);
@@ -88,9 +122,11 @@ static IniFile parse_ini(const std::string& path) {
             std::string val = line.substr(eq + 1);
             // Trim key/value
             auto kt = key.find_last_not_of(" \t");
-            if (kt != std::string::npos) key = key.substr(0, kt + 1);
+            if (kt != std::string::npos)
+                key = key.substr(0, kt + 1);
             auto vs = val.find_first_not_of(" \t");
-            if (vs != std::string::npos) val = val.substr(vs);
+            if (vs != std::string::npos)
+                val = val.substr(vs);
             ini[current_section][key] = val;
         }
     }
@@ -105,7 +141,8 @@ static std::string ini_get(const IniSection& sec, const std::string& key,
 
 static bool ini_get_bool(const IniSection& sec, const std::string& key, bool def = false) {
     auto it = sec.find(key);
-    if (it == sec.end()) return def;
+    if (it == sec.end())
+        return def;
     return (it->second == "true" || it->second == "yes" || it->second == "1");
 }
 
@@ -117,15 +154,15 @@ SystemConfig parse_system_config(const std::string& path) {
     // [system]
     if (auto it = ini.find("system"); it != ini.end()) {
         auto& s = it->second;
-        cfg.compatible      = ini_get(s, "compatible");
-        cfg.mount_prefix     = ini_get(s, "mountprefix", "/mnt/aegis/");
-        cfg.statusfile       = ini_get(s, "statusfile");
-        cfg.data_directory   = ini_get(s, "data-directory");
-        cfg.system_variant   = ini_get(s, "variant-name");
-        cfg.variant_dtb      = ini_get(s, "variant-dtb");
-        cfg.variant_file     = ini_get(s, "variant-file");
+        cfg.compatible = ini_get(s, "compatible");
+        cfg.mount_prefix = ini_get(s, "mountprefix", "/mnt/aegis/");
+        cfg.statusfile = ini_get(s, "statusfile");
+        cfg.data_directory = ini_get(s, "data-directory");
+        cfg.system_variant = ini_get(s, "variant-name");
+        cfg.variant_dtb = ini_get(s, "variant-dtb");
+        cfg.variant_file = ini_get(s, "variant-file");
         cfg.bundle_formats_mask = ini_get(s, "bundle-formats");
-        cfg.activate_installed  = ini_get_bool(s, "activate-installed", true);
+        cfg.activate_installed = ini_get_bool(s, "activate-installed", true);
         cfg.max_bundle_download_size = ini_get(s, "max-bundle-download-size");
 
         auto bl = ini_get(s, "bootloader", "uboot");
@@ -139,10 +176,10 @@ SystemConfig parse_system_config(const std::string& path) {
     // [keyring]
     if (auto it = ini.find("keyring"); it != ini.end()) {
         auto& s = it->second;
-        cfg.keyring_path              = resolve_path(base_dir, ini_get(s, "path"));
-        cfg.keyring_directory         = resolve_path(base_dir, ini_get(s, "directory"));
+        cfg.keyring_path = resolve_path(base_dir, ini_get(s, "path"));
+        cfg.keyring_directory = resolve_path(base_dir, ini_get(s, "directory"));
         cfg.keyring_allow_partial_chain = ini_get_bool(s, "allow-partial-chain");
-        cfg.keyring_check_crl        = ini_get_bool(s, "check-crl");
+        cfg.keyring_check_crl = ini_get_bool(s, "check-crl");
     }
 
     // [autoinstall]
@@ -153,8 +190,8 @@ SystemConfig parse_system_config(const std::string& path) {
     // [handlers]
     if (auto it = ini.find("handlers"); it != ini.end()) {
         auto& s = it->second;
-        cfg.handler_system_info  = resolve_path(base_dir, ini_get(s, "system-info"));
-        cfg.handler_pre_install  = resolve_path(base_dir, ini_get(s, "pre-install"));
+        cfg.handler_system_info = resolve_path(base_dir, ini_get(s, "system-info"));
+        cfg.handler_pre_install = resolve_path(base_dir, ini_get(s, "pre-install"));
         cfg.handler_post_install = resolve_path(base_dir, ini_get(s, "post-install"));
         cfg.handler_bootloader_custom_backend =
             resolve_path(base_dir, ini_get(s, "bootloader-custom-backend"));
@@ -163,7 +200,7 @@ SystemConfig parse_system_config(const std::string& path) {
     // [encryption]
     if (auto it = ini.find("encryption"); it != ini.end()) {
         auto& s = it->second;
-        cfg.encryption_key  = resolve_path(base_dir, ini_get(s, "key"));
+        cfg.encryption_key = resolve_path(base_dir, ini_get(s, "key"));
         cfg.encryption_cert = resolve_path(base_dir, ini_get(s, "cert"));
     }
 
@@ -180,14 +217,14 @@ SystemConfig parse_system_config(const std::string& path) {
             throw ConfigError("Invalid slot section: " + section_name);
 
         Slot slot;
-        slot.name       = slot_id;
+        slot.name = slot_id;
         slot.slot_class = slot_id.substr(0, last_dot);
-        slot.index      = std::stoi(slot_id.substr(last_dot + 1));
-        slot.device     = ini_get(sec, "device");
-        slot.bootname   = ini_get(sec, "bootname");
-        slot.readonly   = ini_get_bool(sec, "readonly");
+        slot.index = std::stoi(slot_id.substr(last_dot + 1));
+        slot.device = ini_get(sec, "device");
+        slot.bootname = ini_get(sec, "bootname");
+        slot.readonly = ini_get_bool(sec, "readonly");
         slot.install_same = ini_get_bool(sec, "force-install-same");
-        slot.parent_name  = ini_get(sec, "parent");
+        slot.parent_name = ini_get(sec, "parent");
         slot.extra_mount_opts = ini_get(sec, "extra-mount-opts");
 
         auto type_str = ini_get(sec, "type", "raw");

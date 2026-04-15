@@ -49,8 +49,7 @@ static std::string bytes_to_hex(const uint8_t* data, size_t len) {
 /// Compute the verity hash tree following the Linux dm-verity algorithm.
 /// Each level hashes pairs of blocks from the level below, with the
 /// lowest level hashing data blocks. Salt is prepended to each hash input.
-VerityResult compute_verity_hash(const std::string& bundle_path,
-                                 uint64_t data_size,
+VerityResult compute_verity_hash(const std::string& bundle_path, uint64_t data_size,
                                  const std::string& salt_hex) {
     const uint32_t block_size = 4096;
     const uint32_t digest_size = 32; // SHA-256
@@ -60,7 +59,8 @@ VerityResult compute_verity_hash(const std::string& bundle_path,
     auto salt = hex_to_bytes(salt_str);
 
     FILE* f = fopen(bundle_path.c_str(), "r+b");
-    if (!f) throw AegisError("Cannot open bundle for verity: " + bundle_path);
+    if (!f)
+        throw AegisError("Cannot open bundle for verity: " + bundle_path);
 
     // Compute number of data blocks
     uint64_t num_data_blocks = (data_size + block_size - 1) / block_size;
@@ -151,10 +151,8 @@ VerityResult compute_verity_hash(const std::string& bundle_path,
     return VerityResult{root_hash, salt_str, total_hash_size};
 }
 
-bool verify_verity_hash(const std::string& bundle_path,
-                        uint64_t data_size,
-                        const std::string& expected_root_hash,
-                        const std::string& salt) {
+bool verify_verity_hash(const std::string& bundle_path, uint64_t data_size,
+                        const std::string& expected_root_hash, const std::string& salt) {
     // Re-compute and compare root hash
     // Note: in production, the kernel dm-verity target handles on-the-fly verification.
     // This is for offline verification only.

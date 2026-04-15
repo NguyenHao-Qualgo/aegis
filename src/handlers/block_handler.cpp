@@ -4,11 +4,10 @@
 namespace aegis {
 
 Result<void> BlockDeviceUpdateHandler::install(const std::string& image_path,
-                                               const ManifestImage& image,
-                                               Slot& target_slot,
+                                               const ManifestImage& image, Slot& target_slot,
                                                ProgressCallback progress) {
-    LOG_INFO("Installing %s %s -> %s",
-             target_kind(), image.filename.c_str(), target_slot.device.c_str());
+    LOG_INFO("Installing %s %s -> %s", target_kind(), image.filename.c_str(),
+             target_slot.device.c_str());
 
     if (!image.sha256.empty()) {
         if (!verify_checksum(image_path, image.sha256, image.size)) {

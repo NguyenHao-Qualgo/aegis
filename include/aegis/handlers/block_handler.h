@@ -6,13 +6,11 @@
 namespace aegis {
 
 class BlockDeviceUpdateHandler : public UpdateHandler {
-public:
-    Result<void> install(const std::string& image_path,
-                         const ManifestImage& image,
-                         Slot& target_slot,
-                         ProgressCallback progress = {}) final;
+  public:
+    Result<void> install(const std::string& image_path, const ManifestImage& image,
+                         Slot& target_slot, ProgressCallback progress = {}) final;
 
-protected:
+  protected:
     virtual const char* target_kind() const = 0;
 };
 

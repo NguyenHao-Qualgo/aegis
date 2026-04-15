@@ -12,7 +12,7 @@ namespace aegis {
 /// Abstract bootchooser backend interface.
 /// Only U-Boot and Custom are implemented (grub, barebox, efi removed).
 class IBootchooser {
-public:
+  public:
     virtual ~IBootchooser() = default;
 
     /// Get the primary (next-boot) slot
@@ -30,20 +30,20 @@ public:
 
 /// U-Boot bootchooser via fw_setenv / fw_printenv
 class UBootBootchooser : public IBootchooser {
-public:
+  public:
     Slot* get_primary(std::map<std::string, Slot>& slots) override;
     Result<void> set_primary(Slot& slot) override;
     Result<bool> get_state(const Slot& slot) override;
     Result<void> set_state(Slot& slot, bool good) override;
 
-private:
+  private:
     Result<std::string> env_get(const std::string& key);
     Result<void> env_set(const std::string& key, const std::string& value);
 };
 
 /// Custom bootchooser calling user-provided backend script
 class CustomBootchooser : public IBootchooser {
-public:
+  public:
     explicit CustomBootchooser(std::string backend_script);
 
     Slot* get_primary(std::map<std::string, Slot>& slots) override;
@@ -51,19 +51,17 @@ public:
     Result<bool> get_state(const Slot& slot) override;
     Result<void> set_state(Slot& slot, bool good) override;
 
-private:
+  private:
     std::string backend_script_;
 
-    Result<std::string> run_backend(const std::string& command,
-                                    const std::string& bootname);
-    Result<void> run_backend_set(const std::string& command,
-                                 const std::string& bootname,
+    Result<std::string> run_backend(const std::string& command, const std::string& bootname);
+    Result<void> run_backend_set(const std::string& command, const std::string& bootname,
                                  const std::string& value);
 };
 
 /// No-op bootchooser for testing
 class NoopBootchooser : public IBootchooser {
-public:
+  public:
     Slot* get_primary(std::map<std::string, Slot>& slots) override;
     Result<void> set_primary(Slot& slot) override;
     Result<bool> get_state(const Slot& slot) override;

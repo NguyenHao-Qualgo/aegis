@@ -29,11 +29,7 @@ constexpr std::array kRawLikeSlotTypes = {
 };
 
 constexpr std::array kFilesystemImageSlotTypes = {
-    SlotType::Ext4,
-    SlotType::Vfat,
-    SlotType::Ubifs,
-    SlotType::Ubivol,
-    SlotType::Jffs2,
+    SlotType::Ext4, SlotType::Vfat, SlotType::Ubifs, SlotType::Ubivol, SlotType::Jffs2,
 };
 
 bool has_suffix(const std::string& value, const std::string& suffix) {
@@ -44,12 +40,9 @@ bool has_suffix(const std::string& value, const std::string& suffix) {
 } // namespace
 
 UpdatePayloadKind UpdateHandlerFactory::classify_payload(const std::string& filename) {
-    if (has_suffix(filename, ".tar") ||
-        has_suffix(filename, ".tar.gz") ||
-        has_suffix(filename, ".tgz") ||
-        has_suffix(filename, ".tar.xz") ||
-        has_suffix(filename, ".txz") ||
-        has_suffix(filename, ".tar.bz2") ||
+    if (has_suffix(filename, ".tar") || has_suffix(filename, ".tar.gz") ||
+        has_suffix(filename, ".tgz") || has_suffix(filename, ".tar.xz") ||
+        has_suffix(filename, ".txz") || has_suffix(filename, ".tar.bz2") ||
         has_suffix(filename, ".tbz2")) {
         return UpdatePayloadKind::Archive;
     }

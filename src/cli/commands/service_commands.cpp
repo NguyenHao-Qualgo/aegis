@@ -31,13 +31,11 @@ bool connect_client(AegisDbusClient& client, bool print_error = true) {
 }
 
 class StatusPrinter {
-public:
+  public:
     explicit StatusPrinter(bool detailed) : detailed_(detailed) {}
 
-    void print_summary(const std::string& compatible,
-                       const std::string& variant,
-                       const std::string& bootloader,
-                       const std::string& boot_slot,
+    void print_summary(const std::string& compatible, const std::string& variant,
+                       const std::string& bootloader, const std::string& boot_slot,
                        const std::string& primary) const {
         std::cout << "=== System Info ===\n"
                   << "Compatible:    " << compatible << "\n"
@@ -85,14 +83,13 @@ public:
         print_u32(slot, "activated.count", "activated.count");
     }
 
-private:
+  private:
     static bool get_bool(const SlotStatusView& slot, const std::string& key) {
         auto it = slot.bool_fields.find(key);
         return it != slot.bool_fields.end() && it->second;
     }
 
-    static void print_string(const SlotStatusView& slot,
-                             const std::string& key,
+    static void print_string(const SlotStatusView& slot, const std::string& key,
                              const char* label) {
         auto it = slot.string_fields.find(key);
         if (it != slot.string_fields.end()) {
@@ -100,34 +97,28 @@ private:
         }
     }
 
-    static void print_u32(const SlotStatusView& slot,
-                          const std::string& key,
-                          const char* label) {
+    static void print_u32(const SlotStatusView& slot, const std::string& key, const char* label) {
         auto it = slot.u32_fields.find(key);
         if (it != slot.u32_fields.end()) {
             std::cout << "    " << label << ": " << it->second << "\n";
         }
     }
 
-    static void print_u64(const SlotStatusView& slot,
-                          const std::string& key,
-                          const char* label) {
+    static void print_u64(const SlotStatusView& slot, const std::string& key, const char* label) {
         auto it = slot.u64_fields.find(key);
         if (it != slot.u64_fields.end()) {
             std::cout << "    " << label << ": " << it->second << "\n";
         }
     }
 
-    static void print_i32(const SlotStatusView& slot,
-                          const std::string& key,
-                          const char* label) {
+    static void print_i32(const SlotStatusView& slot, const std::string& key, const char* label) {
         auto it = slot.i32_fields.find(key);
         if (it != slot.i32_fields.end()) {
             std::cout << "    " << label << ": " << it->second << "\n";
         }
     }
 
-private:
+  private:
     bool detailed_;
 };
 

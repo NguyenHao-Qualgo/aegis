@@ -9,17 +9,23 @@ namespace aegis {
 
 const char* to_string(BundleFormat fmt) {
     switch (fmt) {
-        case BundleFormat::Plain:  return "plain";
-        case BundleFormat::Verity: return "verity";
-        case BundleFormat::Crypt:  return "crypt";
+    case BundleFormat::Plain:
+        return "plain";
+    case BundleFormat::Verity:
+        return "verity";
+    case BundleFormat::Crypt:
+        return "crypt";
     }
     return "unknown";
 }
 
 BundleFormat bundle_format_from_string(const std::string& s) {
-    if (s == "plain")  return BundleFormat::Plain;
-    if (s == "verity") return BundleFormat::Verity;
-    if (s == "crypt")  return BundleFormat::Crypt;
+    if (s == "plain")
+        return BundleFormat::Plain;
+    if (s == "verity")
+        return BundleFormat::Verity;
+    if (s == "crypt")
+        return BundleFormat::Crypt;
     throw AegisError("Unknown bundle format: " + s);
 }
 
@@ -33,11 +39,14 @@ static IniData parse_ini_string(const std::string& content) {
     std::string line, current_section;
     while (std::getline(stream, line)) {
         auto start = line.find_first_not_of(" \t\r\n");
-        if (start == std::string::npos) continue;
+        if (start == std::string::npos)
+            continue;
         line = line.substr(start);
         auto end = line.find_last_not_of(" \t\r\n");
-        if (end != std::string::npos) line = line.substr(0, end + 1);
-        if (line.empty() || line[0] == '#') continue;
+        if (end != std::string::npos)
+            line = line.substr(0, end + 1);
+        if (line.empty() || line[0] == '#')
+            continue;
 
         if (line.front() == '[' && line.back() == ']') {
             current_section = line.substr(1, line.size() - 2);
@@ -48,9 +57,11 @@ static IniData parse_ini_string(const std::string& content) {
             auto key = line.substr(0, eq);
             auto val = line.substr(eq + 1);
             auto kt = key.find_last_not_of(" \t");
-            if (kt != std::string::npos) key = key.substr(0, kt + 1);
+            if (kt != std::string::npos)
+                key = key.substr(0, kt + 1);
             auto vs = val.find_first_not_of(" \t");
-            if (vs != std::string::npos) val = val.substr(vs);
+            if (vs != std::string::npos)
+                val = val.substr(vs);
             ini[current_section][key] = val;
         }
     }
@@ -69,9 +80,9 @@ Manifest parse_manifest(const std::string& path) {
 
     // [update]
     if (auto it = ini.find("update"); it != ini.end()) {
-        m.compatible  = get(it->second, "compatible");
-        m.version     = get(it->second, "version");
-        m.build       = get(it->second, "build");
+        m.compatible = get(it->second, "compatible");
+        m.version = get(it->second, "version");
+        m.build = get(it->second, "build");
         m.description = get(it->second, "description");
     }
 
@@ -82,7 +93,8 @@ Manifest parse_manifest(const std::string& path) {
         m.verity_hash = get(it->second, "verity-hash");
         m.verity_salt = get(it->second, "verity-salt");
         auto vs = get(it->second, "verity-size");
-        if (!vs.empty()) m.bundle_verity_size = std::stoull(vs);
+        if (!vs.empty())
+            m.bundle_verity_size = std::stoull(vs);
         m.crypt_key = get(it->second, "crypt-key");
     }
 
@@ -100,16 +112,18 @@ Manifest parse_manifest(const std::string& path) {
     // [image.*]
     const std::string img_prefix = "image.";
     for (auto& [sec_name, sec] : ini) {
-        if (sec_name.substr(0, img_prefix.size()) != img_prefix) continue;
+        if (sec_name.substr(0, img_prefix.size()) != img_prefix)
+            continue;
 
         ManifestImage img;
         img.slotclass = sec_name.substr(img_prefix.size());
-        img.filename  = get(sec, "filename");
-        img.sha256    = get(sec, "sha256");
-        img.variant   = get(sec, "variant");
-        img.hooks     = get(sec, "hooks");
+        img.filename = get(sec, "filename");
+        img.sha256 = get(sec, "sha256");
+        img.variant = get(sec, "variant");
+        img.hooks = get(sec, "hooks");
         auto sz = get(sec, "size");
-        if (!sz.empty()) img.size = std::stoull(sz);
+        if (!sz.empty())
+            img.size = std::stoull(sz);
         m.images.push_back(std::move(img));
     }
 
@@ -118,7 +132,8 @@ Manifest parse_manifest(const std::string& path) {
 
 void write_manifest(const Manifest& manifest, const std::string& path) {
     std::ofstream f(path);
-    if (!f) throw AegisError("Cannot write manifest: " + path);
+    if (!f)
+        throw AegisError("Cannot write manifest: " + path);
 
     f << "[update]\n";
     f << "compatible=" << manifest.compatible << "\n";

@@ -19,27 +19,24 @@ enum class UpdatePayloadKind {
 
 /// Interface for slot update handlers
 class UpdateHandler {
-public:
+  public:
     virtual ~UpdateHandler() = default;
 
-    virtual Result<void> install(const std::string& image_path,
-                                 const ManifestImage& image,
-                                 Slot& target_slot,
-                                 ProgressCallback progress = {}) = 0;
+    virtual Result<void> install(const std::string& image_path, const ManifestImage& image,
+                                 Slot& target_slot, ProgressCallback progress = {}) = 0;
 
     virtual const char* name() const = 0;
 };
 
 class UpdateHandlerFactory {
-public:
+  public:
     static UpdatePayloadKind classify_payload(const std::string& filename);
     static std::unique_ptr<UpdateHandler> create(SlotType slot_type,
                                                  UpdatePayloadKind payload_kind);
 };
 
 /// Write raw image data from source_path to device_path with progress
-Result<void> write_image_to_device(const std::string& source_path,
-                                   const std::string& device_path,
+Result<void> write_image_to_device(const std::string& source_path, const std::string& device_path,
                                    ProgressCallback progress = {});
 
 } // namespace aegis

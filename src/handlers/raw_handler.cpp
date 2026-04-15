@@ -6,8 +6,7 @@
 
 namespace aegis {
 
-Result<void> write_image_to_device(const std::string& source_path,
-                                   const std::string& device_path,
+Result<void> write_image_to_device(const std::string& source_path, const std::string& device_path,
                                    ProgressCallback progress) {
     FILE* src = fopen(source_path.c_str(), "rb");
     if (!src)
@@ -42,8 +41,8 @@ Result<void> write_image_to_device(const std::string& source_path,
         written += rd;
         if (progress && total_size > 0) {
             int pct = static_cast<int>(written * 100 / total_size);
-            progress(pct, "Writing " + std::to_string(written) + " / " +
-                              std::to_string(total_size));
+            progress(pct,
+                     "Writing " + std::to_string(written) + " / " + std::to_string(total_size));
         }
     }
 

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "aegis/error.h"
 #include "aegis/dbus/service_state.h"
+#include "aegis/error.h"
 
 #include <dbus/dbus.h>
 #include <string>
@@ -15,15 +15,14 @@ struct Slot;
 class Bundle;
 
 class AegisService {
-public:
+  public:
     Result<void> run();
     void stop();
 
-    static DBusHandlerResult handle_message(DBusConnection* connection,
-                                            DBusMessage* message,
+    static DBusHandlerResult handle_message(DBusConnection* connection, DBusMessage* message,
                                             void* user_data);
 
-private:
+  private:
     Result<void> connect_bus();
     Result<void> load_introspection_xml();
     void maybe_run_autoinstall();
@@ -48,15 +47,13 @@ private:
     Slot* resolve_slot_identifier(const std::string& identifier) const;
     Slot* get_primary_slot() const;
 
-    DBusMessage* error_reply(DBusMessage* message,
-                             const char* name,
-                             const std::string& text) const;
+    DBusMessage* error_reply(DBusMessage* message, const char* name, const std::string& text) const;
     void send_message(DBusMessage* message) const;
     void emit_completed(int result) const;
     void emit_properties_changed(const std::vector<std::string>& property_names) const;
     bool append_property_variant(DBusMessageIter* iter, const std::string& property) const;
 
-private:
+  private:
     DBusConnection* connection_ = nullptr;
     std::thread install_thread_;
     ServiceState state_;
