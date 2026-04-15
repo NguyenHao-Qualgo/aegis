@@ -10,3 +10,6 @@ RuntimeDirectory=aegis/mnt
 MountFlags=slave
 Restart=on-failure
 RestartSec=5min
+
+[Install]
+WantedBy=multi-user.target
