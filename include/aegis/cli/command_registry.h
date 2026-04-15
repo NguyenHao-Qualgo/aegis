@@ -2,7 +2,10 @@
 
 #include "aegis/cli/commands.h"
 
+#include <initializer_list>
 #include <string>
+#include <unordered_map>
+#include <vector>
 
 namespace aegis {
 
@@ -13,16 +16,10 @@ public:
     ICommand* find(const std::string& name);
 
 private:
-    CommandPtr bundle_;
-    CommandPtr install_;
-    CommandPtr info_;
-    CommandPtr status_;
-    CommandPtr mark_;
-    CommandPtr extract_;
-    CommandPtr resign_;
-    CommandPtr service_;
-    CommandPtr mount_;
-    CommandPtr version_;
+    void register_command(std::initializer_list<const char*> names, CommandPtr command);
+
+    std::vector<CommandPtr> owned_commands_;
+    std::unordered_map<std::string, ICommand*> commands_;
 };
 
 } // namespace aegis

@@ -25,6 +25,7 @@ public:
 
 private:
     Result<void> connect_bus();
+    Result<void> load_introspection_xml();
     void maybe_run_autoinstall();
     void join_worker_if_needed();
 
@@ -59,6 +60,7 @@ private:
     DBusConnection* connection_ = nullptr;
     std::thread install_thread_;
     ServiceState state_;
+    std::string introspection_xml_;
 };
 
 Result<void> service_run();

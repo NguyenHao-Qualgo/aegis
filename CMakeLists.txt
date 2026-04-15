@@ -13,6 +13,10 @@ set(DBUS_SYSTEM_SERVICES_DIR "/usr/share/dbus-1/system-services"
     CACHE PATH "Install path for the Aegis D-Bus activation service")
 set(SYSTEMD_SYSTEM_UNIT_DIR "/usr/lib/systemd/system"
     CACHE PATH "Install path for the Aegis systemd service unit")
+set(AEGIS_DBUS_INTERFACES_DIR "/usr/share/dbus-1/interfaces"
+    CACHE PATH "Install path for the Aegis D-Bus interface XML")
+set(AEGIS_DBUS_INTROSPECTION_XML_PATH "${AEGIS_DBUS_INTERFACES_DIR}/de.pengutronix.aegis.Installer.xml"
+    CACHE FILEPATH "Runtime path to the Aegis D-Bus introspection XML")
 
 find_package(PkgConfig REQUIRED)
 find_package(OpenSSL REQUIRED)
@@ -56,6 +60,7 @@ set(AEGIS_SOURCES
     src/slot.cpp
     src/bootchooser.cpp
     src/install.cpp
+    src/install/workflow.cpp
     src/handlers/update_handler.cpp
     src/handlers/block_handler.cpp
     src/handlers/raw_handler.cpp
@@ -69,7 +74,8 @@ set(AEGIS_SOURCES
     src/cli/application.cpp
     src/cli/parser.cpp
     src/cli/registry.cpp
-    src/cli/commands.cpp
+    src/cli/commands/bundle_commands.cpp
+    src/cli/commands/service_commands.cpp
     src/dbus/client.cpp
 )
 
@@ -118,6 +124,8 @@ install(TARGETS aegis RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 if(ENABLE_SERVICE)
     install(FILES packaging/dbus-1/system.d/de.pengutronix.aegis.conf
             DESTINATION ${DBUS_SYSTEM_POLICY_DIR})
+    install(FILES packaging/dbus-1/introspection/de.pengutronix.aegis.Installer.xml
+            DESTINATION ${AEGIS_DBUS_INTERFACES_DIR})
     install(FILES ${CMAKE_CURRENT_BINARY_DIR}/aegis.service
             DESTINATION ${SYSTEMD_SYSTEM_UNIT_DIR})
 endif()

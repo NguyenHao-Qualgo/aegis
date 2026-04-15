@@ -3,6 +3,7 @@
 #include "aegis/bootchooser.h"
 #include "aegis/bundle.h"
 #include "aegis/context.h"
+#include "aegis/dbus/interface.h"
 #include "aegis/dbus/message_builder.h"
 #include "aegis/install.h"
 #include "aegis/mark.h"
@@ -24,92 +25,6 @@ static void signal_handler(int /*sig*/) {
 }
 
 namespace {
-
-constexpr const char* kServiceName = "de.pengutronix.aegis";
-constexpr const char* kObjectPath = "/";
-constexpr const char* kInstallerInterface = "de.pengutronix.aegis.Installer";
-constexpr const char* kPropertiesInterface = "org.freedesktop.DBus.Properties";
-constexpr const char* kIntrospectableInterface = "org.freedesktop.DBus.Introspectable";
-
-constexpr const char* kIntrospectionXml = R"xml(
-<node>
-  <interface name='org.freedesktop.DBus.Introspectable'>
-    <method name='Introspect'>
-      <arg name='xml_data' type='s' direction='out'/>
-    </method>
-  </interface>
-  <interface name='org.freedesktop.DBus.Properties'>
-    <method name='Get'>
-      <arg name='interface_name' type='s' direction='in'/>
-      <arg name='property_name' type='s' direction='in'/>
-      <arg name='value' type='v' direction='out'/>
-    </method>
-    <method name='GetAll'>
-      <arg name='interface_name' type='s' direction='in'/>
-      <arg name='props' type='a{sv}' direction='out'/>
-    </method>
-    <signal name='PropertiesChanged'>
-      <arg name='interface_name' type='s'/>
-      <arg name='changed_properties' type='a{sv}'/>
-      <arg name='invalidated_properties' type='as'/>
-    </signal>
-  </interface>
-  <interface name='de.pengutronix.aegis.Installer'>
-    <method name='InstallBundle'>
-      <arg name='source' type='s' direction='in'/>
-      <arg name='args' type='a{sv}' direction='in'/>
-    </method>
-    <method name='Install'>
-      <arg name='source' type='s' direction='in'/>
-    </method>
-    <method name='Info'>
-      <arg name='bundle' type='s' direction='in'/>
-      <arg name='compatible' type='s' direction='out'/>
-      <arg name='version' type='s' direction='out'/>
-    </method>
-    <method name='InspectBundle'>
-      <arg name='bundle' type='s' direction='in'/>
-      <arg name='args' type='a{sv}' direction='in'/>
-      <arg name='info' type='a{sv}' direction='out'/>
-    </method>
-    <method name='Mark'>
-      <arg name='state' type='s' direction='in'/>
-      <arg name='slot_identifier' type='s' direction='in'/>
-      <arg name='slot_name' type='s' direction='out'/>
-      <arg name='message' type='s' direction='out'/>
-    </method>
-    <method name='GetSlotStatus'>
-      <arg name='slot_status_array' type='a(sa{sv})' direction='out'/>
-    </method>
-    <method name='GetPrimary'>
-      <arg name='primary' type='s' direction='out'/>
-    </method>
-    <signal name='Completed'>
-      <arg name='result' type='i'/>
-    </signal>
-    <property name='Operation' type='s' access='read'/>
-    <property name='LastError' type='s' access='read'/>
-    <property name='Progress' type='(isi)' access='read'/>
-    <property name='Compatible' type='s' access='read'/>
-    <property name='Variant' type='s' access='read'/>
-    <property name='BootSlot' type='s' access='read'/>
-    <property name='ServiceVersion' type='s' access='read'/>
-    <property name='Bootloader' type='s' access='read'/>
-  </interface>
-</node>
-)xml";
-
-constexpr const char* kProperties[] = {
-    "Operation",
-    "LastError",
-    "Progress",
-    "Compatible",
-    "Variant",
-    "BootSlot",
-    "ServiceVersion",
-    "Bootloader",
-};
-
 DBusObjectPathVTable kObjectPathVTable = {
     nullptr,
     &AegisService::handle_message,
@@ -126,6 +41,27 @@ DBusHandlerResult AegisService::handle_message(DBusConnection*,
                                                    void* user_data) {
     auto* service = static_cast<AegisService*>(user_data);
     return service->dispatch(message);
+}
+
+Result<void> AegisService::load_introspection_xml() {
+    const char* configured_path = std::getenv("AEGIS_DBUS_INTROSPECTION_XML");
+    std::string path = configured_path && *configured_path
+        ? configured_path
+        : AEGIS_DBUS_INTROSPECTION_XML_PATH;
+
+    try {
+        introspection_xml_ = read_text_file(path);
+    } catch (const std::exception& e) {
+        return Result<void>::err(
+            "Failed to load D-Bus introspection XML from '" + path + "': " + e.what());
+    }
+
+    if (introspection_xml_.empty()) {
+        return Result<void>::err(
+            "Failed to load D-Bus introspection XML from '" + path + "': file is empty");
+    }
+
+    return Result<void>::ok();
 }
 
 Result<void> AegisService::connect_bus() {
@@ -146,7 +82,7 @@ Result<void> AegisService::connect_bus() {
         return Result<void>::err("Failed to connect to D-Bus bus: " + msg);
     }
 
-    int request = dbus_bus_request_name(connection_, kServiceName,
+    int request = dbus_bus_request_name(connection_, dbus::kServiceName,
                                         DBUS_NAME_FLAG_DO_NOT_QUEUE, &error);
     if (dbus_error_is_set(&error)) {
         std::string msg = error.message ? error.message : "Unknown D-Bus error";
@@ -166,7 +102,7 @@ Result<void> AegisService::connect_bus() {
         return Result<void>::err("Bus name de.pengutronix.aegis is already owned");
     }
 
-    if (!dbus_connection_register_object_path(connection_, kObjectPath,
+    if (!dbus_connection_register_object_path(connection_, dbus::kObjectPath,
                                               &kObjectPathVTable, this)) {
         return Result<void>::err("Failed to register D-Bus object path '/'");
     }
@@ -295,7 +231,7 @@ void AegisService::send_message(DBusMessage* message) const {
 }
 
 void AegisService::emit_completed(int result) const {
-    DBusMessage* signal = dbus_message_new_signal(kObjectPath, kInstallerInterface, "Completed");
+    DBusMessage* signal = dbus_message_new_signal(dbus::kObjectPath, dbus::kInstallerInterface, "Completed");
     if (!signal) return;
     dbus_message_append_args(signal, DBUS_TYPE_INT32, &result, DBUS_TYPE_INVALID);
     send_message(signal);
@@ -338,12 +274,12 @@ void AegisService::emit_properties_changed(
     const std::vector<std::string>& property_names) const {
     if (!connection_) return;
 
-    DBusMessage* signal = dbus_message_new_signal(kObjectPath, kPropertiesInterface,
+    DBusMessage* signal = dbus_message_new_signal(dbus::kObjectPath, dbus::kPropertiesInterface,
                                                   "PropertiesChanged");
     if (!signal) return;
 
     DBusMessageIter iter, changed, invalidated;
-    const char* iface = kInstallerInterface;
+    const char* iface = dbus::kInstallerInterface;
     dbus_message_iter_init_append(signal, &iter);
     dbus_message_iter_append_basic(&iter, DBUS_TYPE_STRING, &iface);
 
@@ -369,11 +305,11 @@ void AegisService::emit_properties_changed(
 }
 
 DBusMessage* AegisService::handle_introspect(DBusMessage* message) {
-    return DbusMessageBuilder::make_introspect_reply(message, kIntrospectionXml);
+    return DbusMessageBuilder::make_introspect_reply(message, introspection_xml_.c_str());
 }
 
 DBusMessage* AegisService::handle_properties(DBusMessage* message) {
-    if (dbus_message_is_method_call(message, kPropertiesInterface, "Get")) {
+    if (dbus_message_is_method_call(message, dbus::kPropertiesInterface, "Get")) {
         const char* interface_name = nullptr;
         const char* property_name = nullptr;
         if (!dbus_message_get_args(message, nullptr,
@@ -383,7 +319,7 @@ DBusMessage* AegisService::handle_properties(DBusMessage* message) {
             return error_reply(message, DBUS_ERROR_INVALID_ARGS, "Expected interface and property name");
         }
 
-        if (std::string(interface_name) != kInstallerInterface) {
+        if (std::string(interface_name) != dbus::kInstallerInterface) {
             return error_reply(message, DBUS_ERROR_UNKNOWN_INTERFACE, "Unknown interface");
         }
 
@@ -400,7 +336,7 @@ DBusMessage* AegisService::handle_properties(DBusMessage* message) {
         return reply;
     }
 
-    if (dbus_message_is_method_call(message, kPropertiesInterface, "GetAll")) {
+    if (dbus_message_is_method_call(message, dbus::kPropertiesInterface, "GetAll")) {
         const char* interface_name = nullptr;
         if (!dbus_message_get_args(message, nullptr,
                                    DBUS_TYPE_STRING, &interface_name,
@@ -408,7 +344,7 @@ DBusMessage* AegisService::handle_properties(DBusMessage* message) {
             return error_reply(message, DBUS_ERROR_INVALID_ARGS, "Expected interface name");
         }
 
-        if (std::string(interface_name) != kInstallerInterface) {
+        if (std::string(interface_name) != dbus::kInstallerInterface) {
             return error_reply(message, DBUS_ERROR_UNKNOWN_INTERFACE, "Unknown interface");
         }
 
@@ -419,7 +355,7 @@ DBusMessage* AegisService::handle_properties(DBusMessage* message) {
         dbus_message_iter_init_append(reply, &iter);
         dbus_message_iter_open_container(&iter, DBUS_TYPE_ARRAY, "{sv}", &array);
 
-        for (const auto* property : kProperties) {
+        for (const auto* property : dbus::kInstallerProperties) {
             DBusMessageIter entry;
             const char* key = property;
             dbus_message_iter_open_container(&array, DBUS_TYPE_DICT_ENTRY, nullptr, &entry);
@@ -643,19 +579,19 @@ DBusMessage* AegisService::handle_get_primary(DBusMessage* message) {
 }
 
 DBusMessage* AegisService::handle_installer(DBusMessage* message) {
-    if (dbus_message_is_method_call(message, kInstallerInterface, "InstallBundle"))
+    if (dbus_message_is_method_call(message, dbus::kInstallerInterface, "InstallBundle"))
         return handle_install(message, true);
-    if (dbus_message_is_method_call(message, kInstallerInterface, "Install"))
+    if (dbus_message_is_method_call(message, dbus::kInstallerInterface, "Install"))
         return handle_install(message, false);
-    if (dbus_message_is_method_call(message, kInstallerInterface, "Info"))
+    if (dbus_message_is_method_call(message, dbus::kInstallerInterface, "Info"))
         return handle_info(message);
-    if (dbus_message_is_method_call(message, kInstallerInterface, "InspectBundle"))
+    if (dbus_message_is_method_call(message, dbus::kInstallerInterface, "InspectBundle"))
         return handle_inspect_bundle(message);
-    if (dbus_message_is_method_call(message, kInstallerInterface, "Mark"))
+    if (dbus_message_is_method_call(message, dbus::kInstallerInterface, "Mark"))
         return handle_mark(message);
-    if (dbus_message_is_method_call(message, kInstallerInterface, "GetSlotStatus"))
+    if (dbus_message_is_method_call(message, dbus::kInstallerInterface, "GetSlotStatus"))
         return handle_get_slot_status(message);
-    if (dbus_message_is_method_call(message, kInstallerInterface, "GetPrimary"))
+    if (dbus_message_is_method_call(message, dbus::kInstallerInterface, "GetPrimary"))
         return handle_get_primary(message);
 
     return error_reply(message, DBUS_ERROR_UNKNOWN_METHOD, "Unknown installer method");
@@ -665,11 +601,11 @@ DBusHandlerResult AegisService::dispatch(DBusMessage* message) {
     DBusMessage* reply = nullptr;
 
     try {
-        if (dbus_message_is_method_call(message, kIntrospectableInterface, "Introspect")) {
+        if (dbus_message_is_method_call(message, dbus::kIntrospectableInterface, "Introspect")) {
             reply = handle_introspect(message);
-        } else if (dbus_message_has_interface(message, kPropertiesInterface)) {
+        } else if (dbus_message_has_interface(message, dbus::kPropertiesInterface)) {
             reply = handle_properties(message);
-        } else if (dbus_message_has_interface(message, kInstallerInterface)) {
+        } else if (dbus_message_has_interface(message, dbus::kInstallerInterface)) {
             reply = handle_installer(message);
         } else {
             reply = error_reply(message, DBUS_ERROR_UNKNOWN_METHOD, "Unsupported method");
@@ -705,6 +641,11 @@ void AegisService::maybe_run_autoinstall() {
 }
 
 Result<void> AegisService::run() {
+    auto introspection_result = load_introspection_xml();
+    if (!introspection_result) {
+        return introspection_result;
+    }
+
     auto connect_result = connect_bus();
     if (!connect_result) {
         return connect_result;
@@ -722,7 +663,7 @@ Result<void> AegisService::run() {
     }
 
     if (connection_) {
-        dbus_connection_unregister_object_path(connection_, kObjectPath);
+        dbus_connection_unregister_object_path(connection_, dbus::kObjectPath);
         dbus_connection_unref(connection_);
         connection_ = nullptr;
     }

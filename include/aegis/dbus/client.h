@@ -51,11 +51,6 @@ private:
     Result<DBusMessage*> call_properties_get(const char* property_name);
 
     DBusConnection* connection_ = nullptr;
-
-    static constexpr const char* kServiceName = "de.pengutronix.aegis";
-    static constexpr const char* kObjectPath = "/";
-    static constexpr const char* kInterface = "de.pengutronix.aegis.Installer";
-    static constexpr const char* kPropertiesInterface = "org.freedesktop.DBus.Properties";
 };
 
 } // namespace aegis
