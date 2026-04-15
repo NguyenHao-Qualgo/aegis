@@ -3,6 +3,7 @@
 #include "aegis/cli/app_context.h"
 #include "aegis/dbus/client.h"
 #include "aegis/dbus/service.h"
+#include "config.h"
 
 #include <iostream>
 #include <string>
@@ -18,10 +19,12 @@ bool require_positional(const CliOptions& opts, std::size_t count, const char* u
     return true;
 }
 
-bool connect_client(AegisDbusClient& client) {
+bool connect_client(AegisDbusClient& client, bool print_error = true) {
     auto result = client.connect_system_bus();
     if (!result) {
-        std::cerr << "Error: " << result.error() << "\n";
+        if (print_error) {
+            std::cerr << "Error: " << result.error() << "\n";
+        }
         return false;
     }
     return true;
@@ -274,14 +277,15 @@ int ServiceCommand::execute(const CliOptions& opts) {
 
 int VersionCommand::execute(const CliOptions&) {
     AegisDbusClient client;
-    if (!connect_client(client)) {
-        return 1;
+    if (!connect_client(client, false)) {
+        std::cout << AEGIS_BUILD_VERSION << "\n";
+        return 0;
     }
 
     auto version = client.get_property_string("ServiceVersion");
     if (!version) {
-        std::cerr << "Error: " << version.error() << "\n";
-        return 1;
+        std::cout << AEGIS_BUILD_VERSION << "\n";
+        return 0;
     }
 
     std::cout << version.value() << "\n";

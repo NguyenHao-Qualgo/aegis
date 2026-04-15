@@ -7,6 +7,19 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+find_package(Git QUIET)
+
+set(AEGIS_BUILD_VERSION "${PROJECT_VERSION}")
+if(GIT_FOUND AND EXISTS "${CMAKE_SOURCE_DIR}/.git")
+    execute_process(
+        COMMAND ${GIT_EXECUTABLE} describe --tags --always --dirty
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        OUTPUT_VARIABLE AEGIS_BUILD_VERSION
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+    )
+endif()
+
 set(DBUS_SYSTEM_POLICY_DIR "/usr/share/dbus-1/system.d"
     CACHE PATH "Install path for the Aegis D-Bus system bus policy")
 set(DBUS_SYSTEM_SERVICES_DIR "/usr/share/dbus-1/system-services"

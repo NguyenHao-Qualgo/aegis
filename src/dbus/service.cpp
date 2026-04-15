@@ -258,7 +258,7 @@ bool AegisService::append_property_variant(DBusMessageIter* iter,
         return DbusMessageBuilder::append_string_property(iter, ctx.boot_slot());
     }
     if (property == "ServiceVersion") {
-        return DbusMessageBuilder::append_string_property(iter, AEGIS_VERSION);
+        return DbusMessageBuilder::append_string_property(iter, AEGIS_BUILD_VERSION);
     }
     if (property == "Bootloader") {
         return DbusMessageBuilder::append_string_property(iter, to_string(ctx.config().bootloader));
