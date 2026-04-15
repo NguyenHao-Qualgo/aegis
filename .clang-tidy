@@ -1,0 +1,19 @@
+Checks: >
+  bugprone-*,
+  clang-analyzer-*,
+  modernize-*,
+  performance-*,
+  readability-*,
+  -modernize-use-trailing-return-type,
+  -readability-magic-numbers,
+  -readability-identifier-length,
+  -readability-function-cognitive-complexity,
+  -readability-convert-member-functions-to-static
+WarningsAsErrors: ''
+HeaderFilterRegex: '^(.*\/)?(include|src)\/'
+FormatStyle: file
+CheckOptions:
+  - key: modernize-pass-by-value.IncludeStyle
+    value: llvm
+  - key: readability-else-after-return.WarnOnUnfixable
+    value: '0'

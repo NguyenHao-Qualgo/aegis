@@ -44,6 +44,7 @@ pkg_check_modules(ARCHIVE  REQUIRED libarchive)
 option(ENABLE_NETWORK   "Enable network/HTTP bundle streaming" OFF)
 option(ENABLE_STREAMING "Enable HTTP streaming support"        OFF)
 option(ENABLE_SERVICE   "Enable D-Bus service daemon"          ON)
+option(ENABLE_CLANG_TIDY "Run clang-tidy during compilation when available" OFF)
 
 configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/cmake/config.h.in
@@ -92,6 +93,45 @@ set(AEGIS_SOURCES
     src/dbus/client.cpp
 )
 
+set(AEGIS_ALL_FILES
+    ${AEGIS_SOURCES}
+    include/aegis/bootchooser.h
+    include/aegis/bundle.h
+    include/aegis/checksum.h
+    include/aegis/config_file.h
+    include/aegis/context.h
+    include/aegis/crypt.h
+    include/aegis/dm.h
+    include/aegis/error.h
+    include/aegis/install.h
+    include/aegis/manifest.h
+    include/aegis/mark.h
+    include/aegis/mount.h
+    include/aegis/progress_info.h
+    include/aegis/signature.h
+    include/aegis/slot.h
+    include/aegis/status_file.h
+    include/aegis/utils.h
+    include/aegis/verity_hash.h
+    include/aegis/cli/app_context.h
+    include/aegis/cli/application.h
+    include/aegis/cli/cli_options.h
+    include/aegis/cli/cli_parser.h
+    include/aegis/cli/command_registry.h
+    include/aegis/cli/commands.h
+    include/aegis/dbus/client.h
+    include/aegis/dbus/interface.h
+    include/aegis/dbus/message_builder.h
+    include/aegis/dbus/service.h
+    include/aegis/dbus/service_state.h
+    include/aegis/install/workflow.h
+    include/aegis/handlers/archive_handler.h
+    include/aegis/handlers/block_handler.h
+    include/aegis/handlers/fs_image_handler.h
+    include/aegis/handlers/raw_handler.h
+    include/aegis/handlers/update_handler.h
+)
+
 if(ENABLE_SERVICE)
     list(APPEND AEGIS_SOURCES
     src/dbus/service.cpp
@@ -101,6 +141,30 @@ if(ENABLE_SERVICE)
 endif()
 
 add_executable(aegis ${AEGIS_SOURCES})
+
+find_program(CLANG_FORMAT_EXE NAMES clang-format)
+if(CLANG_FORMAT_EXE)
+    add_custom_target(
+        format
+        COMMAND ${CLANG_FORMAT_EXE} -i ${AEGIS_ALL_FILES}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        COMMENT "Formatting Aegis sources with clang-format"
+    )
+endif()
+
+find_program(CLANG_TIDY_EXE NAMES clang-tidy)
+if(CLANG_TIDY_EXE)
+    add_custom_target(
+        tidy
+        COMMAND ${CLANG_TIDY_EXE} -p ${CMAKE_BINARY_DIR} ${AEGIS_ALL_FILES}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        COMMENT "Running clang-tidy on Aegis sources"
+    )
+
+    if(ENABLE_CLANG_TIDY)
+        set_target_properties(aegis PROPERTIES CXX_CLANG_TIDY "${CLANG_TIDY_EXE};-p;${CMAKE_BINARY_DIR}")
+    endif()
+endif()
 
 target_include_directories(aegis PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
