@@ -1,6 +1,7 @@
 #pragma once
 
 #include "aegis/dbus/service_state.h"
+#include "aegis/agent/state_machine.h"
 #include "aegis/error.h"
 
 #include <dbus/dbus.h>
@@ -16,6 +17,7 @@ class Bundle;
 
 class AegisService {
   public:
+    AegisService();
     Result<void> run();
     void stop();
 
@@ -42,6 +44,7 @@ class AegisService {
     DBusMessage* handle_get_primary(DBusMessage* message);
 
     Result<void> start_install(const std::string& source, const InstallArgs& args);
+    Result<void> request_reboot();
 
     std::string variant() const;
     Slot* resolve_slot_identifier(const std::string& identifier) const;
@@ -57,6 +60,7 @@ class AegisService {
     std::thread install_thread_;
     ServiceState state_;
     std::string introspection_xml_;
+    OtaStateMachine ota_state_machine_;
 };
 
 Result<void> service_run();

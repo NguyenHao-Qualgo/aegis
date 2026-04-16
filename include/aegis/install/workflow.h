@@ -27,6 +27,7 @@ class InstallerWorkflow {
     Result<void> activate_installed_slots();
     void save_status() const;
     void notify(const std::string& message) const;
+    void set_progress(int percent, const std::string& message);
 
     InstallArgs& args_;
     Bundle bundle_;

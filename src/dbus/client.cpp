@@ -1,7 +1,11 @@
 #include "aegis/dbus/client.h"
 #include "aegis/dbus/interface.h"
 
+#include <chrono>
+#include <iomanip>
+#include <iostream>
 #include <string>
+#include <thread>
 
 namespace aegis {
 
@@ -235,6 +239,62 @@ Result<void> AegisDbusClient::install_bundle(const std::string& bundle_path,
 
     dbus_message_unref(reply_res.value());
     return Result<void>::ok();
+}
+
+
+Result<int> AegisDbusClient::install_bundle_with_progress(const std::string& bundle_path,
+                                                          bool ignore_compatible) {
+    auto subscribe = subscribe_completed();
+    if (!subscribe) {
+        return Result<int>::err(subscribe.error());
+    }
+
+    auto install = install_bundle(bundle_path, ignore_compatible);
+    if (!install) {
+        return Result<int>::err(install.error());
+    }
+
+    std::cout << "Install request sent to Aegis service." << std::endl;
+
+    int last_percent = -1;
+    std::string last_message;
+
+    while (true) {
+        dbus_connection_read_write(connection_, 200);
+        while (DBusMessage* message = dbus_connection_pop_message(connection_)) {
+            if (dbus_message_is_signal(message, dbus::kInstallerInterface, "Completed")) {
+                dbus_int32_t result = 1;
+                DBusError error;
+                dbus_error_init(&error);
+
+                bool ok = dbus_message_get_args(message, &error, DBUS_TYPE_INT32, &result,
+                                                DBUS_TYPE_INVALID);
+                dbus_message_unref(message);
+                if (!ok) {
+                    std::string msg = error.message ? error.message : "Unknown D-Bus error";
+                    dbus_error_free(&error);
+                    return Result<int>::err("Failed to read completion signal: " + msg);
+                }
+
+                return Result<int>::ok(static_cast<int>(result));
+            }
+
+            dbus_message_unref(message);
+        }
+
+        auto progress = get_progress();
+        if (progress) {
+            const auto& p = progress.value();
+            if (p.percentage != last_percent || p.message != last_message) {
+                std::cout << "[" << std::setw(3) << p.percentage << "%] " << p.message
+                          << std::endl;
+                last_percent = p.percentage;
+                last_message = p.message;
+            }
+        }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(250));
+    }
 }
 
 Result<int> AegisDbusClient::wait_for_completed() {

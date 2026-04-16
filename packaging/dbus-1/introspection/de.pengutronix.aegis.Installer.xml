@@ -14,7 +14,7 @@
       <arg name='interface_name' type='s' direction='in'/>
       <arg name='props' type='a{sv}' direction='out'/>
     </method>
-    <signal name='PropertiesChanged'>
+    <signal name='PropertiesChanged'>g
       <arg name='interface_name' type='s'/>
       <arg name='changed_properties' type='a{sv}'/>
       <arg name='invalidated_properties' type='as'/>
@@ -61,5 +61,9 @@
     <property name='BootSlot' type='s' access='read'/>
     <property name='ServiceVersion' type='s' access='read'/>
     <property name='Bootloader' type='s' access='read'/>
+    <property name='OtaState' type='s' access='read'/>
+    <property name='OtaStatusMessage' type='s' access='read'/>
+    <property name='TransactionId' type='s' access='read'/>
+    <property name='ExpectedSlot' type='s' access='read'/>
   </interface>
 </node>

@@ -91,6 +91,8 @@ set(AEGIS_SOURCES
     src/cli/commands/bundle_commands.cpp
     src/cli/commands/service_commands.cpp
     src/dbus/client.cpp
+    src/agent/session_store.cpp
+    src/agent/state_machine.cpp
 )
 
 set(AEGIS_ALL_FILES
@@ -113,6 +115,9 @@ set(AEGIS_ALL_FILES
     include/aegis/status_file.h
     include/aegis/utils.h
     include/aegis/verity_hash.h
+    include/aegis/agent/session.h
+    include/aegis/agent/session_store.h
+    include/aegis/agent/state_machine.h
     include/aegis/cli/app_context.h
     include/aegis/cli/application.h
     include/aegis/cli/cli_options.h

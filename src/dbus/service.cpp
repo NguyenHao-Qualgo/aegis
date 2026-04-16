@@ -6,6 +6,7 @@
 #include "aegis/dbus/interface.h"
 #include "aegis/dbus/message_builder.h"
 #include "aegis/install.h"
+#include "aegis/agent/session_store.h"
 #include "aegis/mark.h"
 #include "aegis/signature.h"
 #include "aegis/utils.h"
@@ -23,6 +24,31 @@ static std::atomic<bool> g_running{false};
 static void signal_handler(int /*sig*/) {
     g_running = false;
 }
+
+
+AegisService::AegisService()
+    : ota_state_machine_(
+          state_,
+          OtaSessionStore(
+              Context::instance().config()),
+          [](const std::string& source, InstallArgs& args) {
+              return install_bundle(source, args);
+          },
+          [this](int result) {
+              emit_completed(result);
+          },
+          [this]() {
+              emit_properties_changed({"Operation",
+                                       "LastError",
+                                       "Progress",
+                                       "OtaState",
+                                       "OtaStatusMessage",
+                                       "TransactionId",
+                                       "ExpectedSlot"});
+          },
+          [this]() {
+              return request_reboot();
+          }) {}
 
 namespace {
 DBusObjectPathVTable kObjectPathVTable = {
@@ -120,32 +146,22 @@ Result<void> AegisService::start_install(const std::string& source, const Instal
     }
 
     state_.start_installing();
-    emit_properties_changed({"Operation", "LastError", "Progress"});
+    emit_properties_changed({"Operation", "LastError", "Progress", "OtaState",
+                             "OtaStatusMessage", "TransactionId", "ExpectedSlot"});
 
     install_thread_ = std::thread([this, source, args]() mutable {
         InstallArgs install_args = args;
         install_args.name = source;
-        install_args.progress = [this](int percentage, const std::string& message) {
-            state_.update_progress(percentage, message, 0);
-            emit_properties_changed({"Progress"});
-        };
-        install_args.status_notify = [this](const std::string& message) {
-            auto p = state_.progress();
-            state_.update_progress(p.percentage, message, 0);
-            emit_properties_changed({"Progress"});
-        };
 
-        auto result = install_bundle(source, install_args);
+        auto result = ota_state_machine_.start_update(source, install_args);
         if (result) {
-            state_.update_progress(100, "Installation complete", 0);
-            emit_properties_changed({"Progress"});
             state_.finish_install(0, {});
-            emit_properties_changed({"Operation", "LastError", "Progress"});
-            emit_completed(0);
+            emit_properties_changed({"Operation", "LastError", "Progress", "OtaState",
+                                     "OtaStatusMessage", "TransactionId", "ExpectedSlot"});
         } else {
             state_.finish_install(1, result.error());
-            emit_properties_changed({"Operation", "LastError", "Progress"});
-            emit_completed(1);
+            emit_properties_changed({"Operation", "LastError", "Progress", "OtaState",
+                                     "OtaStatusMessage", "TransactionId", "ExpectedSlot"});
         }
     });
 
@@ -275,6 +291,18 @@ bool AegisService::append_property_variant(DBusMessageIter* iter,
     }
     if (property == "Progress") {
         return DbusMessageBuilder::append_progress_property(iter, state_.progress());
+    }
+    if (property == "OtaState") {
+        return DbusMessageBuilder::append_string_property(iter, state_.ota_state());
+    }
+    if (property == "OtaStatusMessage") {
+        return DbusMessageBuilder::append_string_property(iter, state_.ota_status_message());
+    }
+    if (property == "TransactionId") {
+        return DbusMessageBuilder::append_string_property(iter, state_.transaction_id());
+    }
+    if (property == "ExpectedSlot") {
+        return DbusMessageBuilder::append_string_property(iter, state_.expected_slot());
     }
 
     return false;
@@ -655,6 +683,22 @@ DBusHandlerResult AegisService::dispatch(DBusMessage* message) {
     return DBUS_HANDLER_RESULT_HANDLED;
 }
 
+Result<void> AegisService::request_reboot() {
+    const char* env = std::getenv("AEGIS_OTA_AUTO_REBOOT");
+    const bool auto_reboot = env != nullptr && std::string(env) == "1";
+
+    if (!auto_reboot) {
+        LOG_WARNING("OTA reboot requested but AEGIS_OTA_AUTO_REBOOT is disabled; leaving state as reboot pending");
+        return Result<void>::ok();
+    }
+
+    auto res = run_command({"reboot"});
+    if (res.exit_code != 0) {
+        return Result<void>::err("Failed to request reboot: " + res.stderr_str);
+    }
+    return Result<void>::ok();
+}
+
 void AegisService::maybe_run_autoinstall() {
     auto& ctx = Context::instance();
     if (ctx.config().autoinstall_path.empty() || !path_exists(ctx.config().autoinstall_path)) {
@@ -681,6 +725,11 @@ Result<void> AegisService::run() {
     auto connect_result = connect_bus();
     if (!connect_result) {
         return connect_result;
+    }
+
+    auto resume_result = ota_state_machine_.resume_after_boot();
+    if (!resume_result) {
+        LOG_WARNING("OTA resume after boot failed: %s", resume_result.error().c_str());
     }
 
     maybe_run_autoinstall();

@@ -137,21 +137,7 @@ int InstallCommand::execute(const CliOptions& opts) {
         return 1;
     }
 
-    auto subscribe_result = client.subscribe_completed();
-    if (!subscribe_result) {
-        std::cerr << "Error: " << subscribe_result.error() << "\n";
-        return 1;
-    }
-
-    auto install_result = client.install_bundle(opts.positional[0], opts.ignore_compat);
-    if (!install_result) {
-        std::cerr << "Error: " << install_result.error() << "\n";
-        return 1;
-    }
-
-    std::cout << "Install request sent to Aegis service.\n";
-
-    auto completion = client.wait_for_completed();
+    auto completion = client.install_bundle_with_progress(opts.positional[0], opts.ignore_compat);
     if (!completion) {
         std::cerr << "Error: " << completion.error() << "\n";
         return 1;
@@ -212,6 +198,18 @@ int StatusCommand::execute(const CliOptions& opts) {
     StatusPrinter printer(opts.detailed);
     printer.print_summary(compatible.value(), variant.value(), bootloader.value(),
                           boot_slot.value(), primary.value());
+
+    auto ota_state = client.get_property_string("OtaState");
+    auto ota_message = client.get_property_string("OtaStatusMessage");
+    auto transaction_id = client.get_property_string("TransactionId");
+    auto expected_slot = client.get_property_string("ExpectedSlot");
+    if (ota_state && ota_message && transaction_id && expected_slot) {
+        std::cout << "\n=== OTA State ===\n";
+        std::cout << "State:         " << (ota_state ? ota_state.value() : "<unavailable>") << "\n";
+        std::cout << "Message:       " << (ota_message ? ota_message.value() : "<unavailable>") << "\n";
+        std::cout << "TransactionId: " << (transaction_id ? transaction_id.value() : "<unavailable>") << "\n";
+        std::cout << "Expected slot: " << (expected_slot ? expected_slot.value() : "<unavailable>") << "\n";
+    }
     for (const auto& slot : slots.value()) {
         printer.print_slot(slot);
     }

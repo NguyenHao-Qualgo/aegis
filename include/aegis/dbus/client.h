@@ -38,6 +38,7 @@ class AegisDbusClient {
 
     Result<void> install_bundle(const std::string& bundle_path, bool ignore_compatible);
     Result<int> wait_for_completed();
+    Result<int> install_bundle_with_progress(const std::string& bundle_path, bool ignore_compatible);
 
     Result<std::string> get_property_string(const char* property_name);
     Result<ProgressInfo> get_progress();
