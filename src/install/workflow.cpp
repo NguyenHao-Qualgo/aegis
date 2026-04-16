@@ -31,16 +31,6 @@ Result<void> check_compatible(const Manifest& manifest, const SystemConfig& conf
     return Result<void>::ok();
 }
 
-int clamp_progress(int value) {
-    if (value < 0) {
-        return 0;
-    }
-    if (value > 100) {
-        return 100;
-    }
-    return value;
-}
-
 } // namespace
 
 InstallerWorkflow::InstallerWorkflow(InstallArgs& args) : args_(args) {}
@@ -87,7 +77,10 @@ Result<void> InstallerWorkflow::install(const std::string& bundle_path) {
     finish_step("Pre-install handler completed");
 
     begin_step("prepare-boot-state", 5, "Preparing boot state");
-    deactivate_target_slots();
+    auto deactivate_result = deactivate_target_slots();
+    if (!deactivate_result) {
+        return deactivate_result;
+    }
     finish_step("Boot state prepared");
 
     begin_step("install-images", 55, "Installing images");
@@ -113,7 +106,7 @@ Result<void> InstallerWorkflow::install(const std::string& bundle_path) {
     if (!post_hook) {
         LOG_WARNING("Post-install handler failed: %s", post_hook.error().c_str());
     }
-    finish_step("Installation complete");
+    finish_step("Post-install handler completed");
 
     set_progress(100, "Installation complete");
     return Result<void>::ok();
@@ -135,7 +128,7 @@ Result<void> InstallerWorkflow::open_bundle(const std::string& bundle_path) {
 
     bundle_ = std::move(bundle_result.value());
 
-    set_progress(3, "Mounting bundle");
+    update_step_progress(50, "Mounting bundle");
     auto mount_result = bundle_mount(bundle_);
     if (!mount_result) {
         return mount_result;
@@ -191,9 +184,10 @@ Result<void> InstallerWorkflow::run_hook(const std::string& handler_path,
         return Result<void>::ok();
     }
 
+    auto& ctx = Context::instance();
     std::vector<std::string> env = {
-        "AEGIS_SYSTEM_COMPATIBLE=" + Context::instance().config().compatible,
-        "AEGIS_MOUNT_PREFIX=" + Context::instance().mount_prefix(),
+        "AEGIS_SYSTEM_COMPATIBLE=" + ctx.config().compatible,
+        "AEGIS_MOUNT_PREFIX=" + ctx.mount_prefix(),
         "AEGIS_BUNDLE_MOUNT_POINT=" + bundle_.mount_point,
         "AEGIS_UPDATE_SOURCE=" + bundle_.mount_point,
         "AEGIS_BUNDLE_COMPATIBLE=" + bundle_.manifest.compatible,
@@ -210,14 +204,20 @@ Result<void> InstallerWorkflow::run_hook(const std::string& handler_path,
     return Result<void>::ok();
 }
 
-void InstallerWorkflow::deactivate_target_slots() {
+Result<void> InstallerWorkflow::deactivate_target_slots() {
     auto& bootchooser = Context::instance().bootchooser();
     for (auto& plan : plans_) {
-        if (!plan.target_slot->bootname.empty()) {
-            notify("Deactivating slot " + plan.target_slot->name);
-            bootchooser.set_state(*plan.target_slot, false);
+        if (plan.target_slot->bootname.empty()) {
+            continue;
+        }
+        notify("Deactivating slot " + plan.target_slot->name);
+        auto res = bootchooser.set_state(*plan.target_slot, false);
+        if (!res) {
+            return Result<void>::err("Failed to deactivate slot '" + plan.target_slot->name +
+                                     "': " + res.error());
         }
     }
+    return Result<void>::ok();
 }
 
 Result<void> InstallerWorkflow::install_images() {
@@ -232,22 +232,19 @@ Result<void> InstallerWorkflow::install_images() {
 
         const int image_base = (index * 100) / total;
         const int image_next = ((index + 1) * 100) / total;
+        const std::string label = std::to_string(index + 1) + "/" + std::to_string(total) +
+                                  ": " + plan.image->filename + " -> " + plan.target_slot->name;
 
-        update_step_progress(image_base,
-                             "Installing image " + std::to_string(index + 1) + "/" +
-                                 std::to_string(total) + ": " + plan.image->filename +
-                                 " -> " + plan.target_slot->name);
+        update_step_progress(image_base, "Installing image " + label);
 
         auto mapped_progress = [this, image_base, image_next](int percent,
                                                               const std::string& message) {
-            if (percent < 0) percent = 0;
-            if (percent > 100) percent = 100;
-
+            percent = std::max(0, std::min(100, percent));
             const int mapped = image_base + ((image_next - image_base) * percent) / 100;
             update_step_progress(mapped, message.empty() ? "Installing image" : message);
         };
 
-        std::string image_path = bundle_.mount_point + "/" + plan.image->filename;
+        const std::string image_path = bundle_.mount_point + "/" + plan.image->filename;
         auto payload_kind = UpdateHandlerFactory::classify_payload(plan.image->filename);
         auto handler = UpdateHandlerFactory::create(plan.target_slot->type, payload_kind);
 
@@ -259,10 +256,7 @@ Result<void> InstallerWorkflow::install_images() {
         }
 
         update_slot_status(plan);
-
-        update_step_progress(image_next,
-                             "Installed image " + std::to_string(index + 1) + "/" +
-                                 std::to_string(total) + ": " + plan.image->filename);
+        update_step_progress(image_next, "Installed image " + label);
     }
 
     update_step_progress(100, "All images installed");
@@ -272,10 +266,8 @@ Result<void> InstallerWorkflow::install_images() {
 void InstallerWorkflow::update_slot_status(const InstallPlan& plan) const {
     auto& slot_status = plan.target_slot->status;
 
-    // This function records installation metadata only.
-    // It does NOT mean the slot is confirmed bootable.
-    // "status" should be set later by mark_good() or mark_bad().
-
+    // Records installation metadata only. The slot is not yet confirmed bootable —
+    // that happens later via mark_good() after a successful reboot.
     slot_status.bundle_compatible = bundle_.manifest.compatible;
     slot_status.bundle_version = bundle_.manifest.version;
     slot_status.bundle_description = bundle_.manifest.description;
@@ -299,12 +291,18 @@ Result<void> InstallerWorkflow::activate_installed_slots() {
     }
 
     auto& bootchooser = Context::instance().bootchooser();
+    const int total = static_cast<int>(plans_.size());
+    int index = 0;
+
     for (auto& plan : plans_) {
         if (plan.target_slot->bootname.empty()) {
+            ++index;
             continue;
         }
 
-        set_progress(85, "Activating slot " + plan.target_slot->name);
+        const int percent = total > 0 ? (index * 100) / total : 100;
+        update_step_progress(percent, "Activating slot " + plan.target_slot->name);
+
         auto activate_result = bootchooser.set_primary(*plan.target_slot);
         if (!activate_result) {
             return Result<void>::err("Failed to activate " + plan.target_slot->name + ": " +
@@ -314,6 +312,7 @@ Result<void> InstallerWorkflow::activate_installed_slots() {
 
         plan.target_slot->status.activated_timestamp = current_timestamp();
         plan.target_slot->status.activated_count++;
+        ++index;
     }
 
     return Result<void>::ok();
@@ -353,10 +352,6 @@ int InstallerWorkflow::completed_weight() const {
     return sum;
 }
 
-int InstallerWorkflow::total_weight() const {
-    return 100;
-}
-
 void InstallerWorkflow::begin_step(const std::string& name, int weight, const std::string& message) {
     current_step_ = ProgressStep{name, weight};
     current_step_active_ = true;
@@ -369,9 +364,7 @@ void InstallerWorkflow::update_step_progress(int sub_percent, const std::string&
         return;
     }
 
-    if (sub_percent < 0) sub_percent = 0;
-    if (sub_percent > 100) sub_percent = 100;
-
+    sub_percent = std::max(0, std::min(100, sub_percent));
     const int base = completed_weight();
     const int mapped = base + (current_step_.weight * sub_percent) / 100;
     set_progress(mapped, message);
