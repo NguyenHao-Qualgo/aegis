@@ -46,6 +46,9 @@ class AegisDbusClient {
     Result<std::string> get_primary();
     Result<std::vector<SlotStatusView>> get_slot_status();
     Result<MarkResult> mark(const std::string& state, const std::string& slot_identifier);
+    Result<std::string> get_ota_state() {
+      return get_property_string("OtaState");
+  }
 
   private:
     Result<DBusMessage*> call_method(DBusMessage* message);

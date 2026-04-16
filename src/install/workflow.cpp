@@ -47,64 +47,75 @@ int clamp_progress(int value) {
 InstallerWorkflow::InstallerWorkflow(InstallArgs& args) : args_(args) {}
 
 Result<void> InstallerWorkflow::install(const std::string& bundle_path) {
-    set_progress(1, "Starting installation");
+    finished_steps_.clear();
+    current_step_active_ = false;
 
-    set_progress(5, "Opening bundle");
+    begin_step("open-bundle", 5, "Opening bundle");
     auto open_result = open_bundle(bundle_path);
     if (!open_result) {
         return open_result;
     }
+    finish_step("Bundle opened");
 
     BundleMountGuard guard(bundle_);
 
-    set_progress(15, "Checking compatibility");
+    begin_step("check-compatibility", 5, "Checking compatibility");
     auto compatibility = verify_compatibility();
     if (!compatibility) {
         return compatibility;
     }
+    finish_step("Compatibility check passed");
 
-    set_progress(20, "Determining target slots");
+    begin_step("determine-target-slots", 5, "Determining target slots");
     auto plan_result = determine_install_plans();
     if (!plan_result) {
         return plan_result;
     }
+    finish_step("Target slots determined");
 
-    set_progress(25, "Checking slot devices");
+    begin_step("check-slot-devices", 5, "Checking slot devices");
     auto devices_ok = check_slot_devices();
     if (!devices_ok) {
         return devices_ok;
     }
+    finish_step("Slot devices ready");
 
-    set_progress(30, "Running pre-install handler");
+    begin_step("pre-install-hook", 5, "Running pre-install handler");
     auto pre_hook = run_hook(Context::instance().config().handler_pre_install, "pre-install");
     if (!pre_hook) {
         return pre_hook;
     }
+    finish_step("Pre-install handler completed");
 
-    set_progress(35, "Preparing boot state");
+    begin_step("prepare-boot-state", 5, "Preparing boot state");
     bootchooser_ = create_bootchooser(Context::instance().config());
     deactivate_target_slots();
+    finish_step("Boot state prepared");
 
-    set_progress(40, "Installing images");
+    begin_step("install-images", 55, "Installing images");
     auto install_result = install_images();
     if (!install_result) {
         return install_result;
     }
+    finish_step("All images installed");
 
-    set_progress(85, "Activating installed slots");
+    begin_step("activate-installed-slots", 5, "Activating installed slots");
     auto activation_result = activate_installed_slots();
     if (!activation_result) {
         return activation_result;
     }
+    finish_step("Installed slots activated");
 
-    set_progress(90, "Saving slot status");
+    begin_step("save-status", 3, "Saving slot status");
     save_status();
+    finish_step("Slot status saved");
 
-    set_progress(95, "Running post-install handler");
+    begin_step("post-install-hook", 2, "Running post-install handler");
     auto post_hook = run_hook(Context::instance().config().handler_post_install, "post-install");
     if (!post_hook) {
         LOG_WARNING("Post-install handler failed: %s", post_hook.error().c_str());
     }
+    finish_step("Installation complete");
 
     set_progress(100, "Installation complete");
     return Result<void>::ok();
@@ -213,30 +224,28 @@ void InstallerWorkflow::deactivate_target_slots() {
 Result<void> InstallerWorkflow::install_images() {
     const int total = static_cast<int>(plans_.size());
     if (total <= 0) {
-        set_progress(80, "No images to install");
+        update_step_progress(100, "No images to install");
         return Result<void>::ok();
     }
-
-    const int start_percent = 40;
-    const int end_percent = 80;
-    const int span = end_percent - start_percent;
 
     for (int index = 0; index < total; ++index) {
         auto& plan = plans_[index];
 
-        const int image_base = start_percent + (index * span) / total;
-        const int image_next = start_percent + ((index + 1) * span) / total;
+        const int image_base = (index * 100) / total;
+        const int image_next = ((index + 1) * 100) / total;
 
-        set_progress(image_base,
-                     "Installing image " + std::to_string(index + 1) + "/" +
-                         std::to_string(total) + ": " + plan.image->filename +
-                         " -> " + plan.target_slot->name);
+        update_step_progress(image_base,
+                             "Installing image " + std::to_string(index + 1) + "/" +
+                                 std::to_string(total) + ": " + plan.image->filename +
+                                 " -> " + plan.target_slot->name);
 
         auto mapped_progress = [this, image_base, image_next](int percent,
                                                               const std::string& message) {
-            const int clamped = clamp_progress(percent);
-            const int mapped = image_base + ((image_next - image_base) * clamped) / 100;
-            set_progress(mapped, message.empty() ? "Installing image" : message);
+            if (percent < 0) percent = 0;
+            if (percent > 100) percent = 100;
+
+            const int mapped = image_base + ((image_next - image_base) * percent) / 100;
+            update_step_progress(mapped, message.empty() ? "Installing image" : message);
         };
 
         std::string image_path = bundle_.mount_point + "/" + plan.image->filename;
@@ -252,12 +261,12 @@ Result<void> InstallerWorkflow::install_images() {
 
         update_slot_status(plan);
 
-        set_progress(image_next,
-                     "Installed image " + std::to_string(index + 1) + "/" +
-                         std::to_string(total) + ": " + plan.image->filename);
+        update_step_progress(image_next,
+                             "Installed image " + std::to_string(index + 1) + "/" +
+                                 std::to_string(total) + ": " + plan.image->filename);
     }
 
-    set_progress(end_percent, "All images installed");
+    update_step_progress(100, "All images installed");
     return Result<void>::ok();
 }
 
@@ -330,6 +339,48 @@ void InstallerWorkflow::set_progress(int percent, const std::string& message) {
     if (args_.status_notify) {
         args_.status_notify(message);
     }
+}
+
+int InstallerWorkflow::completed_weight() const {
+    int sum = 0;
+    for (const auto& step : finished_steps_) {
+        sum += step.weight;
+    }
+    return sum;
+}
+
+int InstallerWorkflow::total_weight() const {
+    return 100;
+}
+
+void InstallerWorkflow::begin_step(const std::string& name, int weight, const std::string& message) {
+    current_step_ = ProgressStep{name, weight};
+    current_step_active_ = true;
+    update_step_progress(0, message);
+}
+
+void InstallerWorkflow::update_step_progress(int sub_percent, const std::string& message) {
+    if (!current_step_active_) {
+        set_progress(completed_weight(), message);
+        return;
+    }
+
+    if (sub_percent < 0) sub_percent = 0;
+    if (sub_percent > 100) sub_percent = 100;
+
+    const int base = completed_weight();
+    const int mapped = base + (current_step_.weight * sub_percent) / 100;
+    set_progress(mapped, message);
+}
+
+void InstallerWorkflow::finish_step(const std::string& message) {
+    if (!current_step_active_) {
+        return;
+    }
+
+    finished_steps_.push_back(current_step_);
+    current_step_active_ = false;
+    set_progress(completed_weight(), message);
 }
 
 } // namespace aegis

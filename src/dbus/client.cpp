@@ -258,18 +258,22 @@ Result<int> AegisDbusClient::install_bundle_with_progress(const std::string& bun
 
     int last_percent = -1;
     std::string last_message;
+    std::string last_ota_state;
 
     while (true) {
         dbus_connection_read_write(connection_, 200);
+
         while (DBusMessage* message = dbus_connection_pop_message(connection_)) {
             if (dbus_message_is_signal(message, dbus::kInstallerInterface, "Completed")) {
                 dbus_int32_t result = 1;
                 DBusError error;
                 dbus_error_init(&error);
 
-                bool ok = dbus_message_get_args(message, &error, DBUS_TYPE_INT32, &result,
+                bool ok = dbus_message_get_args(message, &error,
+                                                DBUS_TYPE_INT32, &result,
                                                 DBUS_TYPE_INVALID);
                 dbus_message_unref(message);
+
                 if (!ok) {
                     std::string msg = error.message ? error.message : "Unknown D-Bus error";
                     dbus_error_free(&error);
@@ -283,13 +287,25 @@ Result<int> AegisDbusClient::install_bundle_with_progress(const std::string& bun
         }
 
         auto progress = get_progress();
+        auto ota_state = get_property_string("OtaState");
+
         if (progress) {
             const auto& p = progress.value();
-            if (p.percentage != last_percent || p.message != last_message) {
-                std::cout << "[" << std::setw(3) << p.percentage << "%] " << p.message
+            const std::string state = ota_state ? ota_state.value() : "unknown";
+
+            if (p.percentage != last_percent ||
+                p.message != last_message ||
+                state != last_ota_state) {
+                std::cout << "["
+                          << std::left << std::setw(7) << state
+                          << "]["
+                          << std::right << std::setw(3) << p.percentage << "%] "
+                          << p.message
                           << std::endl;
+
                 last_percent = p.percentage;
                 last_message = p.message;
+                last_ota_state = state;
             }
         }
 
