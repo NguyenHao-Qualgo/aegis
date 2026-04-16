@@ -4,13 +4,13 @@
 #include "aegis/error.h"
 #include "aegis/slot.h"
 
+#include <cctype>
 #include <memory>
 #include <string>
 
 namespace aegis {
 
 /// Abstract bootchooser backend interface.
-/// Only U-Boot and Custom are implemented (grub, barebox, efi removed).
 class IBootchooser {
   public:
     virtual ~IBootchooser() = default;
@@ -21,14 +21,21 @@ class IBootchooser {
     /// Set a slot as the primary boot target
     virtual Result<void> set_primary(Slot& slot) = 0;
 
-    /// Get the "good" state of a slot (ok = stable, not pending)
+    /// Get the bootable state of a slot (true = bootable)
     virtual Result<bool> get_state(const Slot& slot) = 0;
 
-    /// Mark a slot as good or bad
+    /// Mark a slot bootable or unbootable
     virtual Result<void> set_state(Slot& slot, bool good) = 0;
 };
 
-/// U-Boot bootchooser via fw_setenv / fw_printenv
+/// U-Boot bootchooser via fw_setenv / fw_printenv.
+///
+/// Variable scheme:
+///   Bootchain    : "A" = slot-a active, "B" = slot-b active
+///   RootAStatus  : 0 = unbootable, 1 = bootable  (slot with bootname "a")
+///   RootBStatus  : 0 = unbootable, 1 = bootable  (slot with bootname "b")
+///
+/// Slot bootnames must be "a" or "b" in system.conf.
 class UBootBootchooser : public IBootchooser {
   public:
     Slot* get_primary(std::map<std::string, Slot>& slots) override;
@@ -39,9 +46,14 @@ class UBootBootchooser : public IBootchooser {
   private:
     Result<std::string> env_get(const std::string& key);
     Result<void> env_set(const std::string& key, const std::string& value);
+
+    /// Returns "RootAStatus" or "RootBStatus" based on slot.bootname
+    static std::string status_var(const Slot& slot) {
+        const char letter = static_cast<char>(std::toupper(slot.bootname.front()));
+        return std::string("Root") + letter + "Status";
+    }
 };
 
-/// Custom bootchooser calling user-provided backend script
 class CustomBootchooser : public IBootchooser {
   public:
     explicit CustomBootchooser(std::string backend_script);

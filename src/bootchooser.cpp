@@ -1,7 +1,7 @@
 #include "aegis/bootchooser.h"
 #include "aegis/utils.h"
 
-#include <sstream>
+#include <cctype>
 
 namespace aegis {
 
@@ -23,67 +23,39 @@ Result<void> UBootBootchooser::env_set(const std::string& key, const std::string
 }
 
 Slot* UBootBootchooser::get_primary(std::map<std::string, Slot>& slots) {
-    auto order_result = env_get("BOOT_ORDER");
-    if (!order_result) {
-        LOG_WARNING("Cannot read BOOT_ORDER from U-Boot env");
+    auto chain = env_get("Bootchain");
+    if (!chain) {
+        LOG_WARNING("Cannot read Bootchain from U-Boot env");
         return nullptr;
     }
 
-    // BOOT_ORDER is space-separated list of bootnames, first = primary
-    std::istringstream iss(order_result.value());
-    std::string first_bootname;
-    iss >> first_bootname;
-
+    // Bootchain "A" → bootname "a",  "B" → bootname "b"
+    const std::string bootname(1, static_cast<char>(std::tolower(chain.value().front())));
     for (auto& [name, slot] : slots) {
-        if (slot.bootname == first_bootname)
+        if (slot.bootname == bootname)
             return &slot;
     }
     return nullptr;
 }
 
 Result<void> UBootBootchooser::set_primary(Slot& slot) {
-    if (slot.bootname.empty())
-        return Result<void>::err("Slot has no bootname: " + slot.name);
+    if (slot.bootname != "a" && slot.bootname != "b")
+        return Result<void>::err("UBoot bootchooser requires bootname 'a' or 'b', got: '" +
+                                 slot.bootname + "'");
 
-    // Read current order, move this slot to front
-    auto order_result = env_get("BOOT_ORDER");
-    std::string new_order = slot.bootname;
-    if (order_result) {
-        std::istringstream iss(order_result.value());
-        std::string name;
-        while (iss >> name) {
-            if (name != slot.bootname)
-                new_order += " " + name;
-        }
-    }
-
-    auto res = env_set("BOOT_ORDER", new_order);
-    if (!res)
-        return res;
-
-    // Reset boot count
-    res = env_set(slot.bootname + "_OK", "0");
-    if (!res)
-        return res;
-    res = env_set(slot.bootname + "_TRY", "0");
-    return res;
+    const std::string chain(1, static_cast<char>(std::toupper(slot.bootname.front())));
+    return env_set("Bootchain", chain);
 }
 
 Result<bool> UBootBootchooser::get_state(const Slot& slot) {
-    auto ok_result = env_get(slot.bootname + "_OK");
-    if (!ok_result)
-        return Result<bool>::err(ok_result.error());
-    return Result<bool>::ok(ok_result.value() == "1");
+    auto val = env_get(status_var(slot));
+    if (!val)
+        return Result<bool>::err(val.error());
+    return Result<bool>::ok(val.value() == "1");
 }
 
 Result<void> UBootBootchooser::set_state(Slot& slot, bool good) {
-    auto res = env_set(slot.bootname + "_OK", good ? "1" : "0");
-    if (!res)
-        return res;
-    if (good) {
-        res = env_set(slot.bootname + "_TRY", "0");
-    }
-    return res;
+    return env_set(status_var(slot), good ? "1" : "0");
 }
 
 CustomBootchooser::CustomBootchooser(std::string backend_script)
@@ -142,6 +114,8 @@ std::unique_ptr<IBootchooser> create_bootchooser(const SystemConfig& config) {
         return std::make_unique<UBootBootchooser>();
     case Bootloader::Custom:
         return std::make_unique<CustomBootchooser>(config.handler_bootloader_custom_backend);
+    case Bootloader::Noop:
+        throw BootError("Noop bootloader has no bootchooser");
     }
     throw BootError("Unknown bootloader type");
 }
