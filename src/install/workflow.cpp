@@ -137,7 +137,7 @@ Result<void> InstallerWorkflow::open_bundle(const std::string& bundle_path) {
 
     bundle_ = std::move(bundle_result.value());
 
-    set_progress(10, "Mounting bundle");
+    set_progress(3, "Mounting bundle");
     auto mount_result = bundle_mount(bundle_);
     if (!mount_result) {
         return mount_result;
