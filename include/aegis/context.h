@@ -1,5 +1,6 @@
 #pragma once
 
+#include "aegis/bootchooser.h"
 #include "aegis/config_file.h"
 
 #include <memory>
@@ -22,6 +23,10 @@ class Context {
     }
     SystemConfig& config() {
         return config_;
+    }
+
+    [[nodiscard]] IBootchooser& bootchooser() const {
+        return *bootchooser_;
     }
 
     [[nodiscard]] const std::string& config_path() const {
@@ -63,6 +68,7 @@ class Context {
     std::string boot_slot_;
     std::string mount_prefix_;
     SystemConfig config_;
+    std::unique_ptr<IBootchooser> bootchooser_;
 };
 
 } // namespace aegis

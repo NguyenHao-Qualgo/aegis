@@ -1,6 +1,5 @@
 #include "aegis/install/workflow.h"
 
-#include "aegis/bootchooser.h"
 #include "aegis/context.h"
 #include "aegis/status_file.h"
 #include "aegis/utils.h"
@@ -88,7 +87,6 @@ Result<void> InstallerWorkflow::install(const std::string& bundle_path) {
     finish_step("Pre-install handler completed");
 
     begin_step("prepare-boot-state", 5, "Preparing boot state");
-    bootchooser_ = create_bootchooser(Context::instance().config());
     deactivate_target_slots();
     finish_step("Boot state prepared");
 
@@ -213,10 +211,11 @@ Result<void> InstallerWorkflow::run_hook(const std::string& handler_path,
 }
 
 void InstallerWorkflow::deactivate_target_slots() {
+    auto& bootchooser = Context::instance().bootchooser();
     for (auto& plan : plans_) {
         if (!plan.target_slot->bootname.empty()) {
             notify("Deactivating slot " + plan.target_slot->name);
-            bootchooser_->set_state(*plan.target_slot, false);
+            bootchooser.set_state(*plan.target_slot, false);
         }
     }
 }
@@ -299,18 +298,19 @@ Result<void> InstallerWorkflow::activate_installed_slots() {
         return Result<void>::ok();
     }
 
+    auto& bootchooser = Context::instance().bootchooser();
     for (auto& plan : plans_) {
         if (plan.target_slot->bootname.empty()) {
             continue;
         }
 
         set_progress(85, "Activating slot " + plan.target_slot->name);
-        auto activate_result = bootchooser_->set_primary(*plan.target_slot);
+        auto activate_result = bootchooser.set_primary(*plan.target_slot);
         if (!activate_result) {
             return Result<void>::err("Failed to activate " + plan.target_slot->name + ": " +
                                      activate_result.error());
         }
-        bootchooser_->set_state(*plan.target_slot, true);
+        bootchooser.set_state(*plan.target_slot, true);
 
         plan.target_slot->status.activated_timestamp = current_timestamp();
         plan.target_slot->status.activated_count++;

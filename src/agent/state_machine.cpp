@@ -1,6 +1,5 @@
 #include "aegis/agent/state_machine.h"
 
-#include "aegis/bootchooser.h"
 #include "aegis/context.h"
 #include "aegis/mark.h"
 #include "aegis/utils.h"
@@ -133,8 +132,7 @@ Result<void> OtaStateMachine::handle_commit() {
     if (!t) return t;
 
     auto& ctx = Context::instance();
-    auto bootchooser = create_bootchooser(ctx.config());
-    auto* primary = bootchooser->get_primary(ctx.config().slots);
+    auto* primary = ctx.bootchooser().get_primary(ctx.config().slots);
     session_.booted_slot = primary ? primary->name : ctx.boot_slot();
 
     if (session_.expected_slot.empty()) {
@@ -196,8 +194,7 @@ void OtaStateMachine::sync_service_state() {
 
 std::string OtaStateMachine::detect_expected_slot() const {
     auto& ctx = Context::instance();
-    auto bootchooser = create_bootchooser(ctx.config());
-    auto* primary = bootchooser->get_primary(ctx.config().slots);
+    auto* primary = ctx.bootchooser().get_primary(ctx.config().slots);
     return primary ? primary->name : std::string{};
 }
 

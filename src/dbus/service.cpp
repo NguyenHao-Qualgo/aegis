@@ -1,6 +1,5 @@
 #include "aegis/dbus/service.h"
 
-#include "aegis/bootchooser.h"
 #include "aegis/bundle.h"
 #include "aegis/context.h"
 #include "aegis/dbus/interface.h"
@@ -236,8 +235,7 @@ Slot* AegisService::resolve_slot_identifier(const std::string& identifier) const
 
 Slot* AegisService::get_primary_slot() const {
     auto& ctx = Context::instance();
-    auto bootchooser = create_bootchooser(ctx.config());
-    return bootchooser->get_primary(ctx.config().slots);
+    return ctx.bootchooser().get_primary(ctx.config().slots);
 }
 
 DBusMessage* AegisService::error_reply(DBusMessage* message, const char* name,

@@ -1,4 +1,5 @@
 #include "aegis/context.h"
+#include "aegis/bootchooser.h"
 #include "aegis/slot.h"
 #include "aegis/status_file.h"
 #include "aegis/utils.h"
@@ -48,6 +49,8 @@ void Context::init(const std::string& config_path, const std::string& cert_path,
             load_slot_status(slot, config_.data_directory);
         }
     }
+
+    bootchooser_ = create_bootchooser(config_);
 
     initialized_ = true;
     LOG_INFO("Context initialized: compatible=%s, bootloader=%s, boot_slot=%s",

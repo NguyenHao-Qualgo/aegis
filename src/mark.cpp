@@ -1,6 +1,5 @@
 #include "aegis/mark.h"
 
-#include "aegis/bootchooser.h"
 #include "aegis/context.h"
 #include "aegis/slot.h"
 #include "aegis/status_file.h"
@@ -92,8 +91,7 @@ Result<void> mark_good(const std::string& slot_identifier) {
     }
     auto* slot = slot_res.value();
 
-    auto bootchooser = create_bootchooser(ctx.config());
-    auto res = bootchooser->set_state(*slot, true);
+    auto res = ctx.bootchooser().set_state(*slot, true);
     if (!res) {
         return res;
     }
@@ -123,8 +121,7 @@ Result<void> mark_bad(const std::string& slot_identifier) {
     }
     auto* slot = slot_res.value();
 
-    auto bootchooser = create_bootchooser(ctx.config());
-    auto res = bootchooser->set_state(*slot, false);
+    auto res = ctx.bootchooser().set_state(*slot, false);
     if (!res) {
         return res;
     }
@@ -154,8 +151,7 @@ Result<void> mark_active(const std::string& slot_identifier) {
     }
     auto* slot = slot_res.value();
 
-    auto bootchooser = create_bootchooser(ctx.config());
-    auto res = bootchooser->set_primary(*slot);
+    auto res = ctx.bootchooser().set_primary(*slot);
     if (!res) {
         return res;
     }

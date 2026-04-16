@@ -1,6 +1,5 @@
 #pragma once
 
-#include "aegis/bootchooser.h"
 #include "aegis/bundle.h"
 #include "aegis/install.h"
 
@@ -43,7 +42,6 @@ class InstallerWorkflow {
     Bundle bundle_;
     std::map<std::string, Slot*> target_group_;
     std::vector<InstallPlan> plans_;
-    std::unique_ptr<IBootchooser> bootchooser_;
 	std::vector<ProgressStep> finished_steps_;
 	ProgressStep current_step_;
 	bool current_step_active_ = false;
