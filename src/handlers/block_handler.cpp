@@ -16,7 +16,10 @@ Result<void> BlockDeviceUpdateHandler::install(const std::string& image_path,
         LOG_INFO("Checksum verified for %s", image.filename.c_str());
     }
 
-    return write_image_to_device(image_path, target_slot.device, progress);
+    return write_image_to_device(image_path,
+                             target_slot.device,
+                             image.filename + " to " + target_slot.name,
+                             progress);
 }
 
 } // namespace aegis

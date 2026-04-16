@@ -36,7 +36,9 @@ class UpdateHandlerFactory {
 };
 
 /// Write raw image data from source_path to device_path with progress
-Result<void> write_image_to_device(const std::string& source_path, const std::string& device_path,
+Result<void> write_image_to_device(const std::string& source_path,
+                                   const std::string& device_path,
+                                   const std::string& label,
                                    ProgressCallback progress = {});
 
 } // namespace aegis
