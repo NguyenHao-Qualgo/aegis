@@ -59,15 +59,6 @@ class CustomBootchooser : public IBootchooser {
                                  const std::string& value);
 };
 
-/// No-op bootchooser for testing
-class NoopBootchooser : public IBootchooser {
-  public:
-    Slot* get_primary(std::map<std::string, Slot>& slots) override;
-    Result<void> set_primary(Slot& slot) override;
-    Result<bool> get_state(const Slot& slot) override;
-    Result<void> set_state(Slot& slot, bool good) override;
-};
-
 /// Factory: create the appropriate bootchooser from config
 std::unique_ptr<IBootchooser> create_bootchooser(const SystemConfig& config);
 

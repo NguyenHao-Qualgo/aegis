@@ -272,6 +272,11 @@ Result<void> InstallerWorkflow::install_images() {
 
 void InstallerWorkflow::update_slot_status(const InstallPlan& plan) const {
     auto& slot_status = plan.target_slot->status;
+
+    // This function records installation metadata only.
+    // It does NOT mean the slot is confirmed bootable.
+    // "status" should be set later by mark_good() or mark_bad().
+
     slot_status.bundle_compatible = bundle_.manifest.compatible;
     slot_status.bundle_version = bundle_.manifest.version;
     slot_status.bundle_description = bundle_.manifest.description;
@@ -280,7 +285,6 @@ void InstallerWorkflow::update_slot_status(const InstallPlan& plan) const {
     slot_status.checksum_size = plan.image->size;
     slot_status.installed_timestamp = current_timestamp();
     slot_status.installed_count++;
-    slot_status.status = "ok";
 
     const auto& config = Context::instance().config();
     if (!config.data_directory.empty()) {

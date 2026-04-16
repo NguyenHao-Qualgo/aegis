@@ -136,37 +136,12 @@ Result<void> CustomBootchooser::set_state(Slot& slot, bool good) {
     return run_backend_set("set-state", slot.bootname, good ? "good" : "bad");
 }
 
-Slot* NoopBootchooser::get_primary(std::map<std::string, Slot>& slots) {
-    for (auto& [name, slot] : slots) {
-        if (slot.is_booted)
-            return &slot;
-    }
-    return nullptr;
-}
-
-Result<void> NoopBootchooser::set_primary(Slot& slot) {
-    LOG_INFO("noop bootchooser: ignoring set_primary for %s", slot.name.c_str());
-    return Result<void>::ok();
-}
-
-Result<bool> NoopBootchooser::get_state(const Slot& slot) {
-    return Result<bool>::ok(true);
-}
-
-Result<void> NoopBootchooser::set_state(Slot& slot, bool good) {
-    LOG_INFO("noop bootchooser: ignoring set_state %s for %s", good ? "good" : "bad",
-             slot.name.c_str());
-    return Result<void>::ok();
-}
-
 std::unique_ptr<IBootchooser> create_bootchooser(const SystemConfig& config) {
     switch (config.bootloader) {
     case Bootloader::UBoot:
         return std::make_unique<UBootBootchooser>();
     case Bootloader::Custom:
         return std::make_unique<CustomBootchooser>(config.handler_bootloader_custom_backend);
-    case Bootloader::Noop:
-        return std::make_unique<NoopBootchooser>();
     }
     throw BootError("Unknown bootloader type");
 }
