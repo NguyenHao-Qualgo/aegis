@@ -20,5 +20,9 @@
     <method name="GetBooted">
       <arg name="slot" type="s" direction="out"/>
     </method>
+
+    <signal name="StatusChanged">
+      <arg name="status" type="a{sv}"/>
+    </signal>
   </interface>
 </node>

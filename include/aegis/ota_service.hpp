@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <functional>
 
 #include "aegis/boot_control.hpp"
 #include "aegis/bundle_verifier.hpp"
@@ -32,7 +33,7 @@ public:
     std::string getBooted() const;
 
     void resumeAfterBoot();
-
+    void setStatusChangedCallback(std::function<void(const OtaStatus&)> cb);
 private:
     OtaContext context_;
 };

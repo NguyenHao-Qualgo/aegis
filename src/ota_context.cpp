@@ -53,6 +53,7 @@ OtaStatus OtaContext::getStatus() const {
 
 void OtaContext::save() {
     stateStore_.save(status_);
+    notifyStatusChanged();
 }
 
 void OtaContext::setIdle(const std::string& message) {
@@ -125,6 +126,24 @@ void OtaContext::discardPendingRebootState() {
     status_.operation = "idle";
     status_.progress = 0;
     save();
+}
+
+void OtaContext::setStatusChangedCallback(std::function<void(const OtaStatus&)> cb) {
+    std::scoped_lock lock(mutex_);
+    onStatusChanged_ = std::move(cb);
+}
+
+void OtaContext::notifyStatusChanged() {
+    std::function<void(const OtaStatus&)> cb;
+    OtaStatus snapshot;
+    {
+        std::scoped_lock lock(mutex_);
+        cb = onStatusChanged_;
+        snapshot = status_;
+    }
+    if (cb) {
+        cb(snapshot);
+    }
 }
 
 }  // namespace aegis

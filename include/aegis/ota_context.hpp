@@ -5,6 +5,7 @@
 #include <optional>
 #include <string>
 #include <vector>
+#include <functional>
 
 #include "aegis/config.hpp"
 #include "aegis/ota_event.hpp"
@@ -43,6 +44,7 @@ public:
     std::string getBooted() const;
     void markActive(const std::string& slot);
     void discardPendingRebootState();
+    void setStatusChangedCallback(std::function<void(const OtaStatus&)> cb);
 
     OtaConfig config_;
     BootControl bootControl_;
@@ -52,6 +54,9 @@ public:
     OtaStatus status_;
 
 private:
+    void notifyStatusChanged();
+
+    std::function<void(const OtaStatus&)> onStatusChanged_;
     mutable std::mutex mutex_;
     std::unique_ptr<IOtaState> state_;
 };

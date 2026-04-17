@@ -1,5 +1,6 @@
 #pragma once
 
+#include <map>
 #include <memory>
 #include <string>
 
@@ -17,6 +18,7 @@ public:
 
 private:
     std::map<std::string, sdbus::Variant> toMap(const OtaStatus& status) const;
+    void emitStatusChanged(const OtaStatus& status);
 
     OtaService& service_;
     std::unique_ptr<sdbus::IConnection> connection_;

@@ -77,4 +77,8 @@ std::string OtaService::getBooted() const {
     return context_.getBooted();
 }
 
+void OtaService::setStatusChangedCallback(std::function<void(const OtaStatus&)> cb) {
+    context_.setStatusChangedCallback(std::move(cb));
+}
+
 }  // namespace aegis

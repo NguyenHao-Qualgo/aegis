@@ -50,7 +50,14 @@ DbusService::DbusService(OtaService& service)
             .withOutputParamNames("slot")
             .implementedAs([this]() {
                 return service_.getBooted();
-            }));
+            }),
+        sdbus::registerSignal("StatusChanged")
+            .withParameters<std::map<std::string, sdbus::Variant>>("status")
+    );
+
+    service_.setStatusChangedCallback([this](const OtaStatus& status) {
+        emitStatusChanged(status);
+    });
 }
 
 std::map<std::string, sdbus::Variant> DbusService::toMap(const OtaStatus& status) const {
@@ -65,6 +72,13 @@ std::map<std::string, sdbus::Variant> DbusService::toMap(const OtaStatus& status
         {"TargetSlot", sdbus::Variant(status.targetSlot ? *status.targetSlot : std::string{})},
         {"BundleVersion", sdbus::Variant(status.bundleVersion)}
     };
+}
+
+void DbusService::emitStatusChanged(const OtaStatus& status) {
+    const sdbus::SignalName kStatusChangedSignal{"StatusChanged"};
+    auto signal = object_->createSignal(kInterfaceName, kStatusChangedSignal);
+    signal << toMap(status);
+    object_->emitSignal(signal);
 }
 
 void DbusService::run() {
