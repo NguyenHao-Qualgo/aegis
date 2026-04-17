@@ -5,9 +5,13 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+option(AEGIS_ENABLE_DBUS "Build DBus daemon/client support" ON)
+
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(LIBARCHIVE REQUIRED libarchive)
-find_package(sdbus-c++ REQUIRED)
+if (AEGIS_ENABLE_DBUS)
+    find_package(sdbus-c++ REQUIRED)
+endif()
 
 add_executable(aegis
     src/main.cpp
@@ -23,9 +27,14 @@ add_executable(aegis
     src/bundle_verifier.cpp
     src/ext4_installer.cpp
     src/ota_service.cpp
-    src/dbus_service.cpp
-    src/client.cpp
 )
+
+if (AEGIS_ENABLE_DBUS)
+    target_sources(aegis PRIVATE
+        src/dbus_service.cpp
+        src/client.cpp
+    )
+endif()
 
 target_include_directories(aegis PRIVATE
     include
@@ -34,9 +43,16 @@ target_include_directories(aegis PRIVATE
 
 target_link_libraries(aegis PRIVATE
     ${LIBARCHIVE_LIBRARIES}
-    SDBusCpp::sdbus-c++
 )
+
+if (AEGIS_ENABLE_DBUS)
+    target_link_libraries(aegis PRIVATE
+        SDBusCpp::sdbus-c++
+    )
+    target_compile_definitions(aegis PRIVATE AEGIS_ENABLE_DBUS=1)
+endif()
 
 install(TARGETS aegis RUNTIME DESTINATION bin)
 install(FILES dbus/de.skytrack.Aegis1.xml DESTINATION share/dbus-1/interfaces)
 install(FILES dbus/de.skytrack.Aegis.conf DESTINATION share/dbus-1/system.d)
+install(FILES systemd/aegis.service DESTINATION lib/systemd/system)

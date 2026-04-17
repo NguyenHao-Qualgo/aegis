@@ -7,13 +7,16 @@
 #include "aegis/boot_control.hpp"
 #include "aegis/bundle_creator.hpp"
 #include "aegis/bundle_verifier.hpp"
-#include "aegis/client.hpp"
 #include "aegis/config.hpp"
-#include "aegis/dbus_service.hpp"
 #include "aegis/ext4_installer.hpp"
 #include "aegis/ota_service.hpp"
 #include "aegis/state_store.hpp"
+#include "aegis/client.hpp"
 #include "aegis/util.hpp"
+
+#if defined(AEGIS_ENABLE_DBUS)
+#include "aegis/dbus_service.hpp"
+#endif
 
 namespace aegis {
 
@@ -28,8 +31,12 @@ std::vector<std::string> toArgs(int argc, char** argv) {
 int Application::run(int argc, char** argv) {
     const auto args = toArgs(argc, argv);
     if (args.empty()) {
+#if defined(AEGIS_ENABLE_DBUS)
         Client client;
         return client.run(args);
+#else
+        throw std::runtime_error("This build only supports 'bundle create'");
+#endif
     }
 
     if (args[0] == "bundle") {
@@ -74,7 +81,10 @@ int Application::run(int argc, char** argv) {
     }
 
     if (args[0] == "daemon") {
-        const auto configPath = getOptionValue(args, "--config").empty() ? std::string("/etc/aegis/aegis.conf") : getOptionValue(args, "--config");
+#if !defined(AEGIS_ENABLE_DBUS)
+        throw std::runtime_error("Daemon support is disabled in this build");
+#else
+        const auto configPath = getOptionValue(args, "--config").empty() ? std::string("/etc/aegis/system.conf") : getOptionValue(args, "--config");
         ConfigLoader loader;
         const auto config = loader.load(configPath);
         std::filesystem::create_directories(config.dataDirectory);
@@ -88,10 +98,15 @@ int Application::run(int argc, char** argv) {
         DbusService dbus(service);
         dbus.run();
         return 0;
+#endif
     }
 
+#if defined(AEGIS_ENABLE_DBUS)
     Client client;
     return client.run(args);
+#else
+    throw std::runtime_error("This build only supports 'bundle create'");
+#endif
 }
 
 }  // namespace aegis

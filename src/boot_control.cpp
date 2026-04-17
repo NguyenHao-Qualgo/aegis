@@ -38,7 +38,12 @@ std::string BootControl::getBootedSlot() const {
 }
 
 std::string BootControl::getPrimarySlot() const {
-    return printEnv("Bootchain");
+    try {
+        return printEnv("Bootchain");
+    } catch (const std::exception&) {
+        // First boot may happen before Bootchain is initialized in U-Boot env.
+        return "A";
+    }
 }
 
 std::string BootControl::getInactiveSlot() const {

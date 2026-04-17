@@ -10,6 +10,18 @@ One executable provides:
 - `aegis mark-active <A|B>`
 - `aegis bundle create ...`
 
+## Running As A Service
+
+A systemd unit is provided at `systemd/aegis.service`.
+
+It runs:
+
+```bash
+/usr/bin/aegis daemon --config /etc/aegis/system.conf
+```
+
+and uses `Restart=always` so the daemon is brought back automatically if it exits.
+
 ## Bundle creation
 
 Aegis can now create bundles from a manifest file, closer to the way RAUC bundles are assembled.

@@ -4,6 +4,7 @@
 #include <string>
 
 #include <sdbus-c++/sdbus-c++.h>
+#include <sdbus-c++/Types.h>
 
 #include "aegis/ota_service.hpp"
 

@@ -5,6 +5,7 @@
 #include <stdexcept>
 
 #include <sdbus-c++/sdbus-c++.h>
+#include <sdbus-c++/Types.h>
 
 namespace aegis {
 
@@ -14,14 +15,17 @@ int Client::run(const std::vector<std::string>& args) const {
         return 1;
     }
 
+    const sdbus::BusName serviceName{"de.skytrack.Aegis"};
+    const sdbus::InterfaceName interfaceName{"de.skytrack.Aegis1"};
+    const sdbus::ObjectPath objectPath{"/de/skytrack/Aegis"};
+
     auto connection = sdbus::createSystemBusConnection();
-    auto proxy = sdbus::createProxy(*connection, "de.skytrack.Aegis", "/de/skytrack/Aegis");
-    proxy->finishRegistration();
+    auto proxy = sdbus::createProxy(*connection, serviceName, objectPath);
 
     const auto& cmd = args[0];
     if (cmd == "status") {
         std::map<std::string, sdbus::Variant> status;
-        proxy->callMethod("GetStatus").onInterface("de.skytrack.Aegis1").storeResultsTo(status);
+        proxy->callMethod("GetStatus").onInterface(interfaceName).storeResultsTo(status);
         for (const auto& [key, value] : status) {
             std::cout << key << ": ";
             if (value.containsValueOfType<std::string>()) std::cout << value.get<std::string>();
@@ -32,31 +36,31 @@ int Client::run(const std::vector<std::string>& args) const {
     }
     if (cmd == "install") {
         if (args.size() < 2) throw std::runtime_error("install requires bundle path");
-        proxy->callMethod("Install").onInterface("de.skytrack.Aegis1").withArguments(args[1]);
+        proxy->callMethod("Install").onInterface(interfaceName).withArguments(args[1]);
         return 0;
     }
     if (cmd == "mark-good") {
-        proxy->callMethod("MarkGood").onInterface("de.skytrack.Aegis1");
+        proxy->callMethod("MarkGood").onInterface(interfaceName);
         return 0;
     }
     if (cmd == "mark-bad") {
-        proxy->callMethod("MarkBad").onInterface("de.skytrack.Aegis1");
+        proxy->callMethod("MarkBad").onInterface(interfaceName);
         return 0;
     }
     if (cmd == "mark-active") {
         if (args.size() < 2) throw std::runtime_error("mark-active requires A or B");
-        proxy->callMethod("MarkActive").onInterface("de.skytrack.Aegis1").withArguments(args[1]);
+        proxy->callMethod("MarkActive").onInterface(interfaceName).withArguments(args[1]);
         return 0;
     }
     if (cmd == "get-primary") {
         std::string slot;
-        proxy->callMethod("GetPrimary").onInterface("de.skytrack.Aegis1").storeResultsTo(slot);
+        proxy->callMethod("GetPrimary").onInterface(interfaceName).storeResultsTo(slot);
         std::cout << slot << '\n';
         return 0;
     }
     if (cmd == "get-booted") {
         std::string slot;
-        proxy->callMethod("GetBooted").onInterface("de.skytrack.Aegis1").storeResultsTo(slot);
+        proxy->callMethod("GetBooted").onInterface(interfaceName).storeResultsTo(slot);
         std::cout << slot << '\n';
         return 0;
     }

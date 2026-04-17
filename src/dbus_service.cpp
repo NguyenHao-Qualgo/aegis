@@ -1,33 +1,54 @@
 #include "aegis/dbus_service.hpp"
 
+#include <sdbus-c++/VTableItems.h>
+
 namespace aegis {
+
+namespace {
+const sdbus::BusName kServiceName{"de.skytrack.Aegis"};
+const sdbus::InterfaceName kInterfaceName{"de.skytrack.Aegis1"};
+const sdbus::ObjectPath kObjectPath{"/de/skytrack/Aegis"};
+}
 
 DbusService::DbusService(OtaService& service)
     : service_(service),
-      connection_(sdbus::createSystemBusConnection("de.skytrack.Aegis")),
-      object_(sdbus::createObject(*connection_, "/de/skytrack/Aegis")) {
-    object_->registerMethod("Install").onInterface("de.skytrack.Aegis1").implementedAs([this](const std::string& bundle) {
-        service_.install(bundle);
-    });
-    object_->registerMethod("GetStatus").onInterface("de.skytrack.Aegis1").implementedAs([this]() {
-        return toMap(service_.getStatus());
-    });
-    object_->registerMethod("MarkGood").onInterface("de.skytrack.Aegis1").implementedAs([this]() {
-        service_.markGood();
-    });
-    object_->registerMethod("MarkBad").onInterface("de.skytrack.Aegis1").implementedAs([this]() {
-        service_.markBad();
-    });
-    object_->registerMethod("MarkActive").onInterface("de.skytrack.Aegis1").implementedAs([this](const std::string& slot) {
-        service_.markActive(slot);
-    });
-    object_->registerMethod("GetPrimary").onInterface("de.skytrack.Aegis1").implementedAs([this]() {
-        return service_.getPrimary();
-    });
-    object_->registerMethod("GetBooted").onInterface("de.skytrack.Aegis1").implementedAs([this]() {
-        return service_.getBooted();
-    });
-    object_->finishRegistration();
+      connection_(sdbus::createSystemBusConnection(kServiceName)),
+      object_(sdbus::createObject(*connection_, kObjectPath)) {
+    object_->addVTable(
+        kInterfaceName,
+        sdbus::registerMethod("Install")
+            .withInputParamNames("bundle")
+            .implementedAs([this](const std::string& bundle) {
+                service_.install(bundle);
+            }),
+        sdbus::registerMethod("GetStatus")
+            .withOutputParamNames("status")
+            .implementedAs([this]() {
+                return toMap(service_.getStatus());
+            }),
+        sdbus::registerMethod("MarkGood")
+            .implementedAs([this]() {
+                service_.markGood();
+            }),
+        sdbus::registerMethod("MarkBad")
+            .implementedAs([this]() {
+                service_.markBad();
+            }),
+        sdbus::registerMethod("MarkActive")
+            .withInputParamNames("slot")
+            .implementedAs([this](const std::string& slot) {
+                service_.markActive(slot);
+            }),
+        sdbus::registerMethod("GetPrimary")
+            .withOutputParamNames("slot")
+            .implementedAs([this]() {
+                return service_.getPrimary();
+            }),
+        sdbus::registerMethod("GetBooted")
+            .withOutputParamNames("slot")
+            .implementedAs([this]() {
+                return service_.getBooted();
+            }));
 }
 
 std::map<std::string, sdbus::Variant> DbusService::toMap(const OtaStatus& status) const {
