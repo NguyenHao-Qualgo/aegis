@@ -11,6 +11,8 @@ namespace aegis {
 
 class IdleState : public IOtaState {
 public:
+    ~IdleState();
+
     const char* name() const override { return "Idle"; }
     void onEnter(OtaContext& ctx) override;
     void onExit(OtaContext& ctx) override;
@@ -18,6 +20,7 @@ public:
 
 private:
     void pollLoop(OtaContext& ctx);
+    void stopAndJoinPollThread();
 
     std::atomic<bool> stopPolling_{false};
     std::mutex pollMutex_;

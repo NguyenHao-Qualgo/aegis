@@ -95,14 +95,14 @@ int Application::run(int argc, char** argv) {
         const auto config = loader.load(configPath);
         std::filesystem::create_directories(config.dataDirectory);
         CommandRunner runner;
-        BootControl bootControl(config, runner);
-        BundleVerifier verifier;
+        auto bootControl = std::make_unique<BootControl>(config, runner);
+        auto verifier = std::make_unique<BundleVerifier>();
         std::vector<std::unique_ptr<IUpdateHandler>> updateHandlers;
         updateHandlers.push_back(std::make_unique<ArchiveUpdateHandler>());
         updateHandlers.push_back(std::make_unique<RawUpdateHandler>());
         StateStore stateStore(joinPath(config.dataDirectory, "ota-state.env"));
         auto gcsClient = std::make_shared<GcsStub>();
-        OtaService service(config, bootControl, verifier, std::move(updateHandlers), stateStore, std::move(gcsClient));
+        OtaService service(config, std::move(bootControl), std::move(verifier), std::move(updateHandlers), stateStore, std::move(gcsClient));
         service.resumeAfterBoot();
         DbusService dbus(service);
         dbus.run();

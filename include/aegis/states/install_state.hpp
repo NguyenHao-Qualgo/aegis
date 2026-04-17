@@ -9,6 +9,7 @@ public:
     const char* name() const override { return "Install"; }
     void onEnter(OtaContext& ctx) override;
     void handle(OtaContext& ctx, const OtaEvent& event) override;
+    void onExit(OtaContext& ctx) override;
 };
 
 }  // namespace aegis

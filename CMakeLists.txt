@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 option(AEGIS_ENABLE_DBUS "Build DBus daemon/client support" ON)
+option(AEGIS_BUILD_TESTS "Build unit tests" ON)
 
 find_package(PkgConfig REQUIRED)
 find_package(OpenSSL REQUIRED)
@@ -72,3 +73,8 @@ install(TARGETS aegis RUNTIME DESTINATION bin)
 install(FILES dbus/de.skytrack.Aegis1.xml DESTINATION share/dbus-1/interfaces)
 install(FILES dbus/de.skytrack.Aegis.conf DESTINATION share/dbus-1/system.d)
 install(FILES systemd/aegis.service DESTINATION lib/systemd/system)
+
+if (AEGIS_BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(tests)
+endif()

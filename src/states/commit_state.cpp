@@ -20,8 +20,8 @@ void CommitState::onEnter(OtaContext& ctx) {
 void CommitState::handle(OtaContext& ctx, const OtaEvent& event) {
     switch (event.type) {
     case OtaEvent::Type::MarkGood: {
-        const auto slot = ctx.bootControl_.getBootedSlot();
-        ctx.bootControl_.markGood(slot);
+        const auto slot = ctx.getBooted();
+        ctx.bootControl_->markGood(slot);
         ctx.status_.bootedSlot = slot;
         ctx.status_.primarySlot = slot;
         ctx.status_.targetSlot.reset();
@@ -35,8 +35,8 @@ void CommitState::handle(OtaContext& ctx, const OtaEvent& event) {
     }
 
     case OtaEvent::Type::MarkBad: {
-        const auto slot = ctx.bootControl_.getBootedSlot();
-        ctx.bootControl_.markBad(slot);
+        const auto slot = ctx.getBooted();
+        ctx.bootControl_->markBad(slot);
         ctx.transitionTo(std::make_unique<FailureState>("Marked current slot bad"));
         return;
     }

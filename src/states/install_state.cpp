@@ -1,5 +1,6 @@
 #include "aegis/states/install_state.hpp"
 
+#include <filesystem>
 #include <memory>
 #include <stdexcept>
 
@@ -19,7 +20,7 @@ void InstallState::onEnter(OtaContext& ctx) {
         ctx.status_.message = "Verifying bundle signature";
         ctx.save();
 
-        auto manifest = ctx.verifier_.verifyBundle(ctx.status_.bundlePath, ctx.config_);
+        auto manifest = ctx.verifier_->verifyBundle(ctx.status_.bundlePath, ctx.config_);
         if (manifest) {
             ctx.status_.bundleVersion = manifest->version;
         }
@@ -33,21 +34,21 @@ void InstallState::onEnter(OtaContext& ctx) {
 
         const auto fullManifest = manifest
             ? *manifest
-            : ctx.verifier_.loadManifest(ctx.status_.installPath, ctx.config_);
+            : ctx.verifier_->loadManifest(ctx.status_.installPath, ctx.config_);
 
         ctx.status_.operation = "install";
         ctx.status_.progress = 60;
         ctx.status_.message = "Verifying payloads";
         ctx.save();
 
-        ctx.verifier_.verifyPayloads(fullManifest, ctx.status_.installPath);
+        ctx.verifier_->verifyPayloads(fullManifest, ctx.status_.installPath);
 
         const auto* rootfsImage = fullManifest.findImageBySlotClass("rootfs");
         if (!rootfsImage) {
             throw std::runtime_error("Bundle does not contain a rootfs image");
         }
 
-        const auto targetSlotName = ctx.bootControl_.getInactiveSlot();
+        const auto targetSlotName = ctx.bootControl_->getInactiveSlot();
         const auto& targetSlot = ctx.config_.slotByBootname(targetSlotName);
         const auto payloadPath = joinPath(ctx.status_.installPath, rootfsImage->filename);
 
@@ -62,19 +63,25 @@ void InstallState::onEnter(OtaContext& ctx) {
             targetSlot,
             joinPath(ctx.config_.dataDirectory, "installer-work"));
 
+        ctx.bootControl_->setSlotBootable(targetSlotName, true);
+        ctx.bootControl_->setPrimarySlot(targetSlotName);
+
         ctx.status_.operation = "activate";
         ctx.status_.progress = 90;
         ctx.status_.message = "Activating target slot";
-        ctx.save();
-
-        ctx.bootControl_.setSlotBootable(targetSlotName, true);
-        ctx.bootControl_.setPrimarySlot(targetSlotName);
         ctx.status_.primarySlot = targetSlotName;
         ctx.save();
 
         ctx.transitionTo(std::make_unique<RebootState>());
     } catch (const std::exception& e) {
         ctx.transitionTo(std::make_unique<FailureState>(e.what()));
+    }
+}
+
+void InstallState::onExit(OtaContext& ctx) {
+    if (!ctx.status_.installPath.empty()) {
+        std::filesystem::remove_all(ctx.status_.installPath);
+        ctx.status_.installPath.clear();
     }
 }
 

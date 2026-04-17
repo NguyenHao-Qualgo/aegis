@@ -10,7 +10,7 @@ struct OtaEvent {
         ResumeAfterBoot,
         MarkGood,
         MarkBad,
-        Reset
+        Reset,
     };
 
     Type type {};

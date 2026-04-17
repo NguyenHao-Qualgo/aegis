@@ -9,8 +9,8 @@
 namespace aegis {
 
 OtaService::OtaService(OtaConfig config,
-                       BootControl bootControl,
-                       BundleVerifier verifier,
+                       std::unique_ptr<IBootControl> bootControl,
+                       std::unique_ptr<IBundleVerifier> verifier,
                        std::vector<std::unique_ptr<IUpdateHandler>> updateHandlers,
                        StateStore stateStore,
                        std::shared_ptr<IGcsClient> gcsClient)
@@ -34,13 +34,11 @@ void OtaService::startInstall(const std::string& bundlePath) {
         context_.discardPendingRebootState();
     }
 
-    std::thread([this, bundlePath]() {
-        context_.dispatch(OtaEvent{
-            OtaEvent::Type::StartInstall,
-            bundlePath,
-            ""
-        });
-    }).detach();
+    context_.dispatch(OtaEvent{
+        OtaEvent::Type::StartInstall,
+        bundlePath,
+        ""
+    });
 }
 
 void OtaService::markGood() {

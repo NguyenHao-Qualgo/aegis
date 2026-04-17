@@ -1,9 +1,9 @@
 #pragma once
 
+#include <functional>
+#include <memory>
 #include <string>
 #include <vector>
-#include <memory>
-#include <functional>
 
 #include "aegis/boot_control.hpp"
 #include "aegis/bundle_verifier.hpp"
@@ -18,8 +18,8 @@ namespace aegis {
 class OtaService {
 public:
     OtaService(OtaConfig config,
-               BootControl bootControl,
-               BundleVerifier verifier,
+               std::unique_ptr<IBootControl> bootControl,
+               std::unique_ptr<IBundleVerifier> verifier,
                std::vector<std::unique_ptr<IUpdateHandler>> updateHandlers,
                StateStore stateStore,
                std::shared_ptr<IGcsClient> gcsClient = nullptr);

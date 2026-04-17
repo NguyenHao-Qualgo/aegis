@@ -15,6 +15,18 @@ namespace aegis {
 
 static constexpr auto kPollInterval = std::chrono::seconds(30);
 
+IdleState::~IdleState() {
+    stopAndJoinPollThread();
+}
+
+void IdleState::stopAndJoinPollThread() {
+    stopPolling_ = true;
+    pollCv_.notify_all();
+    if (pollThread_.joinable()) {
+        pollThread_.join();
+    }
+}
+
 void IdleState::onEnter(OtaContext& ctx) {
     ctx.status_.state = OtaState::Idle;
     ctx.status_.operation = "idle";
@@ -30,11 +42,7 @@ void IdleState::onEnter(OtaContext& ctx) {
 }
 
 void IdleState::onExit(OtaContext&) {
-    stopPolling_ = true;
-    pollCv_.notify_all();
-    if (pollThread_.joinable()) {
-        pollThread_.join();
-    }
+    stopAndJoinPollThread();
 }
 
 void IdleState::pollLoop(OtaContext& ctx) {
@@ -45,15 +53,15 @@ void IdleState::pollLoop(OtaContext& ctx) {
 
         if (stopPolling_) break;
 
-        // checkForUpdate must not acquire the context mutex — it only talks to GCS
         auto update = ctx.gcsClient_->checkForUpdate();
         if (update) {
             stopPolling_ = true;
             OtaEvent ev;
             ev.type = OtaEvent::Type::StartInstall;
             ev.bundlePath = update->bundleUrl;
-            // Dispatch on a separate thread: dispatching directly here would deadlock
-            // if onExit() tries to join this thread while the context mutex is held.
+            // Dispatch on a separate thread: we cannot call dispatch() directly
+            // here because dispatch() would eventually call onExit() on this
+            // IdleState, which would try to join pollThread_ — deadlock.
             std::thread([&ctx, ev]() { ctx.dispatch(ev); }).detach();
             break;
         }
@@ -71,8 +79,8 @@ void IdleState::handle(OtaContext& ctx, const OtaEvent& event) {
             pollCv_.notify_all();
             ctx.status_.bundlePath = event.bundlePath;
             ctx.status_.lastError.clear();
-            ctx.status_.bootedSlot = ctx.bootControl_.getBootedSlot();
-            ctx.status_.primarySlot = ctx.bootControl_.getPrimarySlot();
+            ctx.status_.bootedSlot = ctx.getBooted();
+            ctx.status_.primarySlot = ctx.getPrimary();
             ctx.transitionTo(std::make_unique<DownloadState>());
         } catch (const std::exception& e) {
             ctx.transitionTo(std::make_unique<FailureState>(e.what()));

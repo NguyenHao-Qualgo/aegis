@@ -23,8 +23,8 @@ void RebootState::handle(OtaContext& ctx, const OtaEvent& event) {
     }
 
     try {
-        const auto booted = ctx.bootControl_.getBootedSlot();
-        const auto primary = ctx.bootControl_.getPrimarySlot();
+        const auto booted = ctx.getBooted();
+        const auto primary = ctx.getPrimary();
 
         ctx.status_.bootedSlot = booted;
         ctx.status_.primarySlot = primary;

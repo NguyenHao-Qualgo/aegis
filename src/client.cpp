@@ -100,7 +100,7 @@ int Client::run(const std::vector<std::string>& args) const {
 
         connection->enterEventLoopAsync();
 
-        proxy->callMethodAsync("Install")
+        proxy->callMethod("Install")
             .onInterface(interfaceName)
             .withArguments(args[1]);
 

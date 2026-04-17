@@ -9,7 +9,17 @@
 
 namespace aegis {
 
-class BundleVerifier {
+class IBundleVerifier {
+public:
+    virtual ~IBundleVerifier() = default;
+
+    virtual std::optional<BundleManifest> verifyBundle(const std::string& bundlePath, const OtaConfig& config) const = 0;
+    virtual BundleManifest loadManifest(const std::string& extractedDir, const OtaConfig& config) const = 0;
+    virtual void verifyPayloads(const BundleManifest& manifest, const std::string& extractedDir) const = 0;
+    virtual std::uint64_t payloadSize(const std::string& bundlePath) const = 0;
+};
+
+class BundleVerifier : public IBundleVerifier {
 public:
     struct SignatureInfo {
         std::uint64_t cmsSize{0};
@@ -19,17 +29,11 @@ public:
 
     BundleVerifier() = default;
 
-    // Verify CMS signature and return trusted manifest. Returns nullopt for unsigned bundles
-    // when no keyring is configured (dev mode). Throws if unsigned but keyring is required.
-    std::optional<BundleManifest> verifyBundle(const std::string& bundlePath, const OtaConfig& config) const;
+    std::optional<BundleManifest> verifyBundle(const std::string& bundlePath, const OtaConfig& config) const override;
+    BundleManifest loadManifest(const std::string& extractedDir, const OtaConfig& config) const override;
+    void verifyPayloads(const BundleManifest& manifest, const std::string& extractedDir) const override;
+    std::uint64_t payloadSize(const std::string& bundlePath) const override;
 
-    // Load manifest from extracted archive and check compatible field (unsigned bundles only).
-    BundleManifest loadManifest(const std::string& extractedDir, const OtaConfig& config) const;
-
-    // Verify extracted payload files match the manifest checksums.
-    void verifyPayloads(const BundleManifest& manifest, const std::string& extractedDir) const;
-
-    std::uint64_t payloadSize(const std::string& bundlePath) const;
     std::optional<SignatureInfo> signatureInfo(const std::string& bundlePath) const;
 
 private:
