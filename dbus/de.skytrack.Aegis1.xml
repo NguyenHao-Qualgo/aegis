@@ -1,0 +1,24 @@
+<!DOCTYPE node PUBLIC
+  "-//freedesktop//DTD D-BUS Object Introspection 1.0//EN"
+  "http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd">
+<node>
+  <interface name="de.skytrack.Aegis1">
+    <method name="Install">
+      <arg name="bundle" type="s" direction="in"/>
+    </method>
+    <method name="GetStatus">
+      <arg name="status" type="a{sv}" direction="out"/>
+    </method>
+    <method name="MarkGood"/>
+    <method name="MarkBad"/>
+    <method name="MarkActive">
+      <arg name="slot" type="s" direction="in"/>
+    </method>
+    <method name="GetPrimary">
+      <arg name="slot" type="s" direction="out"/>
+    </method>
+    <method name="GetBooted">
+      <arg name="slot" type="s" direction="out"/>
+    </method>
+  </interface>
+</node>

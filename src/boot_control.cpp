@@ -1,0 +1,76 @@
+#include "aegis/boot_control.hpp"
+
+#include <stdexcept>
+
+#include "aegis/util.hpp"
+
+namespace aegis {
+
+BootControl::BootControl(OtaConfig config, CommandRunner runner)
+    : config_(std::move(config)), runner_(std::move(runner)) {}
+
+std::string BootControl::printEnv(const std::string& name) const {
+    const auto cmd = "fw_printenv -n " + shellQuote(name);
+    auto value = trim(runner_.runOrThrow(cmd));
+    if (value.empty()) {
+        throw std::runtime_error("Missing U-Boot env: " + name);
+    }
+    return value;
+}
+
+void BootControl::setEnv(const std::string& name, const std::string& value) const {
+    runner_.runOrThrow("fw_setenv " + shellQuote(name) + " " + shellQuote(value));
+}
+
+std::string BootControl::statusVar(const std::string& slot) const {
+    if (slot == "A") return "RootAStatus";
+    if (slot == "B") return "RootBStatus";
+    throw std::runtime_error("Invalid slot: " + slot);
+}
+
+std::string BootControl::getBootedSlot() const {
+    const auto result = runner_.run("grep -o 'rauc.slot=[AB]' /proc/cmdline | cut -d= -f2 2>/dev/null");
+    const auto value = trim(result.output);
+    if (value == "A" || value == "B") {
+        return value;
+    }
+    return getPrimarySlot();
+}
+
+std::string BootControl::getPrimarySlot() const {
+    return printEnv("Bootchain");
+}
+
+std::string BootControl::getInactiveSlot() const {
+    return getBootedSlot() == "A" ? "B" : "A";
+}
+
+bool BootControl::isSlotBootable(const std::string& slot) const {
+    return printEnv(statusVar(slot)) == "1";
+}
+
+void BootControl::setSlotBootable(const std::string& slot, bool bootable) const {
+    setEnv(statusVar(slot), bootable ? "1" : "0");
+}
+
+void BootControl::setPrimarySlot(const std::string& slot) const {
+    if (!isSlotBootable(slot)) {
+        throw std::runtime_error("Slot is not bootable: " + slot);
+    }
+    setEnv("Bootchain", slot);
+}
+
+void BootControl::markGood(const std::string& slot) const {
+    setSlotBootable(slot, true);
+    setEnv("Bootchain", slot);
+}
+
+void BootControl::markBad(const std::string& slot) const {
+    setSlotBootable(slot, false);
+    const auto other = slot == "A" ? "B" : "A";
+    if (isSlotBootable(other)) {
+        setEnv("Bootchain", other);
+    }
+}
+
+}  // namespace aegis
