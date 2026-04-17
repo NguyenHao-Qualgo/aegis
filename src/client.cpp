@@ -1,13 +1,58 @@
 #include "aegis/client.hpp"
 
+#include <chrono>
 #include <iostream>
 #include <map>
+#include <thread>
 #include <stdexcept>
 
 #include <sdbus-c++/sdbus-c++.h>
 #include <sdbus-c++/Types.h>
 
 namespace aegis {
+
+namespace {
+
+std::map<std::string, sdbus::Variant> fetchStatus(sdbus::IProxy& proxy, const sdbus::InterfaceName& interfaceName) {
+    std::map<std::string, sdbus::Variant> status;
+    proxy.callMethod("GetStatus").onInterface(interfaceName).storeResultsTo(status);
+    return status;
+}
+
+std::string getStringField(const std::map<std::string, sdbus::Variant>& status, const std::string& key) {
+    const auto it = status.find(key);
+    if (it == status.end() || !it->second.containsValueOfType<std::string>()) {
+        return {};
+    }
+    return it->second.get<std::string>();
+}
+
+int getIntField(const std::map<std::string, sdbus::Variant>& status, const std::string& key) {
+    const auto it = status.find(key);
+    if (it == status.end() || !it->second.containsValueOfType<int32_t>()) {
+        return 0;
+    }
+    return it->second.get<int32_t>();
+}
+
+void printStatusLine(const std::map<std::string, sdbus::Variant>& status) {
+    const auto state = getStringField(status, "State");
+    const auto operation = getStringField(status, "Operation");
+    const auto progress = getIntField(status, "Progress");
+    const auto message = getStringField(status, "Message");
+
+    std::cout << state << " [" << operation << "] " << progress << "%";
+    if (!message.empty()) {
+        std::cout << " - " << message;
+    }
+    std::cout << '\n';
+}
+
+bool isTerminalState(const std::string& state) {
+    return state == "Idle" || state == "Reboot" || state == "Commit" || state == "Failure";
+}
+
+}
 
 int Client::run(const std::vector<std::string>& args) const {
     if (args.empty()) {
@@ -24,8 +69,7 @@ int Client::run(const std::vector<std::string>& args) const {
 
     const auto& cmd = args[0];
     if (cmd == "status") {
-        std::map<std::string, sdbus::Variant> status;
-        proxy->callMethod("GetStatus").onInterface(interfaceName).storeResultsTo(status);
+        const auto status = fetchStatus(*proxy, interfaceName);
         for (const auto& [key, value] : status) {
             std::cout << key << ": ";
             if (value.containsValueOfType<std::string>()) std::cout << value.get<std::string>();
@@ -37,7 +81,37 @@ int Client::run(const std::vector<std::string>& args) const {
     if (cmd == "install") {
         if (args.size() < 2) throw std::runtime_error("install requires bundle path");
         proxy->callMethod("Install").onInterface(interfaceName).withArguments(args[1]);
-        return 0;
+
+        std::string lastState;
+        std::string lastOperation;
+        int lastProgress = -1;
+        std::string lastMessage;
+
+        while (true) {
+            const auto status = fetchStatus(*proxy, interfaceName);
+            const auto state = getStringField(status, "State");
+            const auto operation = getStringField(status, "Operation");
+            const auto progress = getIntField(status, "Progress");
+            const auto message = getStringField(status, "Message");
+
+            if (state != lastState || operation != lastOperation || progress != lastProgress || message != lastMessage) {
+                printStatusLine(status);
+                lastState = state;
+                lastOperation = operation;
+                lastProgress = progress;
+                lastMessage = message;
+            }
+
+            if (isTerminalState(state)) {
+                if (state == "Failure") {
+                    const auto error = getStringField(status, "LastError");
+                    throw std::runtime_error(error.empty() ? "Install failed" : error);
+                }
+                return 0;
+            }
+
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+        }
     }
     if (cmd == "mark-good") {
         proxy->callMethod("MarkGood").onInterface(interfaceName);

@@ -1,7 +1,9 @@
 #include "aegis/ota_service.hpp"
 
+#include <exception>
 #include <filesystem>
 #include <stdexcept>
+#include <thread>
 
 #include "aegis/util.hpp"
 
@@ -10,13 +12,13 @@ namespace aegis {
 OtaService::OtaService(OtaConfig config,
                        BootControl bootControl,
                        BundleVerifier verifier,
-                       Ext4Installer installer,
+                       std::vector<std::unique_ptr<IUpdateHandler>> updateHandlers,
                        StateStore stateStore,
                        CommandRunner runner)
     : config_(std::move(config)),
       bootControl_(std::move(bootControl)),
       verifier_(std::move(verifier)),
-      installer_(std::move(installer)),
+      updateHandlers_(std::move(updateHandlers)),
       stateStore_(std::move(stateStore)),
       runner_(std::move(runner)) {
     status_ = stateStore_.load();
@@ -27,6 +29,29 @@ OtaService::OtaService(OtaConfig config,
 OtaStatus OtaService::getStatus() const {
     std::scoped_lock lock(mutex_);
     return status_;
+}
+
+void OtaService::startInstall(const std::string& bundlePath) {
+    {
+        std::scoped_lock lock(mutex_);
+        if (installInProgress_) {
+            throw std::runtime_error("An install is already in progress");
+        }
+        installInProgress_ = true;
+        status_.lastError.clear();
+        stateStore_.save(status_);
+    }
+
+    std::thread([this, bundlePath]() {
+        try {
+            install(bundlePath);
+            finishInstall();
+        } catch (const std::exception& ex) {
+            failInstall(ex.what());
+        } catch (...) {
+            failInstall("Unknown install failure");
+        }
+    }).detach();
 }
 
 void OtaService::setState(OtaState state, const std::string& operation, int progress, const std::string& message) {
@@ -40,6 +65,22 @@ void OtaService::setState(OtaState state, const std::string& operation, int prog
 
 void OtaService::save() {
     std::scoped_lock lock(mutex_);
+    stateStore_.save(status_);
+}
+
+void OtaService::finishInstall() {
+    std::scoped_lock lock(mutex_);
+    installInProgress_ = false;
+    stateStore_.save(status_);
+}
+
+void OtaService::failInstall(const std::string& message) {
+    std::scoped_lock lock(mutex_);
+    installInProgress_ = false;
+    status_.state = OtaState::Failure;
+    status_.operation = "failure";
+    status_.message = "Install failed";
+    status_.lastError = message;
     stateStore_.save(status_);
 }
 
@@ -61,11 +102,23 @@ void OtaService::ensureBootable(const std::string& slot) const {
     }
 }
 
+const IUpdateHandler& OtaService::updateHandlerFor(const std::string& imageType) const {
+    for (const auto& handler : updateHandlers_) {
+        if (handler->supportsImageType(imageType)) {
+            return *handler;
+        }
+    }
+    throw std::runtime_error("Unsupported rootfs payload type: " + imageType);
+}
+
 void OtaService::install(const std::string& bundlePath) {
     setState(OtaState::Sync, "sync", 0, "Collecting current slot state");
-    status_.bootedSlot = bootControl_.getBootedSlot();
-    status_.primarySlot = bootControl_.getPrimarySlot();
-    save();
+    {
+        std::scoped_lock lock(mutex_);
+        status_.bootedSlot = bootControl_.getBootedSlot();
+        status_.primarySlot = bootControl_.getPrimarySlot();
+        stateStore_.save(status_);
+    }
 
     setState(OtaState::Download, "prepare", 10, "Preparing bundle");
     const auto extracted = extractBundle(bundlePath);
@@ -76,9 +129,6 @@ void OtaService::install(const std::string& bundlePath) {
     const auto* rootfsImage = manifest.findImageBySlotClass("rootfs");
     if (rootfsImage == nullptr) {
         throw std::runtime_error("Bundle does not contain a rootfs image");
-    }
-    if (rootfsImage->imagetype != "archive") {
-        throw std::runtime_error("Current installer only supports rootfs archive payloads");
     }
 
     const auto targetSlotName = bootControl_.getInactiveSlot();
@@ -92,7 +142,9 @@ void OtaService::install(const std::string& bundlePath) {
     }
 
     setState(OtaState::Install, "install", 60, "Installing bundle payload");
-    installer_.installPayload(joinPath(extracted, rootfsImage->filename), targetSlot, joinPath(config_.dataDirectory, "installer-work"));
+    const auto payloadPath = joinPath(extracted, rootfsImage->filename);
+    updateHandlerFor(rootfsImage->imagetype).install(
+        payloadPath, targetSlot, joinPath(config_.dataDirectory, "installer-work"));
 
     setState(OtaState::Install, "activate", 85, "Activating target slot");
     bootControl_.setSlotBootable(targetSlotName, true);

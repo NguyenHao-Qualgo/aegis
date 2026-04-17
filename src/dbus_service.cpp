@@ -1,6 +1,8 @@
 #include "aegis/dbus_service.hpp"
 
+#if __has_include(<sdbus-c++/VTableItems.h>)
 #include <sdbus-c++/VTableItems.h>
+#endif
 
 namespace aegis {
 
@@ -19,7 +21,7 @@ DbusService::DbusService(OtaService& service)
         sdbus::registerMethod("Install")
             .withInputParamNames("bundle")
             .implementedAs([this](const std::string& bundle) {
-                service_.install(bundle);
+                service_.startInstall(bundle);
             }),
         sdbus::registerMethod("GetStatus")
             .withOutputParamNames("status")

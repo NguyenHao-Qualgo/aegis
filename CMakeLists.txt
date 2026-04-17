@@ -25,7 +25,8 @@ add_executable(aegis
     src/bundle_manifest.cpp
     src/bundle_creator.cpp
     src/bundle_verifier.cpp
-    src/ext4_installer.cpp
+    src/archive_update_handler.cpp
+    src/raw_update_handler.cpp
     src/ota_service.cpp
 )
 

@@ -6,13 +6,20 @@
 
 namespace aegis {
 
+namespace {
+bool isValidSlotName(const std::string& value) {
+    return value == "A" || value == "B";
+}
+}
+
 BootControl::BootControl(OtaConfig config, CommandRunner runner)
     : config_(std::move(config)), runner_(std::move(runner)) {}
 
 std::string BootControl::printEnv(const std::string& name) const {
     const auto cmd = "fw_printenv -n " + shellQuote(name);
-    auto value = trim(runner_.runOrThrow(cmd));
-    if (value.empty()) {
+    const auto result = runner_.run(cmd);
+    auto value = trim(result.output);
+    if (result.exitCode != 0 || value.empty()) {
         throw std::runtime_error("Missing U-Boot env: " + name);
     }
     return value;
@@ -39,11 +46,14 @@ std::string BootControl::getBootedSlot() const {
 
 std::string BootControl::getPrimarySlot() const {
     try {
-        return printEnv("Bootchain");
+        const auto value = printEnv("Bootchain");
+        if (isValidSlotName(value)) {
+            return value;
+        }
     } catch (const std::exception&) {
-        // First boot may happen before Bootchain is initialized in U-Boot env.
-        return "A";
     }
+    // First boot may happen before Bootchain is initialized in U-Boot env.
+    return "A";
 }
 
 std::string BootControl::getInactiveSlot() const {

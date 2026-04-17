@@ -7,9 +7,10 @@
 #include "aegis/boot_control.hpp"
 #include "aegis/bundle_creator.hpp"
 #include "aegis/bundle_verifier.hpp"
+#include "aegis/archive_update_handler.hpp"
 #include "aegis/config.hpp"
-#include "aegis/ext4_installer.hpp"
 #include "aegis/ota_service.hpp"
+#include "aegis/raw_update_handler.hpp"
 #include "aegis/state_store.hpp"
 #include "aegis/client.hpp"
 #include "aegis/util.hpp"
@@ -91,9 +92,11 @@ int Application::run(int argc, char** argv) {
         CommandRunner runner;
         BootControl bootControl(config, runner);
         BundleVerifier verifier(runner);
-        Ext4Installer installer(runner);
+        std::vector<std::unique_ptr<IUpdateHandler>> updateHandlers;
+        updateHandlers.push_back(std::make_unique<ArchiveUpdateHandler>());
+        updateHandlers.push_back(std::make_unique<RawUpdateHandler>());
         StateStore stateStore(joinPath(config.dataDirectory, "ota-state.env"));
-        OtaService service(config, bootControl, verifier, installer, stateStore, runner);
+        OtaService service(config, bootControl, verifier, std::move(updateHandlers), stateStore, runner);
         service.resumeAfterBoot();
         DbusService dbus(service);
         dbus.run();
