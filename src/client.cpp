@@ -49,7 +49,7 @@ void printStatusLine(const std::map<std::string, sdbus::Variant>& status) {
 }
 
 bool isTerminalState(const std::string& state) {
-    return state == "Idle" || state == "Reboot" || state == "Commit" || state == "Failure";
+    return state == "Idle" || state == "Reboot" || state == "Failure";
 }
 
 }
@@ -80,38 +80,40 @@ int Client::run(const std::vector<std::string>& args) const {
     }
     if (cmd == "install") {
         if (args.size() < 2) throw std::runtime_error("install requires bundle path");
-        proxy->callMethod("Install").onInterface(interfaceName).withArguments(args[1]);
 
-        std::string lastState;
-        std::string lastOperation;
-        int lastProgress = -1;
-        std::string lastMessage;
+        bool done = false;
+        std::string terminalError;
 
-        while (true) {
-            const auto status = fetchStatus(*proxy, interfaceName);
-            const auto state = getStringField(status, "State");
-            const auto operation = getStringField(status, "Operation");
-            const auto progress = getIntField(status, "Progress");
-            const auto message = getStringField(status, "Message");
-
-            if (state != lastState || operation != lastOperation || progress != lastProgress || message != lastMessage) {
+        proxy->uponSignal("StatusChanged")
+            .onInterface(interfaceName)
+            .call([&](const std::map<std::string, sdbus::Variant>& status) {
                 printStatusLine(status);
-                lastState = state;
-                lastOperation = operation;
-                lastProgress = progress;
-                lastMessage = message;
-            }
 
-            if (isTerminalState(state)) {
-                if (state == "Failure") {
-                    const auto error = getStringField(status, "LastError");
-                    throw std::runtime_error(error.empty() ? "Install failed" : error);
+                const auto state = getStringField(status, "State");
+                if (isTerminalState(state)) {
+                    if (state == "Failure") {
+                        terminalError = getStringField(status, "LastError");
+                    }
+                    done = true;
                 }
-                return 0;
-            }
+            });
 
-            std::this_thread::sleep_for(std::chrono::seconds(1));
+        connection->enterEventLoopAsync();
+
+        proxy->callMethodAsync("Install")
+            .onInterface(interfaceName)
+            .withArguments(args[1]);
+
+        while (!done) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
+
+        connection->leaveEventLoop();
+
+        if (!terminalError.empty()) {
+            throw std::runtime_error(terminalError);
+        }
+        return 0;
     }
     if (cmd == "mark-good") {
         proxy->callMethod("MarkGood").onInterface(interfaceName);

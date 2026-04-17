@@ -1,4 +1,5 @@
 #include "aegis/dbus_service.hpp"
+#include "aegis/util.hpp"
 
 #if __has_include(<sdbus-c++/VTableItems.h>)
 #include <sdbus-c++/VTableItems.h>
@@ -21,7 +22,9 @@ DbusService::DbusService(OtaService& service)
         sdbus::registerMethod("Install")
             .withInputParamNames("bundle")
             .implementedAs([this](const std::string& bundle) {
+                logInfo("DBus Install called");
                 service_.startInstall(bundle);
+                logInfo("DBus Install returned");
             }),
         sdbus::registerMethod("GetStatus")
             .withOutputParamNames("status")
