@@ -46,12 +46,19 @@ struct OtaStatus {
     OtaState state{OtaState::Idle};
     std::string operation{"idle"};
     int progress{0};
+
     std::string message;
     std::string lastError;
+
     std::string bootedSlot{"A"};
     std::string primarySlot{"A"};
     std::optional<std::string> targetSlot;
+
     std::string bundleVersion;
+
+    // Runtime workflow data for state machine
+    std::string bundlePath;
+    std::string installPath;
 };
 
 std::string toString(BootloaderType value);

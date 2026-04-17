@@ -29,7 +29,18 @@ add_executable(aegis
     src/bundle_extractor.cpp
     src/archive_update_handler.cpp
     src/raw_update_handler.cpp
+
+    src/ota_context.cpp
     src/ota_service.cpp
+
+    src/states/idle_state.cpp
+    src/states/sync_state.cpp
+    src/states/verify_bundle_state.cpp
+    src/states/extract_state.cpp
+    src/states/install_state.cpp
+    src/states/reboot_state.cpp
+    src/states/commit_state.cpp
+    src/states/failure_state.cpp
 )
 
 if (AEGIS_ENABLE_DBUS)
@@ -42,7 +53,6 @@ endif()
 target_include_directories(aegis PRIVATE
     include
     ${LIBARCHIVE_INCLUDE_DIRS}
-    ${OPENSSL_INCLUDE_DIR}
 )
 
 target_link_libraries(aegis PRIVATE
