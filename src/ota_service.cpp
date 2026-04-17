@@ -43,11 +43,15 @@ void OtaService::save() {
     stateStore_.save(status_);
 }
 
-std::string OtaService::extractBundle(const std::string& bundlePath) const {
+std::string OtaService::extractBundle(const std::string& bundlePath) {
     const auto workDir = joinPath(config_.dataDirectory, "bundle-work");
     std::filesystem::remove_all(workDir);
     std::filesystem::create_directories(workDir);
-    runner_.runOrThrow("tar -C " + shellQuote(workDir) + " -xzf " + shellQuote(bundlePath));
+    const auto bundlePayloadSize = verifier_.payloadSize(bundlePath);
+    runner_.runOrThrow(
+        "dd if=" + shellQuote(bundlePath) +
+        " bs=1 count=" + std::to_string(bundlePayloadSize) +
+        " status=none | tar -C " + shellQuote(workDir) + " -xzf -");
     return workDir;
 }
 
@@ -67,7 +71,7 @@ void OtaService::install(const std::string& bundlePath) {
     const auto extracted = extractBundle(bundlePath);
 
     setState(OtaState::Install, "verify", 25, "Verifying bundle");
-    const auto manifest = verifier_.verifyExtracted(extracted, config_);
+    const auto manifest = verifier_.verifyExtracted(bundlePath, extracted, config_);
 
     const auto* rootfsImage = manifest.findImageBySlotClass("rootfs");
     if (rootfsImage == nullptr) {

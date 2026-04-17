@@ -38,6 +38,10 @@ int Application::run(int argc, char** argv) {
             options.compatible = getOptionValue(args, "--compatible");
             options.version = getOptionValue(args, "--version");
             options.outputBundle = getOptionValue(args, "--output");
+            options.manifestPath = getOptionValue(args, "--manifest");
+            options.sourceDirectory = getOptionValue(args, "--source-dir");
+            options.certPath = getOptionValue(args, "--cert");
+            options.keyPath = getOptionValue(args, "--key");
             const auto format = getOptionValue(args, "--format");
             if (!format.empty()) options.format = format;
 
@@ -51,8 +55,15 @@ int Application::run(int argc, char** argv) {
                 }
             }
 
-            if (options.compatible.empty() || options.version.empty() || options.outputBundle.empty() || options.artifacts.empty()) {
-                throw std::runtime_error("bundle create requires --compatible --version --output and at least one --artifact <slot-class>:<type>:<path>");
+            const bool usingManifest = !options.manifestPath.empty();
+            if (usingManifest) {
+                if (options.outputBundle.empty()) {
+                    throw std::runtime_error("bundle create with --manifest requires --output");
+                }
+            } else if (options.compatible.empty() || options.version.empty() || options.outputBundle.empty() || options.artifacts.empty()) {
+                throw std::runtime_error(
+                    "bundle create requires either --manifest <manifest.ini> --output <bundle> "
+                    "or --compatible --version --output and at least one --artifact <slot-class>:<type>:<path>");
             }
             BundleCreator creator(CommandRunner{});
             creator.create(options);

@@ -33,7 +33,7 @@ public:
 private:
     void setState(OtaState state, const std::string& operation, int progress, const std::string& message);
     void save();
-    std::string extractBundle(const std::string& bundlePath) const;
+    std::string extractBundle(const std::string& bundlePath);
     void ensureBootable(const std::string& slot) const;
 
     OtaConfig config_;

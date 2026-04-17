@@ -25,9 +25,16 @@ struct BundleManifest {
     const BundleImage* findImageBySlotClass(const std::string& slotClass) const;
 };
 
+enum class BundleManifestValidationMode {
+    AllowMissingPayloadMetadata,
+    RequirePayloadMetadata,
+};
+
 class BundleManifestIO {
 public:
-    BundleManifest loadFromFile(const std::string& path) const;
+    BundleManifest loadFromFile(
+        const std::string& path,
+        BundleManifestValidationMode validationMode = BundleManifestValidationMode::RequirePayloadMetadata) const;
     std::string serialize(const BundleManifest& manifest) const;
 };
 

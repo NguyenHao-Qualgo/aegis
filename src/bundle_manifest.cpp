@@ -16,7 +16,25 @@ const BundleImage* BundleManifest::findImageBySlotClass(const std::string& slotC
     return it == images.end() ? nullptr : &*it;
 }
 
-BundleManifest BundleManifestIO::loadFromFile(const std::string& path) const {
+namespace {
+void validateManifest(const BundleManifest& manifest, BundleManifestValidationMode validationMode) {
+    if (manifest.version.empty() || manifest.compatible.empty() || manifest.images.empty()) {
+        throw std::runtime_error("Manifest is incomplete");
+    }
+
+    for (const auto& image : manifest.images) {
+        if (image.slotClass.empty() || image.filename.empty()) {
+            throw std::runtime_error("Manifest image entry is incomplete: " + image.name);
+        }
+        if (validationMode == BundleManifestValidationMode::RequirePayloadMetadata &&
+            (image.sha256.empty() || image.size == 0)) {
+            throw std::runtime_error("Manifest image entry is incomplete: " + image.name);
+        }
+    }
+}
+}
+
+BundleManifest BundleManifestIO::loadFromFile(const std::string& path, BundleManifestValidationMode validationMode) const {
     std::ifstream ifs(path);
     if (!ifs) {
         throw std::runtime_error("Cannot open manifest: " + path);
@@ -56,14 +74,8 @@ BundleManifest BundleManifestIO::loadFromFile(const std::string& path) const {
             else if (key == "size") currentImage->size = std::stoull(value);
         }
     }
-    if (manifest.version.empty() || manifest.compatible.empty() || manifest.images.empty()) {
-        throw std::runtime_error("Manifest is incomplete");
-    }
-    for (const auto& image : manifest.images) {
-        if (image.slotClass.empty() || image.filename.empty() || image.sha256.empty()) {
-            throw std::runtime_error("Manifest image entry is incomplete: " + image.name);
-        }
-    }
+
+    validateManifest(manifest, validationMode);
     return manifest;
 }
 
