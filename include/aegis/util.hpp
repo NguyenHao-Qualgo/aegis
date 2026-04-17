@@ -6,6 +6,11 @@
 
 namespace aegis {
 
+void logDebug(const std::string& msg);
+void logInfo(const std::string& msg);
+void logWarn(const std::string& msg);
+void logError(const std::string& msg);
+
 bool startsWith(const std::string& value, const std::string& prefix);
 std::string trim(const std::string& value);
 std::vector<std::string> split(const std::string& value, char delim);

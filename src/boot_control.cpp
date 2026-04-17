@@ -36,7 +36,7 @@ std::string BootControl::statusVar(const std::string& slot) const {
 }
 
 std::string BootControl::getBootedSlot() const {
-    const auto result = runner_.run("grep -o 'rauc.slot=[AB]' /proc/cmdline | cut -d= -f2 2>/dev/null");
+    const auto result = runner_.run("grep -o 'aegis.slot=[AB]' /proc/cmdline | cut -d= -f2 2>/dev/null");
     const auto value = trim(result.output);
     if (value == "A" || value == "B") {
         return value;

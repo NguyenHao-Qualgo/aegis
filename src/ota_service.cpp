@@ -5,6 +5,7 @@
 #include <stdexcept>
 #include <thread>
 
+#include "aegis/bundle_extractor.hpp"
 #include "aegis/util.hpp"
 
 namespace aegis {
@@ -13,14 +14,12 @@ OtaService::OtaService(OtaConfig config,
                        BootControl bootControl,
                        BundleVerifier verifier,
                        std::vector<std::unique_ptr<IUpdateHandler>> updateHandlers,
-                       StateStore stateStore,
-                       CommandRunner runner)
+                       StateStore stateStore)
     : config_(std::move(config)),
       bootControl_(std::move(bootControl)),
       verifier_(std::move(verifier)),
       updateHandlers_(std::move(updateHandlers)),
-      stateStore_(std::move(stateStore)),
-      runner_(std::move(runner)) {
+      stateStore_(std::move(stateStore)) {
     status_ = stateStore_.load();
     status_.bootedSlot = bootControl_.getBootedSlot();
     status_.primarySlot = bootControl_.getPrimarySlot();
@@ -75,6 +74,7 @@ void OtaService::finishInstall() {
 }
 
 void OtaService::failInstall(const std::string& message) {
+    logError("Install failed: " + message);
     std::scoped_lock lock(mutex_);
     installInProgress_ = false;
     status_.state = OtaState::Failure;
@@ -88,11 +88,8 @@ std::string OtaService::extractBundle(const std::string& bundlePath) {
     const auto workDir = joinPath(config_.dataDirectory, "bundle-work");
     std::filesystem::remove_all(workDir);
     std::filesystem::create_directories(workDir);
-    const auto bundlePayloadSize = verifier_.payloadSize(bundlePath);
-    runner_.runOrThrow(
-        "dd if=" + shellQuote(bundlePath) +
-        " bs=1 count=" + std::to_string(bundlePayloadSize) +
-        " status=none | tar -C " + shellQuote(workDir) + " -xzf -");
+    BundleExtractor extractor;
+    extractor.extract(bundlePath, workDir, verifier_.payloadSize(bundlePath));
     return workDir;
 }
 
@@ -112,6 +109,8 @@ const IUpdateHandler& OtaService::updateHandlerFor(const std::string& imageType)
 }
 
 void OtaService::install(const std::string& bundlePath) {
+    logInfo("Install started: " + bundlePath);
+
     setState(OtaState::Sync, "sync", 0, "Collecting current slot state");
     {
         std::scoped_lock lock(mutex_);
@@ -119,12 +118,28 @@ void OtaService::install(const std::string& bundlePath) {
         status_.primarySlot = bootControl_.getPrimarySlot();
         stateStore_.save(status_);
     }
+    logInfo("Booted slot: " + status_.bootedSlot + "  primary: " + status_.primarySlot);
 
-    setState(OtaState::Download, "prepare", 10, "Preparing bundle");
+    setState(OtaState::Download, "verify", 10, "Verifying bundle signature");
+    logInfo("Verifying bundle signature");
+    auto preManifest = verifier_.verifyBundle(bundlePath, config_);
+    if (preManifest) {
+        logInfo("Bundle signature OK  compatible=" + preManifest->compatible +
+                "  version=" + preManifest->version);
+    } else {
+        logWarn("Bundle is unsigned (no keyring configured)");
+    }
+
+    setState(OtaState::Install, "prepare", 25, "Extracting bundle");
+    logInfo("Extracting bundle payload");
     const auto extracted = extractBundle(bundlePath);
+    logInfo("Bundle extracted to: " + extracted);
 
-    setState(OtaState::Install, "verify", 25, "Verifying bundle");
-    const auto manifest = verifier_.verifyExtracted(bundlePath, extracted, config_);
+    setState(OtaState::Install, "verify", 40, "Verifying bundle payloads");
+    logInfo("Verifying payload checksums");
+    const auto manifest = preManifest ? *preManifest : verifier_.loadManifest(extracted, config_);
+    verifier_.verifyPayloads(manifest, extracted);
+    logInfo("Payload checksums OK  images=" + std::to_string(manifest.images.size()));
 
     const auto* rootfsImage = manifest.findImageBySlotClass("rootfs");
     if (rootfsImage == nullptr) {
@@ -143,10 +158,14 @@ void OtaService::install(const std::string& bundlePath) {
 
     setState(OtaState::Install, "install", 60, "Installing bundle payload");
     const auto payloadPath = joinPath(extracted, rootfsImage->filename);
+    logInfo("Installing " + rootfsImage->imagetype + " image to slot " +
+            targetSlotName + " (" + targetSlot.device + ")");
     updateHandlerFor(rootfsImage->imagetype).install(
         payloadPath, targetSlot, joinPath(config_.dataDirectory, "installer-work"));
+    logInfo("Payload installed");
 
     setState(OtaState::Install, "activate", 85, "Activating target slot");
+    logInfo("Activating slot: " + targetSlotName);
     bootControl_.setSlotBootable(targetSlotName, true);
     bootControl_.setPrimarySlot(targetSlotName);
 
@@ -157,6 +176,7 @@ void OtaService::install(const std::string& bundlePath) {
     }
 
     setState(OtaState::Reboot, "reboot", 100, "Ready to reboot");
+    logInfo("Install complete — reboot required");
 }
 
 void OtaService::markGood() {

@@ -5,13 +5,13 @@ usage() {
     cat <<'EOF'
 Usage: ./extract.sh BUNDLE [CAFILE] [MANIFEST_OUT] [EXTRACT_DIR]
 
-Extract and optionally verify the manifest from an Aegis bundle.
+Inspect and optionally verify an Aegis bundle.
 
 Arguments:
   BUNDLE        Bundle path to inspect
-  CAFILE        Optional CA/keyring PEM for CMS verification
-  MANIFEST_OUT  Optional manifest output path (default: manifest.ini)
-  EXTRACT_DIR   Optional directory to extract the full bundle contents
+  CAFILE        CA/keyring PEM for CMS signature verification (optional)
+  MANIFEST_OUT  Path to write the extracted manifest (default: manifest.ini)
+  EXTRACT_DIR   Directory to extract full bundle payload into (optional)
 EOF
 }
 
@@ -37,76 +37,91 @@ fi
 
 mkdir -p "$(dirname "$MANIFEST_OUT")"
 
-if [[ -n "$CAFILE" ]]; then
-    TMP_CMS="$(mktemp)"
-    cleanup() {
-        rm -f "$TMP_CMS"
-    }
-    trap cleanup EXIT
-
-    read_sig_info() {
+# ---------------------------------------------------------------------------
+# Parse the bundle trailer to determine whether the bundle is CMS-signed.
+# Returns: PAYLOAD_SIZE  CMS_SIZE  (both in bytes)
+# ---------------------------------------------------------------------------
+parse_trailer() {
 python3 - "$BUNDLE" <<'PY'
 import os, struct, sys
 path = sys.argv[1]
-size = os.path.getsize(path)
-if size < 8:
-    raise SystemExit(1)
+total = os.path.getsize(path)
+if total < 8:
+    raise SystemExit("bundle too small")
 with open(path, "rb") as f:
     f.seek(-8, 2)
-    sig_size = struct.unpack("<Q", f.read(8))[0]
-if sig_size == 0 or sig_size > size - 8:
-    raise SystemExit(1)
-cms_offset = size - 8 - sig_size
-print(size)
-print(sig_size)
-print(cms_offset)
+    cms_size = struct.unpack("<Q", f.read(8))[0]
+if cms_size == 0 or cms_size > total - 8:
+    # unsigned bundle — payload is the whole file
+    print(total, 0)
+else:
+    payload_size = total - 8 - cms_size
+    print(payload_size, cms_size)
 PY
-    }
+}
 
-    if mapfile -t INFO < <(read_sig_info); then
-        BUNDLE_SIZE="${INFO[0]}"
-        SIG_SIZE="${INFO[1]}"
-        CMS_OFFSET="${INFO[2]}"
+read -r PAYLOAD_SIZE CMS_SIZE < <(parse_trailer)
 
-        echo "Bundle size : $BUNDLE_SIZE"
-        echo "CMS size    : $SIG_SIZE"
-        echo "CMS offset  : $CMS_OFFSET"
+if (( CMS_SIZE > 0 )); then
+    CMS_OFFSET="$PAYLOAD_SIZE"
+    echo "Signed bundle"
+    echo "  Payload size : $PAYLOAD_SIZE bytes"
+    echo "  CMS size     : $CMS_SIZE bytes"
+    echo "  CMS offset   : $CMS_OFFSET"
 
-        dd if="$BUNDLE" of="$TMP_CMS" bs=1 skip="$CMS_OFFSET" count="$SIG_SIZE" status=none
+    if [[ -n "$CAFILE" ]]; then
+        TMP_CMS="$(mktemp --suffix=.der)"
+        trap 'rm -f "$TMP_CMS"' EXIT
+
+        # Extract the CMS bytes using Python (efficient random-access read)
+        python3 - "$BUNDLE" "$CMS_OFFSET" "$CMS_SIZE" "$TMP_CMS" <<'PY'
+import sys
+src, offset, size, dst = sys.argv[1], int(sys.argv[2]), int(sys.argv[3]), sys.argv[4]
+with open(src, "rb") as f:
+    f.seek(offset)
+    data = f.read(size)
+if len(data) != size:
+    raise SystemExit("short read extracting CMS")
+with open(dst, "wb") as f:
+    f.write(data)
+PY
 
         openssl cms -verify \
-          -binary \
-          -inform DER \
-          -in "$TMP_CMS" \
-          -CAfile "$CAFILE" \
-          -out "$MANIFEST_OUT"
+            -binary \
+            -inform DER \
+            -in  "$TMP_CMS" \
+            -CAfile "$CAFILE" \
+            -out "$MANIFEST_OUT"
+        echo "Signature OK"
     else
-        echo "Error: bundle does not contain a valid CMS trailer" >&2
-        exit 1
+        echo "No CAFILE supplied — skipping signature verification"
+        # Extract manifest from the payload tar.gz without verifying
+        head -c "$PAYLOAD_SIZE" "$BUNDLE" | tar -xOzf - manifest.ini > "$MANIFEST_OUT"
     fi
 else
-    if ! tar -tzf "$BUNDLE" >/dev/null 2>&1; then
-        echo "Error: bundle is not a readable unsigned aegis tar archive: $BUNDLE" >&2
+    echo "Unsigned bundle"
+    if ! tar -tzf "$BUNDLE" manifest.ini >/dev/null 2>&1; then
+        echo "Error: manifest.ini not found in bundle" >&2
         exit 1
     fi
-    if ! tar -tzf "$BUNDLE" | grep -Fx "manifest.ini" >/dev/null; then
-        echo "Error: manifest.ini not found in bundle: $BUNDLE" >&2
-        exit 1
-    fi
-    tar -xOf "$BUNDLE" manifest.ini > "$MANIFEST_OUT"
+    tar -xOzf "$BUNDLE" manifest.ini > "$MANIFEST_OUT"
 fi
 
+echo
 echo "Manifest written to: $MANIFEST_OUT"
 echo
 cat "$MANIFEST_OUT"
 
+# ---------------------------------------------------------------------------
+# Optional full payload extraction
+# ---------------------------------------------------------------------------
 if [[ -n "$EXTRACT_DIR" ]]; then
     mkdir -p "$EXTRACT_DIR"
-    if [[ -n "${CMS_OFFSET:-}" ]]; then
-        dd if="$BUNDLE" bs=1 count="$CMS_OFFSET" status=none | tar -C "$EXTRACT_DIR" -xzf -
+    echo
+    if (( CMS_SIZE > 0 )); then
+        head -c "$PAYLOAD_SIZE" "$BUNDLE" | tar -C "$EXTRACT_DIR" -xzf -
     else
         tar -C "$EXTRACT_DIR" -xzf "$BUNDLE"
     fi
-    echo
-    echo "Bundle extracted to: $EXTRACT_DIR"
+    echo "Bundle payload extracted to: $EXTRACT_DIR"
 fi

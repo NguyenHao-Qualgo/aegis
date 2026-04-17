@@ -9,7 +9,7 @@ namespace aegis {
 struct BundleImage {
     std::string name;
     std::string slotClass;
-    std::string type;      // image, file, boot, kernel, none
+    std::string sourceType;      // image, file, boot, kernel, none
     std::string imagetype; // raw, archive, file, emptyfs
     std::string filename;
     std::string sha256;

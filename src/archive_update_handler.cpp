@@ -7,6 +7,8 @@
 #include <sys/mount.h>
 #include <unistd.h>
 
+#include "aegis/util.hpp"
+
 namespace aegis {
 
 namespace {
@@ -52,7 +54,6 @@ void extractArchive(const std::string& archivePath, const std::filesystem::path&
         ARCHIVE_EXTRACT_TIME |
         ARCHIVE_EXTRACT_PERM |
         ARCHIVE_EXTRACT_ACL |
-        ARCHIVE_EXTRACT_FFLAGS |
         ARCHIVE_EXTRACT_OWNER |
         ARCHIVE_EXTRACT_XATTR);
     archive_write_disk_set_standard_lookup(writer);
@@ -83,7 +84,20 @@ void extractArchive(const std::string& archivePath, const std::filesystem::path&
         const auto targetPath = (mountPoint / sanitizedPath).string();
         archive_entry_set_pathname(entry, targetPath.c_str());
 
-        if (archive_write_header(writer, entry) != ARCHIVE_OK) {
+        std::filesystem::create_directories(std::filesystem::path(targetPath).parent_path());
+
+        // If this entry is a hardlink, ensure the target was already extracted;
+        // otherwise clear the hardlink so libarchive writes a regular empty file
+        // (the data blocks below will fill it in).
+        if (const char* linkTarget = archive_entry_hardlink(entry)) {
+            const auto absTarget = mountPoint / sanitizeArchivePath(linkTarget);
+            if (!std::filesystem::exists(absTarget)) {
+                archive_entry_set_hardlink(entry, nullptr);
+            }
+        }
+
+        const auto headerRc = archive_write_header(writer, entry);
+        if (headerRc == ARCHIVE_FATAL) {
             const auto message = std::string("Failed writing archive entry: ") + archive_error_string(writer);
             archive_read_close(reader);
             archive_read_free(reader);
@@ -147,14 +161,23 @@ void ArchiveUpdateHandler::install(const std::string& payloadPath, const SlotCon
 
     const auto mountPoint = std::filesystem::path(workDir) / "mnt";
     std::filesystem::create_directories(mountPoint);
+
+    logInfo("Mounting " + slot.device + " -> " + mountPoint.string());
     if (::mount(slot.device.c_str(), mountPoint.c_str(), "ext4", 0, nullptr) != 0) {
         throw std::runtime_error("Failed to mount target slot: " + slot.device);
     }
 
     try {
+        logInfo("Clearing target filesystem");
         clearMountedDirectory(mountPoint);
+
+        logInfo("Extracting rootfs archive: " + payloadPath);
         extractArchive(payloadPath, mountPoint);
+
+        logInfo("Syncing filesystem");
         ::sync();
+
+        logInfo("Unmounting " + slot.device);
         if (::umount(mountPoint.c_str()) != 0) {
             throw std::runtime_error("Failed to unmount target slot");
         }

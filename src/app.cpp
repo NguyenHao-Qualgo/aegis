@@ -2,6 +2,7 @@
 
 #include <filesystem>
 #include <iostream>
+#include <syslog.h>
 #include <vector>
 
 #include "aegis/boot_control.hpp"
@@ -85,18 +86,21 @@ int Application::run(int argc, char** argv) {
 #if !defined(AEGIS_ENABLE_DBUS)
         throw std::runtime_error("Daemon support is disabled in this build");
 #else
+        logInfo("Starting aegis daemon");
+
         const auto configPath = getOptionValue(args, "--config").empty() ? std::string("/etc/aegis/system.conf") : getOptionValue(args, "--config");
+        logInfo("Loading config: " + configPath);
         ConfigLoader loader;
         const auto config = loader.load(configPath);
         std::filesystem::create_directories(config.dataDirectory);
         CommandRunner runner;
         BootControl bootControl(config, runner);
-        BundleVerifier verifier(runner);
+        BundleVerifier verifier;
         std::vector<std::unique_ptr<IUpdateHandler>> updateHandlers;
         updateHandlers.push_back(std::make_unique<ArchiveUpdateHandler>());
         updateHandlers.push_back(std::make_unique<RawUpdateHandler>());
         StateStore stateStore(joinPath(config.dataDirectory, "ota-state.env"));
-        OtaService service(config, bootControl, verifier, std::move(updateHandlers), stateStore, runner);
+        OtaService service(config, bootControl, verifier, std::move(updateHandlers), stateStore);
         service.resumeAfterBoot();
         DbusService dbus(service);
         dbus.run();

@@ -4,10 +4,26 @@
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
+#include <iostream>
 #include <sstream>
 #include <stdexcept>
 
 namespace aegis {
+void logDebug(const std::string& msg) {
+    std::cerr << "[DEBUG] " << msg << std::endl;
+}
+
+void logInfo(const std::string& msg) {
+    std::cerr << "[INFO ] " << msg << std::endl;
+}
+
+void logWarn(const std::string& msg) {
+    std::cerr << "[WARN ] " << msg << std::endl;
+}
+
+void logError(const std::string& msg) {
+    std::cerr << "[ERROR] " << msg << std::endl;
+}
 
 bool startsWith(const std::string& value, const std::string& prefix) {
     return value.rfind(prefix, 0) == 0;

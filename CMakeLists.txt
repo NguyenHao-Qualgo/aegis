@@ -8,6 +8,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 option(AEGIS_ENABLE_DBUS "Build DBus daemon/client support" ON)
 
 find_package(PkgConfig REQUIRED)
+find_package(OpenSSL REQUIRED)
 pkg_check_modules(LIBARCHIVE REQUIRED libarchive)
 if (AEGIS_ENABLE_DBUS)
     find_package(sdbus-c++ REQUIRED)
@@ -25,6 +26,7 @@ add_executable(aegis
     src/bundle_manifest.cpp
     src/bundle_creator.cpp
     src/bundle_verifier.cpp
+    src/bundle_extractor.cpp
     src/archive_update_handler.cpp
     src/raw_update_handler.cpp
     src/ota_service.cpp
@@ -40,10 +42,13 @@ endif()
 target_include_directories(aegis PRIVATE
     include
     ${LIBARCHIVE_INCLUDE_DIRS}
+    ${OPENSSL_INCLUDE_DIR}
 )
 
 target_link_libraries(aegis PRIVATE
     ${LIBARCHIVE_LIBRARIES}
+    OpenSSL::SSL
+    OpenSSL::Crypto
 )
 
 if (AEGIS_ENABLE_DBUS)

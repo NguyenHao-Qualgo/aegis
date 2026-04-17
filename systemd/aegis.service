@@ -4,10 +4,11 @@ After=network-online.target
 Wants=network-online.target
 
 [Service]
-Type=simple
+Type=dbus
+BusName=de.skytrack.Aegis
 ExecStart=/usr/bin/aegis daemon --config /etc/aegis/system.conf
-Restart=always
-RestartSec=2
+Restart=on-failure
+RestartSec=5min
 
 [Install]
 WantedBy=multi-user.target

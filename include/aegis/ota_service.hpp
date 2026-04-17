@@ -8,7 +8,6 @@
 
 #include "aegis/boot_control.hpp"
 #include "aegis/bundle_verifier.hpp"
-#include "aegis/command_runner.hpp"
 #include "aegis/state_store.hpp"
 #include "aegis/types.hpp"
 #include "aegis/update_handler.hpp"
@@ -21,8 +20,7 @@ public:
                BootControl bootControl,
                BundleVerifier verifier,
                std::vector<std::unique_ptr<IUpdateHandler>> updateHandlers,
-               StateStore stateStore,
-               CommandRunner runner);
+               StateStore stateStore);
 
     OtaStatus getStatus() const;
     void startInstall(const std::string& bundlePath);
@@ -48,7 +46,6 @@ private:
     BundleVerifier verifier_;
     std::vector<std::unique_ptr<IUpdateHandler>> updateHandlers_;
     StateStore stateStore_;
-    CommandRunner runner_;
 
     mutable std::mutex mutex_;
     OtaStatus status_;

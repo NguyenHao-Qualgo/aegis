@@ -68,7 +68,7 @@ BundleManifest BundleManifestIO::loadFromFile(const std::string& path, BundleMan
         } else if (currentImage != nullptr) {
             if (key == "slot-class") currentImage->slotClass = value;
             else if (key == "type") currentImage->imagetype = value;
-            else if (key == "source-type") currentImage->type = value;
+            else if (key == "source-type") currentImage->sourceType = value;
             else if (key == "filename") currentImage->filename = value;
             else if (key == "sha256") currentImage->sha256 = value;
             else if (key == "size") currentImage->size = std::stoull(value);
@@ -89,8 +89,8 @@ std::string BundleManifestIO::serialize(const BundleManifest& manifest) const {
     for (const auto& image : manifest.images) {
         os << "[image." << image.name << "]\n";
         os << "slot-class=" << image.slotClass << "\n";
-        if (!image.type.empty()) {
-            os << "source-type=" << image.type << "\n";
+        if (!image.sourceType.empty()) {
+            os << "source-type=" << image.sourceType << "\n";
         }
         if (!image.imagetype.empty()) {
             os << "type=" << image.imagetype << "\n";

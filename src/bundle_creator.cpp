@@ -2,21 +2,74 @@
 
 #include <filesystem>
 #include <fstream>
+#include <iomanip>
+#include <memory>
+#include <sstream>
 #include <stdexcept>
+
+#include <openssl/bio.h>
+#include <openssl/cms.h>
+#include <openssl/err.h>
+#include <openssl/evp.h>
+#include <openssl/pem.h>
+#include <openssl/x509.h>
 
 #include "aegis/bundle_manifest.hpp"
 #include "aegis/util.hpp"
 
 namespace aegis {
 
+namespace {
+
+using BioPtr     = std::unique_ptr<BIO,             decltype(&BIO_free)>;
+using CmsPtr     = std::unique_ptr<CMS_ContentInfo, decltype(&CMS_ContentInfo_free)>;
+using X509Ptr    = std::unique_ptr<X509,            decltype(&X509_free)>;
+using EvpPkeyPtr = std::unique_ptr<EVP_PKEY,        decltype(&EVP_PKEY_free)>;
+using EvpCtxPtr  = std::unique_ptr<EVP_MD_CTX,      decltype(&EVP_MD_CTX_free)>;
+
+std::string opensslError() {
+    char buf[256] = {};
+    ERR_error_string_n(ERR_get_error(), buf, sizeof(buf));
+    return buf;
+}
+
+}  // namespace
+
 BundleCreator::BundleCreator(CommandRunner runner) : runner_(std::move(runner)) {}
 
 std::string BundleCreator::sha256(const std::string& path) const {
-    const auto output = trim(runner_.runOrThrow("sha256sum " + shellQuote(path) + " | awk '{print $1}'"));
-    if (output.empty()) {
-        throw std::runtime_error("Failed to calculate sha256");
+    std::ifstream file(path, std::ios::binary);
+    if (!file) {
+        throw std::runtime_error("Cannot open file for hashing: " + path);
     }
-    return output;
+
+    EvpCtxPtr ctx(EVP_MD_CTX_new(), EVP_MD_CTX_free);
+    if (!ctx) {
+        throw std::runtime_error("EVP_MD_CTX_new failed");
+    }
+    if (EVP_DigestInit_ex(ctx.get(), EVP_sha256(), nullptr) != 1) {
+        throw std::runtime_error("EVP_DigestInit_ex failed: " + opensslError());
+    }
+
+    char buf[8192];
+    while (file.read(buf, sizeof(buf)) || file.gcount() > 0) {
+        if (EVP_DigestUpdate(ctx.get(), buf, static_cast<std::size_t>(file.gcount())) != 1) {
+            throw std::runtime_error("EVP_DigestUpdate failed: " + opensslError());
+        }
+    }
+
+    unsigned char digest[EVP_MAX_MD_SIZE];
+    unsigned int digestLen = 0;
+    if (EVP_DigestFinal_ex(ctx.get(), digest, &digestLen) != 1) {
+        throw std::runtime_error("EVP_DigestFinal_ex failed: " + opensslError());
+    }
+
+    std::ostringstream oss;
+    oss << std::hex << std::setfill('0');
+    for (unsigned int i = 0; i < digestLen; ++i) {
+        oss << std::setw(2) << static_cast<int>(digest[i]);
+    }
+    return oss.str();
 }
 
 BundleArtifactInput BundleCreator::parseArtifactSpec(const std::string& spec) {
@@ -85,7 +138,7 @@ BundleManifest BundleCreator::buildManifestFromArtifacts(const BundleCreateOptio
         BundleImage image;
         image.name = artifact.slotClass;
         image.slotClass = artifact.slotClass;
-        image.type = artifact.sourceType;
+        image.sourceType = artifact.sourceType;
         image.imagetype = artifact.imagetype;
         image.filename = artifact.bundleFilename;
         manifest.images.push_back(std::move(image));
@@ -118,11 +171,51 @@ void BundleCreator::signBundle(const std::filesystem::path& manifestPath, const 
     }
 
     const auto cmsPath = unsignedBundlePath.parent_path() / "manifest.cms";
-    runner_.runOrThrow(
-        "openssl cms -sign -binary -in " + shellQuote(manifestPath.string()) +
-        " -signer " + shellQuote(options.certPath) +
-        " -inkey " + shellQuote(options.keyPath) +
-        " -outform DER -nodetach -md sha256 -out " + shellQuote(cmsPath.string()));
+    {
+        BioPtr certBio(BIO_new_file(options.certPath.c_str(), "r"), BIO_free);
+        if (!certBio) {
+            throw std::runtime_error("Cannot open signing cert: " + options.certPath);
+        }
+        X509Ptr signerCert(PEM_read_bio_X509(certBio.get(), nullptr, nullptr, nullptr), X509_free);
+        if (!signerCert) {
+            throw std::runtime_error("Failed to read signing cert: " + opensslError());
+        }
+
+        BioPtr keyBio(BIO_new_file(options.keyPath.c_str(), "r"), BIO_free);
+        if (!keyBio) {
+            throw std::runtime_error("Cannot open signing key: " + options.keyPath);
+        }
+        EvpPkeyPtr signerKey(PEM_read_bio_PrivateKey(keyBio.get(), nullptr, nullptr, nullptr), EVP_PKEY_free);
+        if (!signerKey) {
+            throw std::runtime_error("Failed to read signing key: " + opensslError());
+        }
+
+        BioPtr inBio(BIO_new_file(manifestPath.string().c_str(), "rb"), BIO_free);
+        if (!inBio) {
+            throw std::runtime_error("Cannot open manifest for signing: " + manifestPath.string());
+        }
+
+        // CMS_DETACHED is intentionally absent — content is embedded (equivalent to -nodetach)
+        CmsPtr cms(CMS_sign(nullptr, nullptr, nullptr, nullptr, CMS_PARTIAL | CMS_BINARY),
+                   CMS_ContentInfo_free);
+        if (!cms) {
+            throw std::runtime_error("CMS_sign init failed: " + opensslError());
+        }
+        if (!CMS_add1_signer(cms.get(), signerCert.get(), signerKey.get(), EVP_sha256(), 0)) {
+            throw std::runtime_error("CMS_add1_signer failed: " + opensslError());
+        }
+        if (CMS_final(cms.get(), inBio.get(), nullptr, CMS_BINARY) != 1) {
+            throw std::runtime_error("CMS_final failed: " + opensslError());
+        }
+
+        BioPtr outBio(BIO_new_file(cmsPath.string().c_str(), "wb"), BIO_free);
+        if (!outBio) {
+            throw std::runtime_error("Cannot write CMS output: " + cmsPath.string());
+        }
+        if (i2d_CMS_bio(outBio.get(), cms.get()) != 1) {
+            throw std::runtime_error("Failed to write CMS DER: " + opensslError());
+        }
+    }
 
     std::filesystem::copy_file(unsignedBundlePath, outputBundlePath, std::filesystem::copy_options::overwrite_existing);
 
