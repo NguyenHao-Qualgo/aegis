@@ -18,6 +18,45 @@ namespace aegis {
 
 namespace {
 
+class FileDescriptor {
+  public:
+    explicit FileDescriptor(int fd = -1) : fd_(fd) {}
+    ~FileDescriptor() {
+        if (fd_ >= 0) {
+            ::close(fd_);
+        }
+    }
+
+    FileDescriptor(const FileDescriptor&) = delete;
+    FileDescriptor& operator=(const FileDescriptor&) = delete;
+
+    FileDescriptor(FileDescriptor&& other) noexcept : fd_(other.fd_) {
+        other.fd_ = -1;
+    }
+
+    FileDescriptor& operator=(FileDescriptor&& other) noexcept {
+        if (this != &other) {
+            if (fd_ >= 0) {
+                ::close(fd_);
+            }
+            fd_ = other.fd_;
+            other.fd_ = -1;
+        }
+        return *this;
+    }
+
+    [[nodiscard]] int get() const {
+        return fd_;
+    }
+
+    [[nodiscard]] bool valid() const {
+        return fd_ >= 0;
+    }
+
+  private:
+    int fd_;
+};
+
 constexpr size_t kBufferSize = 4 * 1024 * 1024; // 4 MiB
 constexpr auto kProgressInterval = std::chrono::seconds(5);
 
@@ -61,33 +100,25 @@ Result<void> write_image_to_device(const std::string& source_path,
                                    const std::string& device_path,
                                    const std::string& label,
                                    ProgressCallback progress) {
-    int src_fd = -1;
-    int dst_fd = -1;
-
-    src_fd = ::open(source_path.c_str(), O_RDONLY | O_CLOEXEC);
-    if (src_fd < 0) {
+    FileDescriptor src_fd(::open(source_path.c_str(), O_RDONLY | O_CLOEXEC));
+    if (!src_fd.valid()) {
         return Result<void>::err("Cannot open source: " + source_path + ": " +
                                  std::string(std::strerror(errno)));
     }
 
-    dst_fd = ::open(device_path.c_str(), O_WRONLY | O_CLOEXEC);
-    if (dst_fd < 0) {
-        ::close(src_fd);
+    FileDescriptor dst_fd(::open(device_path.c_str(), O_WRONLY | O_CLOEXEC));
+    if (!dst_fd.valid()) {
         return Result<void>::err("Cannot open device: " + device_path + ": " +
                                  std::string(std::strerror(errno)));
     }
 
-    auto source_size_res = get_fd_size_bytes(src_fd);
+    auto source_size_res = get_fd_size_bytes(src_fd.get());
     if (!source_size_res) {
-        ::close(src_fd);
-        ::close(dst_fd);
         return Result<void>::err("Failed to determine source size: " + source_size_res.error());
     }
 
-    auto device_size_res = get_fd_size_bytes(dst_fd);
+    auto device_size_res = get_fd_size_bytes(dst_fd.get());
     if (!device_size_res) {
-        ::close(src_fd);
-        ::close(dst_fd);
         return Result<void>::err("Failed to determine target device size: " +
                                  device_size_res.error());
     }
@@ -96,15 +127,13 @@ Result<void> write_image_to_device(const std::string& source_path,
     const uint64_t device_size = device_size_res.value();
 
     if (device_size > 0 && total_size > device_size) {
-        ::close(src_fd);
-        ::close(dst_fd);
         return Result<void>::err("Target device '" + device_path + "' is too small: image=" +
                                  std::to_string(total_size) + " bytes, device=" +
                                  std::to_string(device_size) + " bytes");
     }
 
 #ifdef POSIX_FADV_SEQUENTIAL
-    (void)::posix_fadvise(src_fd, 0, 0, POSIX_FADV_SEQUENTIAL);
+    (void)::posix_fadvise(src_fd.get(), 0, 0, POSIX_FADV_SEQUENTIAL);
 #endif
 
     std::vector<uint8_t> buffer(kBufferSize);
@@ -117,14 +146,12 @@ Result<void> write_image_to_device(const std::string& source_path,
     }
 
     while (true) {
-        ssize_t rd = ::read(src_fd, buffer.data(), buffer.size());
+        ssize_t rd = ::read(src_fd.get(), buffer.data(), buffer.size());
         if (rd == 0) {
             break;
         }
         if (rd < 0) {
             int saved = errno;
-            ::close(src_fd);
-            ::close(dst_fd);
             return Result<void>::err("Read error from source: " + source_path + ": " +
                                      std::string(std::strerror(saved)));
         }
@@ -133,11 +160,9 @@ Result<void> write_image_to_device(const std::string& source_path,
         ssize_t remaining = rd;
 
         while (remaining > 0) {
-            ssize_t wr = ::write(dst_fd, out_ptr, static_cast<size_t>(remaining));
+            ssize_t wr = ::write(dst_fd.get(), out_ptr, static_cast<size_t>(remaining));
             if (wr < 0) {
                 int saved = errno;
-                ::close(src_fd);
-                ::close(dst_fd);
                 return Result<void>::err("Write error to device '" + device_path +
                                          "' at offset " + std::to_string(written) + ": " +
                                          std::string(std::strerror(saved)));
@@ -169,16 +194,11 @@ Result<void> write_image_to_device(const std::string& source_path,
         }
     }
 
-    if (::fsync(dst_fd) != 0) {
+    if (::fsync(dst_fd.get()) != 0) {
         int saved = errno;
-        ::close(src_fd);
-        ::close(dst_fd);
         return Result<void>::err("fsync failed for device: " + device_path + ": " +
                                  std::string(std::strerror(saved)));
     }
-
-    ::close(src_fd);
-    ::close(dst_fd);
 
     if (progress) {
         progress(100, "Image " + label + " written");

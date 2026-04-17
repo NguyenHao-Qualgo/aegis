@@ -161,7 +161,6 @@ SystemConfig parse_system_config(const std::string& path) {
         cfg.system_variant = ini_get(s, "variant-name");
         cfg.variant_dtb = ini_get(s, "variant-dtb");
         cfg.variant_file = ini_get(s, "variant-file");
-        cfg.bundle_formats_mask = ini_get(s, "bundle-formats");
         cfg.activate_installed = ini_get_bool(s, "activate-installed", true);
         cfg.max_bundle_download_size = ini_get(s, "max-bundle-download-size");
 
@@ -223,9 +222,7 @@ SystemConfig parse_system_config(const std::string& path) {
         slot.device = ini_get(sec, "device");
         slot.bootname = ini_get(sec, "bootname");
         slot.readonly = ini_get_bool(sec, "readonly");
-        slot.install_same = ini_get_bool(sec, "force-install-same");
         slot.parent_name = ini_get(sec, "parent");
-        slot.extra_mount_opts = ini_get(sec, "extra-mount-opts");
 
         auto type_str = ini_get(sec, "type", "raw");
         slot.type = slot_type_from_string(type_str);

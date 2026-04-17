@@ -26,8 +26,8 @@ static Result<void> create_squashfs(const std::string& content_dir, const std::s
     }
 
     auto res = run_command(cmd);
-    if (res.exit_code != 0)
-        return Result<void>::err("mksquashfs failed: " + res.stderr_str);
+    if (res.first != 0)
+        return Result<void>::err("mksquashfs failed: " + res.second);
     return Result<void>::ok();
 }
 
@@ -334,8 +334,8 @@ Result<void> bundle_extract(const Bundle& bundle, const std::string& dest_dir) {
 
     mkdir_p(dest_dir);
     auto res = run_command({"cp", "-a", bundle.mount_point + "/.", dest_dir + "/"});
-    if (res.exit_code != 0)
-        return Result<void>::err("Extract failed: " + res.stderr_str);
+    if (res.first != 0)
+        return Result<void>::err("Extract failed: " + res.second);
 
     LOG_INFO("Bundle extracted to %s", dest_dir.c_str());
     return Result<void>::ok();

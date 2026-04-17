@@ -24,8 +24,8 @@ Result<void> mount(const std::string& source, const std::string& mountpoint,
     cmd.push_back(mountpoint);
 
     auto res = run_command(cmd);
-    if (res.exit_code != 0)
-        return Result<void>::err("mount failed: " + res.stderr_str);
+    if (res.first != 0)
+        return Result<void>::err("mount failed: " + res.second);
 
     LOG_DEBUG("Mounted %s on %s (type=%s)", source.c_str(), mountpoint.c_str(),
               fstype.empty() ? "auto" : fstype.c_str());
@@ -34,8 +34,8 @@ Result<void> mount(const std::string& source, const std::string& mountpoint,
 
 Result<void> umount(const std::string& mountpoint) {
     auto res = run_command({"umount", mountpoint});
-    if (res.exit_code != 0)
-        return Result<void>::err("umount failed for " + mountpoint + ": " + res.stderr_str);
+    if (res.first != 0)
+        return Result<void>::err("umount failed for " + mountpoint + ": " + res.second);
     return Result<void>::ok();
 }
 

@@ -1,7 +1,6 @@
 #include "aegis/install/workflow.h"
 
 #include "aegis/context.h"
-#include "aegis/status_file.h"
 #include "aegis/utils.h"
 
 namespace aegis {
@@ -33,7 +32,26 @@ Result<void> check_compatible(const Manifest& manifest, const SystemConfig& conf
 
 } // namespace
 
-InstallerWorkflow::InstallerWorkflow(InstallArgs& args) : args_(args) {}
+InstallerWorkflow::InstallerWorkflow(InstallArgs& args) : args_(args) {
+    auto& ctx = Context::instance();
+    config_ = &ctx.config();
+    bootchooser_ = &ctx.bootchooser();
+    owned_status_store_ = std::make_unique<FileStatusStore>(ctx.config());
+    owned_hook_runner_ = std::make_unique<ShellHookRunner>();
+    status_store_ = owned_status_store_.get();
+    hook_runner_ = owned_hook_runner_.get();
+    boot_slot_ = ctx.boot_slot();
+    keyring_path_ = ctx.keyring_path();
+    mount_prefix_ = ctx.mount_prefix();
+}
+
+InstallerWorkflow::InstallerWorkflow(InstallArgs& args, SystemConfig& config,
+                                     IBootchooser& bootchooser, IStatusStore& status_store,
+                                     IHookRunner& hook_runner, std::string boot_slot,
+                                     std::string keyring_path, std::string mount_prefix)
+    : args_(args), config_(&config), bootchooser_(&bootchooser), status_store_(&status_store),
+      hook_runner_(&hook_runner), boot_slot_(std::move(boot_slot)),
+      keyring_path_(std::move(keyring_path)), mount_prefix_(std::move(mount_prefix)) {}
 
 Result<void> InstallerWorkflow::install(const std::string& bundle_path) {
     finished_steps_.clear();
@@ -70,7 +88,8 @@ Result<void> InstallerWorkflow::install(const std::string& bundle_path) {
     finish_step("Slot devices ready");
 
     begin_step("pre-install-hook", 5, "Running pre-install handler");
-    auto pre_hook = run_hook(Context::instance().config().handler_pre_install, "pre-install");
+    auto pre_hook = hook_runner_->run(config_->handler_pre_install, "pre-install",
+                                      *config_, bundle_, mount_prefix_);
     if (!pre_hook) {
         return pre_hook;
     }
@@ -98,11 +117,15 @@ Result<void> InstallerWorkflow::install(const std::string& bundle_path) {
     finish_step("Installed slots activated");
 
     begin_step("save-status", 3, "Saving slot status");
-    save_status();
+    auto save_result = save_status();
+    if (!save_result) {
+        return save_result;
+    }
     finish_step("Slot status saved");
 
     begin_step("post-install-hook", 2, "Running post-install handler");
-    auto post_hook = run_hook(Context::instance().config().handler_post_install, "post-install");
+    auto post_hook = hook_runner_->run(config_->handler_post_install, "post-install",
+                                       *config_, bundle_, mount_prefix_);
     if (!post_hook) {
         LOG_WARNING("Post-install handler failed: %s", post_hook.error().c_str());
     }
@@ -113,13 +136,10 @@ Result<void> InstallerWorkflow::install(const std::string& bundle_path) {
 }
 
 Result<void> InstallerWorkflow::open_bundle(const std::string& bundle_path) {
-    auto& ctx = Context::instance();
-    auto& config = ctx.config();
-
     SigningParams verify_params;
-    verify_params.keyring_path = ctx.keyring_path();
-    verify_params.allow_partial_chain = config.keyring_allow_partial_chain;
-    verify_params.check_crl = config.keyring_check_crl;
+    verify_params.keyring_path = keyring_path_;
+    verify_params.allow_partial_chain = config_->keyring_allow_partial_chain;
+    verify_params.check_crl = config_->keyring_check_crl;
 
     auto bundle_result = bundle_open(bundle_path, verify_params);
     if (!bundle_result) {
@@ -138,13 +158,11 @@ Result<void> InstallerWorkflow::open_bundle(const std::string& bundle_path) {
 }
 
 Result<void> InstallerWorkflow::verify_compatibility() const {
-    return check_compatible(bundle_.manifest, Context::instance().config(),
-                            args_.ignore_compatible);
+    return check_compatible(bundle_.manifest, *config_, args_.ignore_compatible);
 }
 
 Result<void> InstallerWorkflow::determine_install_plans() {
-    auto& ctx = Context::instance();
-    target_group_ = get_target_group(ctx.config().slots, ctx.boot_slot());
+    target_group_ = get_target_group(config_->slots, boot_slot_);
     if (target_group_.empty()) {
         return Result<void>::err("No inactive target slots available");
     }
@@ -173,45 +191,13 @@ Result<void> InstallerWorkflow::check_slot_devices() const {
     return Result<void>::ok();
 }
 
-Result<void> InstallerWorkflow::run_hook(const std::string& handler_path,
-                                         const std::string& action) const {
-    if (handler_path.empty()) {
-        LOG_DEBUG("No handler configured for action '%s'", action.c_str());
-        return Result<void>::ok();
-    }
-    if (!path_exists(handler_path)) {
-        LOG_WARNING("Handler not found: %s", handler_path.c_str());
-        return Result<void>::ok();
-    }
-
-    auto& ctx = Context::instance();
-    std::vector<std::string> env = {
-        "AEGIS_SYSTEM_COMPATIBLE=" + ctx.config().compatible,
-        "AEGIS_MOUNT_PREFIX=" + ctx.mount_prefix(),
-        "AEGIS_BUNDLE_MOUNT_POINT=" + bundle_.mount_point,
-        "AEGIS_UPDATE_SOURCE=" + bundle_.mount_point,
-        "AEGIS_BUNDLE_COMPATIBLE=" + bundle_.manifest.compatible,
-        "AEGIS_BUNDLE_VERSION=" + bundle_.manifest.version,
-    };
-
-    LOG_INFO("Running hook '%s' via %s", action.c_str(), handler_path.c_str());
-    auto result = run_command({handler_path, action}, env);
-    if (result.exit_code != 0) {
-        return Result<void>::err("Handler '" + action + "' failed (exit " +
-                                 std::to_string(result.exit_code) + "): " + result.stderr_str);
-    }
-
-    return Result<void>::ok();
-}
-
 Result<void> InstallerWorkflow::deactivate_target_slots() {
-    auto& bootchooser = Context::instance().bootchooser();
     for (auto& plan : plans_) {
         if (plan.target_slot->bootname.empty()) {
             continue;
         }
         notify("Deactivating slot " + plan.target_slot->name);
-        auto res = bootchooser.set_state(*plan.target_slot, false);
+        auto res = bootchooser_->set_state(*plan.target_slot, false);
         if (!res) {
             return Result<void>::err("Failed to deactivate slot '" + plan.target_slot->name +
                                      "': " + res.error());
@@ -255,7 +241,10 @@ Result<void> InstallerWorkflow::install_images() {
                                      plan.target_slot->name + ": " + install_result.error());
         }
 
-        update_slot_status(plan);
+        auto update_result = update_slot_status(plan);
+        if (!update_result) {
+            return update_result;
+        }
         update_step_progress(image_next, "Installed image " + label);
     }
 
@@ -263,11 +252,9 @@ Result<void> InstallerWorkflow::install_images() {
     return Result<void>::ok();
 }
 
-void InstallerWorkflow::update_slot_status(const InstallPlan& plan) const {
+Result<void> InstallerWorkflow::update_slot_status(const InstallPlan& plan) const {
     auto& slot_status = plan.target_slot->status;
 
-    // Records installation metadata only. The slot is not yet confirmed bootable —
-    // that happens later via mark_good() after a successful reboot.
     slot_status.bundle_compatible = bundle_.manifest.compatible;
     slot_status.bundle_version = bundle_.manifest.version;
     slot_status.bundle_description = bundle_.manifest.description;
@@ -277,20 +264,15 @@ void InstallerWorkflow::update_slot_status(const InstallPlan& plan) const {
     slot_status.installed_timestamp = current_timestamp();
     slot_status.installed_count++;
 
-    const auto& config = Context::instance().config();
-    if (!config.data_directory.empty()) {
-        save_slot_status(*plan.target_slot, config.data_directory);
-    }
+    return status_store_->save_slot(*plan.target_slot);
 }
 
 Result<void> InstallerWorkflow::activate_installed_slots() {
-    auto& config = Context::instance().config();
-    if (!config.activate_installed) {
+    if (!config_->activate_installed) {
         LOG_INFO("Activation of installed slots is disabled");
         return Result<void>::ok();
     }
 
-    auto& bootchooser = Context::instance().bootchooser();
     const int total = static_cast<int>(plans_.size());
     int index = 0;
 
@@ -303,12 +285,16 @@ Result<void> InstallerWorkflow::activate_installed_slots() {
         const int percent = total > 0 ? (index * 100) / total : 100;
         update_step_progress(percent, "Activating slot " + plan.target_slot->name);
 
-        auto activate_result = bootchooser.set_primary(*plan.target_slot);
+        auto activate_result = bootchooser_->set_primary(*plan.target_slot);
         if (!activate_result) {
             return Result<void>::err("Failed to activate " + plan.target_slot->name + ": " +
                                      activate_result.error());
         }
-        bootchooser.set_state(*plan.target_slot, true);
+        auto state_result = bootchooser_->set_state(*plan.target_slot, true);
+        if (!state_result) {
+            return Result<void>::err("Failed to mark slot bootable " + plan.target_slot->name + ": " +
+                                     state_result.error());
+        }
 
         plan.target_slot->status.activated_timestamp = current_timestamp();
         plan.target_slot->status.activated_count++;
@@ -318,12 +304,8 @@ Result<void> InstallerWorkflow::activate_installed_slots() {
     return Result<void>::ok();
 }
 
-void InstallerWorkflow::save_status() const {
-    const auto& config = Context::instance().config();
-    if (!config.statusfile.empty()) {
-        LOG_INFO("Saving slot status to %s", config.statusfile.c_str());
-        save_all_slot_status(config.slots, config.statusfile);
-    }
+Result<void> InstallerWorkflow::save_status() const {
+    return status_store_->save_all(config_->slots);
 }
 
 void InstallerWorkflow::notify(const std::string& message) const {

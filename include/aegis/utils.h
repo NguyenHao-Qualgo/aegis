@@ -8,17 +8,8 @@
 
 namespace aegis {
 
-struct SubprocessResult {
-    int exit_code = -1;
-    std::string stdout_str;
-    std::string stderr_str;
-};
-
-SubprocessResult run_command(const std::vector<std::string>& argv,
-                             const std::vector<std::string>& env = {});
-
-SubprocessResult run_command_checked(const std::vector<std::string>& argv,
-                                     const std::vector<std::string>& env = {});
+std::pair<int, std::string> run_command(const std::vector<std::string>& argv,
+                                        const std::vector<std::string>& env = {});
 
 bool path_exists(const std::string& path);
 

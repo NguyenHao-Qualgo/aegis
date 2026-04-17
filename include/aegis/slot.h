@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <map>
 #include <string>
+#include <string_view>
 
 namespace aegis {
 
@@ -52,11 +53,9 @@ struct Slot {
     SlotType type = SlotType::Raw;
     std::string bootname;
     bool readonly = false;
-    bool install_same = false;
 
     std::string parent_name;
     Slot* parent = nullptr;
-    std::string extra_mount_opts;
 
     SlotStatus status;
     bool is_booted = false;
@@ -64,9 +63,26 @@ struct Slot {
     [[nodiscard]] std::string full_name() const {
         return slot_class + "." + std::to_string(index);
     }
+
+    [[nodiscard]] bool matches_identifier(std::string_view identifier) const;
+    [[nodiscard]] bool is_same_class(const Slot& other) const;
+    [[nodiscard]] bool is_alternate_of(const Slot& other) const;
+    [[nodiscard]] bool is_writable_target() const {
+        return !readonly;
+    }
 };
 
 std::string detect_booted_slot(const std::map<std::string, Slot>& slots);
+
+Slot* find_booted_slot(std::map<std::string, Slot>& slots);
+const Slot* find_booted_slot(const std::map<std::string, Slot>& slots);
+
+Slot* find_slot_by_identifier(std::map<std::string, Slot>& slots, std::string_view identifier);
+const Slot* find_slot_by_identifier(const std::map<std::string, Slot>& slots,
+                                    std::string_view identifier);
+
+Slot* find_other_slot(std::map<std::string, Slot>& slots, const Slot& reference);
+const Slot* find_other_slot(const std::map<std::string, Slot>& slots, const Slot& reference);
 
 std::map<std::string, Slot*> get_target_group(std::map<std::string, Slot>& slots,
                                               const std::string& booted_slot_name);

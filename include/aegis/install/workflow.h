@@ -1,9 +1,14 @@
 #pragma once
 
+#include "aegis/bootchooser.h"
 #include "aegis/bundle.h"
+#include "aegis/config_file.h"
 #include "aegis/install.h"
+#include "aegis/install/hook_runner.h"
+#include "aegis/status_file.h"
 
 #include <map>
+#include <memory>
 
 namespace aegis {
 
@@ -15,6 +20,9 @@ struct ProgressStep {
 class InstallerWorkflow {
   public:
     explicit InstallerWorkflow(InstallArgs& args);
+    InstallerWorkflow(InstallArgs& args, SystemConfig& config, IBootchooser& bootchooser,
+                      IStatusStore& status_store, IHookRunner& hook_runner,
+                      std::string boot_slot, std::string keyring_path, std::string mount_prefix);
 
     Result<void> install(const std::string& bundle_path);
 
@@ -23,13 +31,11 @@ class InstallerWorkflow {
     [[nodiscard]] Result<void> verify_compatibility() const;
     Result<void> determine_install_plans();
     [[nodiscard]] Result<void> check_slot_devices() const;
-    [[nodiscard]] Result<void> run_hook(const std::string& handler_path,
-                                        const std::string& action) const;
     Result<void> deactivate_target_slots();
     Result<void> install_images();
-    void update_slot_status(const InstallPlan& plan) const;
+    Result<void> update_slot_status(const InstallPlan& plan) const;
     Result<void> activate_installed_slots();
-    void save_status() const;
+    Result<void> save_status() const;
     void notify(const std::string& message) const;
     void set_progress(int percent, const std::string& message);
     int completed_weight() const;
@@ -38,6 +44,15 @@ class InstallerWorkflow {
     void finish_step(const std::string& message);
 
     InstallArgs& args_;
+    SystemConfig* config_ = nullptr;
+    IBootchooser* bootchooser_ = nullptr;
+    IStatusStore* status_store_ = nullptr;
+    std::unique_ptr<IStatusStore> owned_status_store_;
+    std::unique_ptr<IHookRunner> owned_hook_runner_;
+    IHookRunner* hook_runner_ = nullptr;
+    std::string boot_slot_;
+    std::string keyring_path_;
+    std::string mount_prefix_;
     Bundle bundle_;
     std::map<std::string, Slot*> target_group_;
     std::vector<InstallPlan> plans_;

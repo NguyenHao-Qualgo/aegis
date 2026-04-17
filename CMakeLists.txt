@@ -75,10 +75,10 @@ set(AEGIS_SOURCES
     src/bootchooser.cpp
     src/install.cpp
     src/install/workflow.cpp
+    src/install/hook_runner.cpp
     src/handlers/update_handler.cpp
     src/handlers/block_handler.cpp
     src/handlers/raw_handler.cpp
-    src/handlers/fs_image_handler.cpp
     src/handlers/archive_handler.cpp
     src/mount.cpp
     src/mark.cpp
@@ -130,6 +130,7 @@ set(AEGIS_ALL_FILES
     include/aegis/dbus/service.h
     include/aegis/dbus/service_state.h
     include/aegis/install/workflow.h
+    include/aegis/install/hook_runner.h
     include/aegis/handlers/archive_handler.h
     include/aegis/handlers/block_handler.h
     include/aegis/handlers/fs_image_handler.h

@@ -150,8 +150,8 @@ Result<void> OtaSessionStore::clear() const {
     auto parent = dirname(path_);
     auto base = basename(path_);
     auto res = run_command({"rm", "-f", path_});
-    if (res.exit_code != 0) {
-        return Result<void>::err("Failed to remove OTA session file: " + res.stderr_str);
+    if (res.first != 0) {
+        return Result<void>::err("Failed to remove OTA session file: " + res.second);
     }
     return Result<void>::ok();
 }

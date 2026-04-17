@@ -691,8 +691,8 @@ Result<void> AegisService::request_reboot() {
     }
 
     auto res = run_command({"reboot"});
-    if (res.exit_code != 0) {
-        return Result<void>::err("Failed to request reboot: " + res.stderr_str);
+    if (res.first != 0) {
+        return Result<void>::err("Failed to request reboot: " + res.second);
     }
     return Result<void>::ok();
 }

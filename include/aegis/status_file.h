@@ -1,5 +1,6 @@
 #pragma once
 
+#include "aegis/config_file.h"
 #include "aegis/error.h"
 #include "aegis/slot.h"
 
@@ -19,5 +20,23 @@ Result<void> save_all_slot_status(const std::map<std::string, Slot>& slots,
                                   const std::string& status_file_path);
 
 std::string current_timestamp();
+
+class IStatusStore {
+  public:
+    virtual ~IStatusStore() = default;
+    virtual Result<void> save_slot(const Slot& slot) = 0;
+    virtual Result<void> save_all(const std::map<std::string, Slot>& slots) = 0;
+};
+
+class FileStatusStore : public IStatusStore {
+  public:
+    explicit FileStatusStore(const SystemConfig& config) : config_(config) {}
+
+    Result<void> save_slot(const Slot& slot) override;
+    Result<void> save_all(const std::map<std::string, Slot>& slots) override;
+
+  private:
+    const SystemConfig& config_;
+};
 
 } // namespace aegis

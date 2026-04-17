@@ -5,19 +5,27 @@
 
 namespace aegis {
 
+namespace {
+
+void trim_trailing_newlines(std::string& value) {
+    while (!value.empty() && (value.back() == '\n' || value.back() == '\r'))
+        value.pop_back();
+}
+
+} // namespace
+
 Result<std::string> UBootBootchooser::env_get(const std::string& key) {
     auto res = run_command({"fw_printenv", "-n", key});
-    if (res.exit_code != 0)
+    if (res.first != 0)
         return Result<std::string>::err("fw_printenv failed for " + key);
-    auto val = res.stdout_str;
-    while (!val.empty() && (val.back() == '\n' || val.back() == '\r'))
-        val.pop_back();
+    auto val = res.second;
+    trim_trailing_newlines(val);
     return Result<std::string>::ok(std::move(val));
 }
 
 Result<void> UBootBootchooser::env_set(const std::string& key, const std::string& value) {
     auto res = run_command({"fw_setenv", key, value});
-    if (res.exit_code != 0)
+    if (res.first != 0)
         return Result<void>::err("fw_setenv failed for " + key + "=" + value);
     return Result<void>::ok();
 }
@@ -64,12 +72,11 @@ CustomBootchooser::CustomBootchooser(std::string backend_script)
 Result<std::string> CustomBootchooser::run_backend(const std::string& command,
                                                    const std::string& bootname) {
     auto res = run_command({backend_script_, command, bootname});
-    if (res.exit_code != 0)
+    if (res.first != 0)
         return Result<std::string>::err("Custom backend '" + command +
-                                        "' failed: " + res.stderr_str);
-    auto val = res.stdout_str;
-    while (!val.empty() && (val.back() == '\n' || val.back() == '\r'))
-        val.pop_back();
+                                        "' failed: " + res.second);
+    auto val = res.second;
+    trim_trailing_newlines(val);
     return Result<std::string>::ok(std::move(val));
 }
 
@@ -77,8 +84,8 @@ Result<void> CustomBootchooser::run_backend_set(const std::string& command,
                                                 const std::string& bootname,
                                                 const std::string& value) {
     auto res = run_command({backend_script_, command, bootname, value});
-    if (res.exit_code != 0)
-        return Result<void>::err("Custom backend '" + command + "' set failed: " + res.stderr_str);
+    if (res.first != 0)
+        return Result<void>::err("Custom backend '" + command + "' set failed: " + res.second);
     return Result<void>::ok();
 }
 

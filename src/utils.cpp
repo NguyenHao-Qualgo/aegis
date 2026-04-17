@@ -1,5 +1,6 @@
 #include "aegis/utils.h"
 
+#include <array>
 #include <cstdarg>
 #include <cstdio>
 #include <cstring>
@@ -19,166 +20,85 @@ extern char** environ;
 namespace aegis {
 namespace {
 
-std::string join_command(const std::vector<std::string>& argv) {
+std::string shell_escape(const std::string& s) {
+    std::string out = "'";
+    for (char c : s) {
+        if (c == '\'') {
+            out += "'\\''";
+        } else {
+            out += c;
+        }
+    }
+    out += "'";
+    return out;
+}
+
+std::string build_shell_command(const std::vector<std::string>& argv,
+                                const std::vector<std::string>& env) {
+    if (argv.empty()) {
+        throw std::runtime_error("argv must not be empty");
+    }
+
     std::ostringstream oss;
+
+    for (const auto& e : env) {
+        auto pos = e.find('=');
+        if (pos == std::string::npos || pos == 0) {
+            throw std::runtime_error("Invalid environment entry: " + e);
+        }
+
+        std::string key = e.substr(0, pos);
+        std::string value = e.substr(pos + 1);
+        oss << key << "=" << shell_escape(value) << " ";
+    }
+
     for (size_t i = 0; i < argv.size(); ++i) {
         if (i != 0) {
-            oss << ' ';
+            oss << " ";
         }
-        oss << argv[i];
+        oss << shell_escape(argv[i]);
     }
+
+    oss << " 2>&1";
     return oss.str();
-}
-
-bool contains_slash(const std::string& s) {
-    return s.find('/') != std::string::npos;
-}
-
-std::vector<std::string> build_environment(const std::vector<std::string>& env_overrides) {
-    std::vector<std::string> envp;
-    for (char** current = environ; current && *current; ++current) {
-        envp.emplace_back(*current);
-    }
-
-    for (const auto& item : env_overrides) {
-        auto pos = item.find('=');
-        if (pos == std::string::npos || pos == 0) {
-            throw AegisError("Invalid environment entry: " + item);
-        }
-
-        const std::string key = item.substr(0, pos);
-        bool replaced = false;
-        for (auto& existing : envp) {
-            if (existing.rfind(key + "=", 0) == 0) {
-                existing = item;
-                replaced = true;
-                break;
-            }
-        }
-        if (!replaced) {
-            envp.push_back(item);
-        }
-    }
-
-    return envp;
-}
-
-std::string read_fd_into_string(int fd) {
-    std::string out;
-    char buffer[4096];
-    while (true) {
-        ssize_t n = ::read(fd, buffer, sizeof(buffer));
-        if (n == 0)
-            break;
-        if (n < 0) {
-            if (errno == EINTR)
-                continue;
-            break;
-        }
-        out.append(buffer, static_cast<size_t>(n));
-    }
-    ::close(fd);
-    return out;
 }
 
 } // namespace
 
-SubprocessResult run_command(const std::vector<std::string>& argv,
-                             const std::vector<std::string>& env) {
-    if (argv.empty()) {
-        throw AegisError("run_command(): argv must not be empty");
-    }
+std::pair<int, std::string> run_command(const std::vector<std::string>& argv,
+                                        const std::vector<std::string>& env) {
+    std::string cmd = build_shell_command(argv, env);
 
-    if (argv[0].empty()) {
-        throw AegisError("run_command(): argv[0] must not be empty");
-    }
+    std::array<char, 128> buffer;
+    std::string output;
+    int return_code = -1;
 
-    if (contains_slash(argv[0]) && !path_exists(argv[0])) {
-        throw AegisError("Command does not exist: " + argv[0]);
-    }
-
-    int stdout_pipe[2];
-    int stderr_pipe[2];
-    if (::pipe(stdout_pipe) != 0 || ::pipe(stderr_pipe) != 0) {
-        throw AegisError("Failed to create pipes for command: " + join_command(argv) + ": " +
-                         std::string(std::strerror(errno)));
-    }
-
-    std::vector<std::string> env_strings = build_environment(env);
-    std::vector<char*> envp;
-    envp.reserve(env_strings.size() + 1);
-    for (auto& item : env_strings) {
-        envp.push_back(item.data());
-    }
-    envp.push_back(nullptr);
-
-    std::vector<char*> exec_argv;
-    exec_argv.reserve(argv.size() + 1);
-    for (const auto& arg : argv) {
-        exec_argv.push_back(const_cast<char*>(arg.c_str()));
-    }
-    exec_argv.push_back(nullptr);
-
-    pid_t pid = ::fork();
-    if (pid < 0) {
-        ::close(stdout_pipe[0]);
-        ::close(stdout_pipe[1]);
-        ::close(stderr_pipe[0]);
-        ::close(stderr_pipe[1]);
-        throw AegisError("Failed to start command: " + join_command(argv) + ": " +
-                         std::string(std::strerror(errno)));
-    }
-
-    if (pid == 0) {
-        ::dup2(stdout_pipe[1], STDOUT_FILENO);
-        ::dup2(stderr_pipe[1], STDERR_FILENO);
-        ::close(stdout_pipe[0]);
-        ::close(stdout_pipe[1]);
-        ::close(stderr_pipe[0]);
-        ::close(stderr_pipe[1]);
-
-        if (contains_slash(argv[0])) {
-            ::execve(argv[0].c_str(), exec_argv.data(), envp.data());
-        } else {
-            ::execvpe(argv[0].c_str(), exec_argv.data(), envp.data());
+    auto pclose_wrapper = [&return_code](FILE* file) {
+        if (file != nullptr) {
+            return_code = pclose(file);
         }
-        _exit(errno == ENOENT ? 127 : 126);
-    }
+    };
 
-    ::close(stdout_pipe[1]);
-    ::close(stderr_pipe[1]);
+    {
+        const auto pipe =
+            std::unique_ptr<FILE, decltype(pclose_wrapper)>(popen(cmd.c_str(), "r"), pclose_wrapper);
 
-    SubprocessResult result;
-    result.stdout_str = read_fd_into_string(stdout_pipe[0]);
-    result.stderr_str = read_fd_into_string(stderr_pipe[0]);
+        if (!pipe) {
+            throw std::runtime_error("popen() failed");
+        }
 
-    int status = 0;
-    while (::waitpid(pid, &status, 0) < 0) {
-        if (errno != EINTR) {
-            throw AegisError("Failed to wait for command: " + join_command(argv) + ": " +
-                             std::string(std::strerror(errno)));
+        while (fgets(buffer.data(), static_cast<int>(buffer.size()), pipe.get()) != nullptr) {
+            output += buffer.data();
         }
     }
 
-    if (WIFEXITED(status)) {
-        result.exit_code = WEXITSTATUS(status);
-    } else if (WIFSIGNALED(status)) {
-        result.exit_code = 128 + WTERMSIG(status);
-    } else {
-        result.exit_code = -1;
+    if (return_code != -1 && WIFEXITED(return_code)) {
+        return_code = WEXITSTATUS(return_code);
+    } else if (return_code != -1 && WIFSIGNALED(return_code)) {
+        return_code = 128 + WTERMSIG(return_code);
     }
-    return result;
-}
 
-SubprocessResult run_command_checked(const std::vector<std::string>& argv,
-                                     const std::vector<std::string>& env) {
-    auto res = run_command(argv, env);
-    if (res.exit_code != 0) {
-        throw AegisError("Command failed (exit " + std::to_string(res.exit_code) +
-                         "): " + join_command(argv) +
-                         (res.stderr_str.empty() ? "" : "\n" + res.stderr_str));
-    }
-    return res;
+    return {return_code, output};
 }
 
 bool path_exists(const std::string& path) {

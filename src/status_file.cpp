@@ -190,4 +190,26 @@ Result<void> save_all_slot_status(const std::map<std::string, Slot>& slots,
     return Result<void>::ok();
 }
 
+Result<void> FileStatusStore::save_slot(const Slot& slot) {
+    if (!config_.data_directory.empty()) {
+        auto result = save_slot_status(slot, config_.data_directory);
+        if (!result) {
+            return result;
+        }
+    }
+
+    if (!config_.statusfile.empty()) {
+        return save_all(config_.slots);
+    }
+
+    return Result<void>::ok();
+}
+
+Result<void> FileStatusStore::save_all(const std::map<std::string, Slot>& slots) {
+    if (!config_.statusfile.empty()) {
+        return save_all_slot_status(slots, config_.statusfile);
+    }
+    return Result<void>::ok();
+}
+
 } // namespace aegis
