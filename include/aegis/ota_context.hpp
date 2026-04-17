@@ -7,14 +7,15 @@
 #include <vector>
 #include <functional>
 
+#include "aegis/boot_control.hpp"
+#include "aegis/bundle_verifier.hpp"
 #include "aegis/config.hpp"
+#include "aegis/gcs_client.hpp"
 #include "aegis/ota_event.hpp"
 #include "aegis/ota_state.hpp"
 #include "aegis/state_store.hpp"
 #include "aegis/types.hpp"
 #include "aegis/update_handler.hpp"
-#include "aegis/boot_control.hpp"
-#include "aegis/bundle_verifier.hpp"
 
 namespace aegis {
 
@@ -24,7 +25,8 @@ public:
                BootControl bootControl,
                BundleVerifier verifier,
                std::vector<std::unique_ptr<IUpdateHandler>> updateHandlers,
-               StateStore stateStore);
+               StateStore stateStore,
+               std::shared_ptr<IGcsClient> gcsClient = nullptr);
 
     void dispatch(const OtaEvent& event);
     void transitionTo(std::unique_ptr<IOtaState> next);
@@ -38,6 +40,7 @@ public:
 
     const IUpdateHandler& updateHandlerFor(const std::string& imageType) const;
     void ensureBootable(const std::string& slot) const;
+    std::string downloadBundle(const std::string& url);
     std::string extractBundle(const std::string& bundlePath);
 
     std::string getPrimary() const;
@@ -51,6 +54,7 @@ public:
     BundleVerifier verifier_;
     std::vector<std::unique_ptr<IUpdateHandler>> updateHandlers_;
     StateStore stateStore_;
+    std::shared_ptr<IGcsClient> gcsClient_;
     OtaStatus status_;
 
 private:

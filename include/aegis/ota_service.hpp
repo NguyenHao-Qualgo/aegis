@@ -7,6 +7,7 @@
 
 #include "aegis/boot_control.hpp"
 #include "aegis/bundle_verifier.hpp"
+#include "aegis/gcs_client.hpp"
 #include "aegis/ota_context.hpp"
 #include "aegis/state_store.hpp"
 #include "aegis/types.hpp"
@@ -20,7 +21,8 @@ public:
                BootControl bootControl,
                BundleVerifier verifier,
                std::vector<std::unique_ptr<IUpdateHandler>> updateHandlers,
-               StateStore stateStore);
+               StateStore stateStore,
+               std::shared_ptr<IGcsClient> gcsClient = nullptr);
 
     OtaStatus getStatus() const;
 

@@ -12,12 +12,14 @@ OtaService::OtaService(OtaConfig config,
                        BootControl bootControl,
                        BundleVerifier verifier,
                        std::vector<std::unique_ptr<IUpdateHandler>> updateHandlers,
-                       StateStore stateStore)
+                       StateStore stateStore,
+                       std::shared_ptr<IGcsClient> gcsClient)
     : context_(std::move(config),
                std::move(bootControl),
                std::move(verifier),
                std::move(updateHandlers),
-               std::move(stateStore)) {
+               std::move(stateStore),
+               std::move(gcsClient)) {
 }
 
 OtaStatus OtaService::getStatus() const {

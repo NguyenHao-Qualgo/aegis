@@ -14,19 +14,35 @@ namespace aegis {
 void InstallState::onEnter(OtaContext& ctx) {
     try {
         ctx.status_.state = OtaState::Install;
+        ctx.status_.operation = "verify";
+        ctx.status_.progress = 20;
+        ctx.status_.message = "Verifying bundle signature";
+        ctx.save();
+
+        auto manifest = ctx.verifier_.verifyBundle(ctx.status_.bundlePath, ctx.config_);
+        if (manifest) {
+            ctx.status_.bundleVersion = manifest->version;
+        }
+
+        ctx.status_.operation = "extract";
+        ctx.status_.progress = 40;
+        ctx.status_.message = "Extracting bundle";
+        ctx.save();
+
+        ctx.status_.installPath = ctx.extractBundle(ctx.status_.bundlePath);
+
+        const auto fullManifest = manifest
+            ? *manifest
+            : ctx.verifier_.loadManifest(ctx.status_.installPath, ctx.config_);
+
         ctx.status_.operation = "install";
-        ctx.status_.progress = 50;
+        ctx.status_.progress = 60;
         ctx.status_.message = "Verifying payloads";
         ctx.save();
 
-        auto preManifest = ctx.verifier_.verifyBundle(ctx.status_.bundlePath, ctx.config_);
-        const auto manifest = preManifest
-            ? *preManifest
-            : ctx.verifier_.loadManifest(ctx.status_.installPath, ctx.config_);
+        ctx.verifier_.verifyPayloads(fullManifest, ctx.status_.installPath);
 
-        ctx.verifier_.verifyPayloads(manifest, ctx.status_.installPath);
-
-        const auto* rootfsImage = manifest.findImageBySlotClass("rootfs");
+        const auto* rootfsImage = fullManifest.findImageBySlotClass("rootfs");
         if (!rootfsImage) {
             throw std::runtime_error("Bundle does not contain a rootfs image");
         }
@@ -36,7 +52,7 @@ void InstallState::onEnter(OtaContext& ctx) {
         const auto payloadPath = joinPath(ctx.status_.installPath, rootfsImage->filename);
 
         ctx.status_.targetSlot = targetSlotName;
-        ctx.status_.bundleVersion = manifest.version;
+        ctx.status_.bundleVersion = fullManifest.version;
         ctx.status_.progress = 70;
         ctx.status_.message = "Installing payload";
         ctx.save();
@@ -49,6 +65,8 @@ void InstallState::onEnter(OtaContext& ctx) {
         ctx.status_.operation = "activate";
         ctx.status_.progress = 90;
         ctx.status_.message = "Activating target slot";
+        ctx.save();
+
         ctx.bootControl_.setSlotBootable(targetSlotName, true);
         ctx.bootControl_.setPrimarySlot(targetSlotName);
         ctx.status_.primarySlot = targetSlotName;

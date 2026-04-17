@@ -4,6 +4,7 @@
 #include <stdexcept>
 
 #include "aegis/bundle_extractor.hpp"
+#include "aegis/command_runner.hpp"
 #include "aegis/states/idle_state.hpp"
 #include "aegis/util.hpp"
 
@@ -13,12 +14,14 @@ OtaContext::OtaContext(OtaConfig config,
                        BootControl bootControl,
                        BundleVerifier verifier,
                        std::vector<std::unique_ptr<IUpdateHandler>> updateHandlers,
-                       StateStore stateStore)
+                       StateStore stateStore,
+                       std::shared_ptr<IGcsClient> gcsClient)
     : config_(std::move(config)),
       bootControl_(std::move(bootControl)),
       verifier_(std::move(verifier)),
       updateHandlers_(std::move(updateHandlers)),
-      stateStore_(std::move(stateStore)) {
+      stateStore_(std::move(stateStore)),
+      gcsClient_(std::move(gcsClient)) {
     status_ = stateStore_.load();
     status_.bootedSlot = bootControl_.getBootedSlot();
     status_.primarySlot = bootControl_.getPrimarySlot();
@@ -86,6 +89,16 @@ void OtaContext::ensureBootable(const std::string& slot) const {
     if (!bootControl_.isSlotBootable(slot)) {
         throw std::runtime_error("Slot is not bootable: " + slot);
     }
+}
+
+std::string OtaContext::downloadBundle(const std::string& url) {
+    if (url.find_first_of("'\"\\;&|`$<>!\n\r") != std::string::npos) {
+        throw std::runtime_error("Unsafe characters in bundle URL");
+    }
+    const auto destPath = joinPath(config_.dataDirectory, "bundle-download");
+    CommandRunner runner;
+    runner.runOrThrow("curl -fsSL --max-time 300 -o '" + destPath + "' '" + url + "'");
+    return destPath;
 }
 
 std::string OtaContext::extractBundle(const std::string& bundlePath) {

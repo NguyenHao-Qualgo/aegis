@@ -5,15 +5,16 @@
 #include <syslog.h>
 #include <vector>
 
+#include "aegis/archive_update_handler.hpp"
 #include "aegis/boot_control.hpp"
 #include "aegis/bundle_creator.hpp"
 #include "aegis/bundle_verifier.hpp"
-#include "aegis/archive_update_handler.hpp"
+#include "aegis/client.hpp"
 #include "aegis/config.hpp"
+#include "aegis/gcs_stub.hpp"
 #include "aegis/ota_service.hpp"
 #include "aegis/raw_update_handler.hpp"
 #include "aegis/state_store.hpp"
-#include "aegis/client.hpp"
 #include "aegis/util.hpp"
 
 #if defined(AEGIS_ENABLE_DBUS)
@@ -100,7 +101,8 @@ int Application::run(int argc, char** argv) {
         updateHandlers.push_back(std::make_unique<ArchiveUpdateHandler>());
         updateHandlers.push_back(std::make_unique<RawUpdateHandler>());
         StateStore stateStore(joinPath(config.dataDirectory, "ota-state.env"));
-        OtaService service(config, bootControl, verifier, std::move(updateHandlers), stateStore);
+        auto gcsClient = std::make_shared<GcsStub>();
+        OtaService service(config, bootControl, verifier, std::move(updateHandlers), stateStore, std::move(gcsClient));
         service.resumeAfterBoot();
         DbusService dbus(service);
         dbus.run();

@@ -31,7 +31,6 @@ std::string toString(SlotType value) {
 std::string toString(OtaState value) {
     switch (value) {
         case OtaState::Idle: return "Idle";
-        case OtaState::Sync: return "Sync";
         case OtaState::Download: return "Download";
         case OtaState::Install: return "Install";
         case OtaState::Reboot: return "Reboot";

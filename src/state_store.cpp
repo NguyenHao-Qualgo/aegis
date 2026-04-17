@@ -23,8 +23,7 @@ OtaStatus StateStore::load() const {
         const auto key = line.substr(0, pos);
         const auto value = line.substr(pos + 1);
         if (key == "state") {
-            if (value == "Idle") status.state = OtaState::Idle;
-            else if (value == "Sync") status.state = OtaState::Sync;
+            if (value == "Idle" || value == "Sync") status.state = OtaState::Idle;
             else if (value == "Download") status.state = OtaState::Download;
             else if (value == "Install") status.state = OtaState::Install;
             else if (value == "Reboot") status.state = OtaState::Reboot;

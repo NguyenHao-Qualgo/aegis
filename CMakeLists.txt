@@ -33,10 +33,10 @@ add_executable(aegis
     src/ota_context.cpp
     src/ota_service.cpp
 
+    src/gcs_stub.cpp
+
     src/states/idle_state.cpp
-    src/states/sync_state.cpp
-    src/states/verify_bundle_state.cpp
-    src/states/extract_state.cpp
+    src/states/download_state.cpp
     src/states/install_state.cpp
     src/states/reboot_state.cpp
     src/states/commit_state.cpp

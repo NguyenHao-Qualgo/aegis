@@ -19,6 +19,10 @@ void FailureState::onEnter(OtaContext& ctx) {
     ctx.status_.message = "OTA failed";
     ctx.status_.lastError = error_;
     ctx.save();
+
+    if (ctx.gcsClient_) {
+        ctx.gcsClient_->reportStatus(ctx.status_);
+    }
 }
 
 void FailureState::handle(OtaContext& ctx, const OtaEvent& event) {

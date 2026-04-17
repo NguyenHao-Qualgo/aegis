@@ -4,9 +4,9 @@
 
 namespace aegis {
 
-class SyncState : public IOtaState {
+class DownloadState : public IOtaState {
 public:
-    const char* name() const override { return "Sync"; }
+    const char* name() const override { return "Download"; }
     void onEnter(OtaContext& ctx) override;
     void handle(OtaContext& ctx, const OtaEvent& event) override;
 };

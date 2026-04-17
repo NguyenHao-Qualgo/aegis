@@ -25,8 +25,11 @@ void CommitState::handle(OtaContext& ctx, const OtaEvent& event) {
         ctx.status_.bootedSlot = slot;
         ctx.status_.primarySlot = slot;
         ctx.status_.targetSlot.reset();
-        ctx.status_.message = "Marked current slot good";
+        ctx.status_.message = "OTA complete";
         ctx.status_.lastError.clear();
+        if (ctx.gcsClient_) {
+            ctx.gcsClient_->reportStatus(ctx.status_);
+        }
         ctx.transitionTo(std::make_unique<IdleState>());
         return;
     }

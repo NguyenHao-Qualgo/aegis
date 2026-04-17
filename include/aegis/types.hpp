@@ -17,7 +17,6 @@ enum class SlotType {
 
 enum class OtaState {
     Idle,
-    Sync,
     Download,
     Install,
     Reboot,
