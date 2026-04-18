@@ -1,6 +1,8 @@
 #include "aegis/client.hpp"
+#include "aegis/util.hpp"
 
 #include <chrono>
+#include <csignal>
 #include <iostream>
 #include <map>
 #include <thread>
@@ -12,6 +14,8 @@
 namespace aegis {
 
 namespace {
+
+volatile sig_atomic_t gInterrupted = 0;
 
 std::map<std::string, sdbus::Variant> fetchStatus(sdbus::IProxy& proxy, const sdbus::InterfaceName& interfaceName) {
     std::map<std::string, sdbus::Variant> status;

@@ -8,6 +8,7 @@
 
 #include "aegis/ota_context.hpp"
 #include "aegis/ota_event.hpp"
+#include "aegis/util.hpp"
 #include "aegis/states/download_state.hpp"
 #include "aegis/states/failure_state.hpp"
 
@@ -33,6 +34,7 @@ void IdleState::onEnter(OtaContext& ctx) {
     ctx.status_.progress = 0;
     ctx.status_.message = "Waiting for update";
     ctx.save();
+    logDebug(ctx.status_.message);
 
     if (ctx.gcsClient_) {
         ctx.gcsClient_->reportStatus(ctx.status_);
@@ -81,6 +83,9 @@ void IdleState::handle(OtaContext& ctx, const OtaEvent& event) {
             ctx.status_.lastError.clear();
             ctx.status_.bootedSlot = ctx.getBooted();
             ctx.status_.primarySlot = ctx.getPrimary();
+            if (ctx.status_.bootedSlot != ctx.status_.primarySlot) {
+                logWarn("Oops, someone has manually set active slot or service restart at Reboot state");
+            }
             ctx.transitionTo(std::make_unique<DownloadState>());
         } catch (const std::exception& e) {
             ctx.transitionTo(std::make_unique<FailureState>(e.what()));

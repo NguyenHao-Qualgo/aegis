@@ -5,6 +5,7 @@
 
 #include "aegis/ota_context.hpp"
 #include "aegis/states/idle_state.hpp"
+#include "aegis/util.hpp"
 
 namespace aegis {
 
@@ -20,9 +21,12 @@ void FailureState::onEnter(OtaContext& ctx) {
     ctx.status_.lastError = error_;
     ctx.save();
 
+    logError("OTA failure: " + error_);
+
     if (ctx.gcsClient_) {
         ctx.gcsClient_->reportStatus(ctx.status_);
     }
+    ctx.transitionTo(std::make_unique<IdleState>());
 }
 
 void FailureState::handle(OtaContext& ctx, const OtaEvent& event) {

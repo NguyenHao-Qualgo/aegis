@@ -56,6 +56,7 @@ public:
     void markActive(const std::string& slot);
     void discardPendingRebootState();
     void setStatusChangedCallback(std::function<void(const OtaStatus&)> cb);
+    void setState(std::unique_ptr<IOtaState> state);
 
     OtaConfig config_;
     std::unique_ptr<IBootControl> bootControl_;

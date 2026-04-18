@@ -7,6 +7,7 @@
 #include <sys/mount.h>
 #include <unistd.h>
 
+#include "aegis/command_runner.hpp"
 #include "aegis/util.hpp"
 
 namespace aegis {
@@ -27,15 +28,6 @@ std::filesystem::path sanitizeArchivePath(const std::string& path) {
         }
     }
     return relative;
-}
-
-void clearMountedDirectory(const std::filesystem::path& mountPoint) {
-    if (!std::filesystem::exists(mountPoint)) {
-        return;
-    }
-    for (const auto& entry : std::filesystem::directory_iterator(mountPoint)) {
-        std::filesystem::remove_all(entry.path());
-    }
 }
 
 void extractArchive(const std::string& archivePath, const std::filesystem::path& mountPoint) {
@@ -162,15 +154,18 @@ void ArchiveUpdateHandler::install(const std::string& payloadPath, const SlotCon
     const auto mountPoint = std::filesystem::path(workDir) / "mnt";
     std::filesystem::create_directories(mountPoint);
 
+    ::umount(mountPoint.c_str());
+
+    logInfo("Formatting " + slot.device + " as ext4");
+    CommandRunner runner;
+    runner.runOrThrow("mkfs.ext4 -F " + slot.device);
+
     logInfo("Mounting " + slot.device + " -> " + mountPoint.string());
     if (::mount(slot.device.c_str(), mountPoint.c_str(), "ext4", 0, nullptr) != 0) {
         throw std::runtime_error("Failed to mount target slot: " + slot.device);
     }
 
     try {
-        logInfo("Clearing target filesystem");
-        clearMountedDirectory(mountPoint);
-
         logInfo("Extracting rootfs archive: " + payloadPath);
         extractArchive(payloadPath, mountPoint);
 

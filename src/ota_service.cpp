@@ -2,9 +2,11 @@
 
 #include <thread>
 #include <utility>
+#include <memory>
 
 #include "aegis/ota_event.hpp"
 #include "aegis/util.hpp"
+#include "aegis/states/idle_state.hpp"
 
 namespace aegis {
 
@@ -30,8 +32,8 @@ void OtaService::startInstall(const std::string& bundlePath) {
     const auto status = context_.getStatus();
 
     if (status.state == OtaState::Reboot) {
-        logWarn("Discarding pending reboot state and starting a new install");
-        context_.discardPendingRebootState();
+        logWarn("Cancelling pending reboot to start a new install");
+        context_.setState(std::make_unique<IdleState>());
     }
 
     context_.dispatch(OtaEvent{

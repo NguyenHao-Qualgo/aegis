@@ -1,4 +1,5 @@
 #include "aegis/dbus_service.hpp"
+#include "aegis/types.hpp"
 #include "aegis/util.hpp"
 
 #include <thread>
@@ -28,6 +29,12 @@ DbusService::DbusService(OtaService& service)
             .withInputParamNames("bundle")
             .implementedAs([this](const std::string& bundle) {
                 logInfo("DBus Install called");
+
+                const auto state = service_.getStatus().state;
+                if (state == OtaState::Download || state == OtaState::Install) {
+                    throw sdbus::Error(sdbus::Error::Name{"de.skytrack.Aegis1.Error.Busy"},
+                                       "Install already in progress");
+                }
 
                 std::thread([this, bundle]() {
                     try {

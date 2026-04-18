@@ -16,10 +16,13 @@ namespace aegis {
 static std::unique_ptr<IOtaState> stateFromPersisted(const OtaStatus& status) {
     switch (status.state) {
     case OtaState::Reboot:
+        logInfo("Resuming persisted Reboot state — waiting for ResumeAfterBoot");
         return std::make_unique<RebootState>();
     case OtaState::Commit:
+        logInfo("Resuming persisted Commit state — waiting for mark-good");
         return std::make_unique<CommitState>();
     case OtaState::Failure:
+        logWarn("Resuming persisted Failure state: " + status.lastError);
         return std::make_unique<FailureState>(status.lastError);
     default:
         return std::make_unique<IdleState>();
@@ -245,6 +248,13 @@ void OtaContext::discardPendingRebootState() {
 void OtaContext::setStatusChangedCallback(std::function<void(const OtaStatus&)> cb) {
     std::scoped_lock lock(mutex_);
     onStatusChanged_ = std::move(cb);
+}
+
+void OtaContext::setState(std::unique_ptr<IOtaState> state) {
+    {
+        std::scoped_lock lock(mutex_);
+        state_ = std::move(state);
+    }
 }
 
 }  // namespace aegis

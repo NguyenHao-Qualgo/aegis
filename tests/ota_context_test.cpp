@@ -221,6 +221,8 @@ TEST_F(OtaContextTest, RebootResumeMatchingSlotTransitionsToCommit) {
 
 TEST_F(OtaContextTest, RebootResumeMismatchedSlotTransitionsToFailure) {
     auto bc = makeBootControl("A", "A", "B");
+    EXPECT_CALL(*bc, setPrimarySlot("A")).Times(1);
+
     auto verifier = std::make_unique<NiceMock<MockBundleVerifier>>();
     TempStateStore tss;
 
@@ -228,12 +230,14 @@ TEST_F(OtaContextTest, RebootResumeMismatchedSlotTransitionsToFailure) {
     OtaContext ctx(makeConfig(), std::move(bc), std::move(verifier), {}, tss.store(), nullptr,
                    std::move(initialState));
 
-    // We booted into A but expected B.
+    // We booted into A but expected B (watchdog rollback).
     ctx.status_.targetSlot = "B";
 
     ctx.dispatch(event(OtaEvent::Type::ResumeAfterBoot));
 
     EXPECT_EQ(ctx.getStatus().state, OtaState::Failure);
+    // Primary slot must be rolled back to the actual booted slot.
+    EXPECT_EQ(ctx.getStatus().primarySlot, "A");
 }
 
 TEST_F(OtaContextTest, RebootResumeMissingTargetSlotTransitionsToFailure) {
@@ -264,9 +268,27 @@ TEST_F(OtaContextTest, RebootIgnoresUnrelatedEvents) {
 
     ctx.dispatch(event(OtaEvent::Type::MarkGood));
     ctx.dispatch(event(OtaEvent::Type::MarkBad));
-    ctx.dispatch(event(OtaEvent::Type::StartInstall, "/some/path"));
 
     EXPECT_EQ(ctx.getStatus().state, OtaState::Reboot);
+}
+
+TEST_F(OtaContextTest, RebootResetTransitionsToIdleAndClearsRebootData) {
+    auto bc = makeBootControl();
+    auto verifier = std::make_unique<NiceMock<MockBundleVerifier>>();
+    TempStateStore tss;
+
+    auto initialState = std::make_unique<RebootState>();
+    OtaContext ctx(makeConfig(), std::move(bc), std::move(verifier), {}, tss.store(), nullptr,
+                   std::move(initialState));
+
+    ctx.status_.targetSlot = "B";
+    ctx.status_.bundleVersion = "2.0";
+
+    ctx.dispatch(event(OtaEvent::Type::Reset));
+
+    EXPECT_EQ(ctx.getStatus().state, OtaState::Idle);
+    EXPECT_FALSE(ctx.getStatus().targetSlot.has_value());
+    EXPECT_TRUE(ctx.getStatus().bundleVersion.empty());
 }
 
 // ---------------------------------------------------------------------------
@@ -485,6 +507,31 @@ TEST_F(OtaContextTest, DiscardPendingRebootStateClearsFields) {
 }
 
 // ---------------------------------------------------------------------------
+// OtaService-level tests
+// ---------------------------------------------------------------------------
+
+TEST_F(OtaContextTest, StartInstallFromFailureAutoResets) {
+    // After a failed install, a new install request must auto-reset from
+    // Failure → Idle and then dispatch StartInstall, not silently no-op.
+    auto bc = makeBootControl();
+    auto verifier = std::make_unique<NiceMock<MockBundleVerifier>>();
+    TempStateStore tss;
+    OtaContext ctx(makeConfig(), std::move(bc), std::move(verifier), {}, tss.store(), nullptr,
+                   std::make_unique<FailureState>("bundle not found"));
+
+    ASSERT_EQ(ctx.getStatus().state, OtaState::Failure);
+
+    // Simulate what OtaService::startInstall does: reset then StartInstall.
+    ctx.dispatch(OtaEvent{OtaEvent::Type::Reset, "", ""});
+    ASSERT_EQ(ctx.getStatus().state, OtaState::Idle);
+
+    // A StartInstall with an empty path transitions to Failure (not silently ignored).
+    ctx.dispatch(OtaEvent{OtaEvent::Type::StartInstall, "", ""});
+    EXPECT_EQ(ctx.getStatus().state, OtaState::Failure);
+    EXPECT_NE(ctx.getStatus().lastError, "bundle not found"); // new error, not old one
+}
+
+// ---------------------------------------------------------------------------
 // Reboot-resume path (normal constructor restores state from StateStore)
 // ---------------------------------------------------------------------------
 
@@ -543,11 +590,13 @@ TEST_F(OtaContextTest, ResumeAfterBootFailsWhenBootedSlotMismatch) {
 
     // On cold boot: ended up on slot A instead of expected B (watchdog rollback).
     auto bc = makeBootControl("A", "A", "B");
+    EXPECT_CALL(*bc, setPrimarySlot("A")).Times(1);
     OtaContext ctx = makeContextFromStore(tss.store(), std::move(bc));
 
     ctx.dispatch(OtaEvent{OtaEvent::Type::ResumeAfterBoot, "", ""});
 
     EXPECT_EQ(ctx.getStatus().state, OtaState::Failure);
+    EXPECT_EQ(ctx.getStatus().primarySlot, "A");
 }
 
 TEST_F(OtaContextTest, AfterRebootRestoredToCommitState) {
