@@ -2,47 +2,43 @@
 
 #include <memory>
 
-#include "aegis/ota_context.hpp"
+#include "aegis/ota_state_machine.hpp"
 #include "aegis/states/failure_state.hpp"
 #include "aegis/states/idle_state.hpp"
 
 namespace aegis {
 
-void CommitState::onEnter(OtaContext& ctx) {
-    ctx.status_.state = OtaState::Commit;
-    ctx.status_.operation = "commit";
-    ctx.status_.progress = 100;
-    ctx.status_.lastError.clear();
-    ctx.status_.message = "Booted into expected slot; waiting for mark-good";
-    ctx.save();
+void CommitState::onEnter(OtaStateMachine& machine) {
+    machine.clearLastError();
+    machine.setProgress(OtaState::Commit, "commit", 100,
+                        "Booted into expected slot; waiting for mark-good");
 }
 
-void CommitState::handle(OtaContext& ctx, const OtaEvent& event) {
+void CommitState::handle(OtaStateMachine& machine, const OtaEvent& event) {
     switch (event.type) {
     case OtaEvent::Type::MarkGood: {
-        const auto slot = ctx.getBooted();
-        ctx.bootControl_->markGood(slot);
-        ctx.status_.bootedSlot = slot;
-        ctx.status_.primarySlot = slot;
-        ctx.status_.targetSlot.reset();
-        ctx.status_.message = "OTA complete";
-        ctx.status_.lastError.clear();
-        if (ctx.gcsClient_) {
-            ctx.gcsClient_->reportStatus(ctx.status_);
+        const auto slot = machine.bootControl().getBootedSlot();
+        machine.bootControl().markGood(slot);
+        machine.updateSlots(slot, slot);
+        machine.clearWorkflowData();
+        if (auto* gcs = machine.gcsClient()) {
+            OtaStatus snapshot = machine.getStatus();
+            snapshot.message = "OTA complete";
+            gcs->reportStatus(snapshot);
         }
-        ctx.transitionTo(std::make_unique<IdleState>());
+        machine.transitionTo(std::make_unique<IdleState>());
         return;
     }
 
     case OtaEvent::Type::MarkBad: {
-        const auto slot = ctx.getBooted();
-        ctx.bootControl_->markBad(slot);
-        ctx.transitionTo(std::make_unique<FailureState>("Marked current slot bad"));
+        const auto slot = machine.bootControl().getBootedSlot();
+        machine.bootControl().markBad(slot);
+        machine.transitionTo(std::make_unique<FailureState>("Marked current slot bad"));
         return;
     }
 
     case OtaEvent::Type::Reset:
-        ctx.transitionTo(std::make_unique<IdleState>());
+        machine.transitionTo(std::make_unique<IdleState>());
         return;
 
     default:

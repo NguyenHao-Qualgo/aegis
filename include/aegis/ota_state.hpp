@@ -4,7 +4,7 @@
 
 namespace aegis {
 
-class OtaContext;
+class OtaStateMachine;
 struct OtaEvent;
 
 class IOtaState {
@@ -13,10 +13,10 @@ public:
 
     virtual const char* name() const = 0;
 
-    virtual void onEnter(OtaContext& ctx) {}
-    virtual void onExit(OtaContext& ctx) {}
+    virtual void onEnter(OtaStateMachine& machine) {}
+    virtual void onExit(OtaStateMachine& machine) {}
 
-    virtual void handle(OtaContext& ctx, const OtaEvent& event) = 0;
+    virtual void handle(OtaStateMachine& machine, const OtaEvent& event) = 0;
 };
 
 }  // namespace aegis

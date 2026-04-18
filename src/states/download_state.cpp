@@ -3,7 +3,7 @@
 #include <filesystem>
 #include <memory>
 
-#include "aegis/ota_context.hpp"
+#include "aegis/ota_state_machine.hpp"
 #include "aegis/states/failure_state.hpp"
 #include "aegis/states/install_state.hpp"
 
@@ -13,31 +13,25 @@ static bool isUrl(const std::string& path) {
     return path.rfind("http://", 0) == 0 || path.rfind("https://", 0) == 0;
 }
 
-void DownloadState::onEnter(OtaContext& ctx) {
+void DownloadState::onEnter(OtaStateMachine& machine) {
     try {
-        ctx.status_.state = OtaState::Download;
-        ctx.status_.operation = "download";
-        ctx.status_.progress = 10;
-
-        if (isUrl(ctx.status_.bundlePath)) {
-            ctx.status_.message = "Downloading bundle";
-            ctx.save();
-            ctx.status_.bundlePath = ctx.downloadBundle(ctx.status_.bundlePath);
+        const auto bundlePath = machine.getStatus().bundlePath;
+        if (isUrl(bundlePath)) {
+            machine.setProgress(OtaState::Download, "download", 10, "Downloading bundle");
+            machine.setBundlePath(machine.downloadBundle(bundlePath));
         } else {
-            ctx.status_.message = "Preparing bundle";
-            ctx.save();
-            if (!std::filesystem::exists(ctx.status_.bundlePath)) {
-                throw std::runtime_error("Bundle not found: " + ctx.status_.bundlePath);
+            machine.setProgress(OtaState::Download, "download", 10, "Preparing bundle");
+            if (!std::filesystem::exists(bundlePath)) {
+                throw std::runtime_error("Bundle not found: " + bundlePath);
             }
         }
-
-        ctx.transitionTo(std::make_unique<InstallState>());
+        machine.transitionTo(std::make_unique<InstallState>());
     } catch (const std::exception& e) {
-        ctx.transitionTo(std::make_unique<FailureState>(e.what()));
+        machine.transitionTo(std::make_unique<FailureState>(e.what()));
     }
 }
 
-void DownloadState::handle(OtaContext&, const OtaEvent&) {
+void DownloadState::handle(OtaStateMachine&, const OtaEvent&) {
 }
 
 }  // namespace aegis

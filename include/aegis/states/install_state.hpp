@@ -7,9 +7,9 @@ namespace aegis {
 class InstallState : public IOtaState {
 public:
     const char* name() const override { return "Install"; }
-    void onEnter(OtaContext& ctx) override;
-    void handle(OtaContext& ctx, const OtaEvent& event) override;
-    void onExit(OtaContext& ctx) override;
+    void onEnter(OtaStateMachine& machine) override;
+    void handle(OtaStateMachine& machine, const OtaEvent& event) override;
+    void onExit(OtaStateMachine& machine) override;
 };
 
 }  // namespace aegis

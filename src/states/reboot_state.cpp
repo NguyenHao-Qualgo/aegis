@@ -3,7 +3,7 @@
 #include <memory>
 #include <stdexcept>
 
-#include "aegis/ota_context.hpp"
+#include "aegis/ota_state_machine.hpp"
 #include "aegis/states/commit_state.hpp"
 #include "aegis/states/failure_state.hpp"
 #include "aegis/states/idle_state.hpp"
@@ -11,60 +11,61 @@
 
 namespace aegis {
 
-void RebootState::onEnter(OtaContext& ctx) {
-    ctx.status_.state = OtaState::Reboot;
-    ctx.status_.operation = "reboot";
-    ctx.status_.progress = 100;
-    ctx.status_.message = "Ready to reboot";
-    ctx.save();
+void RebootState::onEnter(OtaStateMachine& machine) {
+    machine.setProgress(OtaState::Reboot, "reboot", 100, "Ready to reboot");
 }
 
-void RebootState::onExit(OtaContext& ctx) {
-    ctx.status_.targetSlot.reset();
-    ctx.status_.bundleVersion.clear();
-    ctx.status_.lastError.clear();
+void RebootState::onExit(OtaStateMachine& machine) {
+    machine.clearWorkflowData();
 }
 
-void RebootState::handle(OtaContext& ctx, const OtaEvent& event) {
-    if (event.type != OtaEvent::Type::ResumeAfterBoot) {
+void RebootState::handle(OtaStateMachine& machine, const OtaEvent& event) {
+    switch (event.type) {
+    case OtaEvent::Type::Reset:
+        machine.transitionTo(std::make_unique<IdleState>());
+        return;
+
+    case OtaEvent::Type::ResumeAfterBoot: {
+        try {
+            const auto booted = machine.bootControl().getBootedSlot();
+            const auto primary = machine.bootControl().getPrimarySlot();
+            machine.updateSlots(booted, primary);
+
+            const auto status = machine.getStatus();
+            if (!status.targetSlot) {
+                throw std::runtime_error("Missing target slot while resuming after reboot");
+            }
+
+            if (booted == *status.targetSlot) {
+                logInfo("Booted into expected slot " + booted + " — transitioning to Commit");
+                machine.transitionTo(std::make_unique<CommitState>());
+                return;
+            }
+
+            logWarn("Slot mismatch: expected " + *status.targetSlot +
+                    " but booted into " + booted + " (possible watchdog rollback)");
+
+            // Rollback: point primary slot back to the slot we actually booted
+            // so the next reboot stays on the working slot instead of retrying
+            // the failed target.
+            try {
+                machine.bootControl().setPrimarySlot(booted);
+                machine.updateSlots(booted, booted);
+                logInfo("Primary slot reset to " + booted);
+            } catch (const std::exception& e) {
+                logWarn("Failed to reset primary slot to " + booted + ": " + e.what());
+            }
+
+            machine.transitionTo(std::make_unique<FailureState>(
+                "Booted slot does not match expected target"));
+        } catch (const std::exception& e) {
+            machine.transitionTo(std::make_unique<FailureState>(e.what()));
+        }
         return;
     }
 
-    try {
-        const auto booted = ctx.getBooted();
-        const auto primary = ctx.getPrimary();
-
-        ctx.status_.bootedSlot = booted;
-        ctx.status_.primarySlot = primary;
-
-        if (!ctx.status_.targetSlot) {
-            throw std::runtime_error("Missing target slot while resuming after reboot");
-        }
-
-        if (booted == *ctx.status_.targetSlot) {
-            logInfo("Booted into expected slot " + booted + " — transitioning to Commit");
-            ctx.transitionTo(std::make_unique<CommitState>());
-            return;
-        }
-
-        logWarn("Slot mismatch: expected " + *ctx.status_.targetSlot +
-                " but booted into " + booted + " (possible watchdog rollback)");
-
-        // Rollback: point primary slot back to the slot we actually booted
-        // so the next reboot stays on the working slot instead of retrying
-        // the failed target.
-        try {
-            ctx.bootControl_->setPrimarySlot(booted);
-            ctx.status_.primarySlot = booted;
-            logInfo("Primary slot reset to " + booted);
-        } catch (const std::exception& e) {
-            logWarn("Failed to reset primary slot to " + booted + ": " + e.what());
-        }
-
-        ctx.transitionTo(std::make_unique<FailureState>(
-            "Booted slot does not match expected target"));
-    } catch (const std::exception& e) {
-        ctx.transitionTo(std::make_unique<FailureState>(e.what()));
+    default:
+        return;
     }
 }
 

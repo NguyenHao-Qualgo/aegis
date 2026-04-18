@@ -9,6 +9,7 @@
 #include "aegis/bundle_verifier.hpp"
 #include "aegis/gcs_client.hpp"
 #include "aegis/ota_context.hpp"
+#include "aegis/ota_state_machine.hpp"
 #include "aegis/state_store.hpp"
 #include "aegis/types.hpp"
 #include "aegis/update_handler.hpp"
@@ -36,8 +37,9 @@ public:
 
     void resumeAfterBoot();
     void setStatusChangedCallback(std::function<void(const OtaStatus&)> cb);
+
 private:
-    OtaContext context_;
+    OtaStateMachine machine_;
 };
 
 }  // namespace aegis

@@ -38,6 +38,7 @@ add_library(aegis_core STATIC
     ../src/archive_update_handler.cpp
     ../src/raw_update_handler.cpp
     ../src/ota_context.cpp
+    ../src/ota_state_machine.cpp
     ../src/ota_service.cpp
     ../src/gcs_stub.cpp
     ../src/states/idle_state.cpp
@@ -62,15 +63,15 @@ target_link_libraries(aegis_core PUBLIC
 target_compile_features(aegis_core PUBLIC cxx_std_17)
 
 # ---- state machine tests ----
-add_executable(ota_context_test
-    ota_context_test.cpp
+add_executable(ota_state_machine_test
+    ota_state_machine_test.cpp
 )
 
-target_link_libraries(ota_context_test PRIVATE
+target_link_libraries(ota_state_machine_test PRIVATE
     aegis_core
     GTest::gtest_main
     GTest::gmock
 )
 
 include(GoogleTest)
-gtest_discover_tests(ota_context_test DISCOVERY_MODE PRE_TEST)
+gtest_discover_tests(ota_state_machine_test DISCOVERY_MODE PRE_TEST)

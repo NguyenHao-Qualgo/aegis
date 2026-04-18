@@ -3,7 +3,7 @@
 #include <memory>
 #include <utility>
 
-#include "aegis/ota_context.hpp"
+#include "aegis/ota_state_machine.hpp"
 #include "aegis/states/idle_state.hpp"
 #include "aegis/util.hpp"
 
@@ -13,28 +13,20 @@ FailureState::FailureState(std::string error)
     : error_(std::move(error)) {
 }
 
-void FailureState::onEnter(OtaContext& ctx) {
-    ctx.status_.state = OtaState::Failure;
-    ctx.status_.operation = "failure";
-    ctx.status_.progress = 0;
-    ctx.status_.message = "OTA failed";
-    ctx.status_.lastError = error_;
-    ctx.save();
-
+void FailureState::onEnter(OtaStateMachine& machine) {
+    machine.setFailure(error_);
     logError("OTA failure: " + error_);
-
-    if (ctx.gcsClient_) {
-        ctx.gcsClient_->reportStatus(ctx.status_);
+    if (auto* gcs = machine.gcsClient()) {
+        gcs->reportStatus(machine.getStatus());
     }
-    ctx.transitionTo(std::make_unique<IdleState>());
 }
 
-void FailureState::handle(OtaContext& ctx, const OtaEvent& event) {
+void FailureState::handle(OtaStateMachine& machine, const OtaEvent& event) {
     switch (event.type) {
     case OtaEvent::Type::Reset:
     case OtaEvent::Type::MarkBad:
     case OtaEvent::Type::ResumeAfterBoot:
-        ctx.transitionTo(std::make_unique<IdleState>());
+        machine.transitionTo(std::make_unique<IdleState>());
         return;
 
     default:

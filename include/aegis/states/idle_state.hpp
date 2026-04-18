@@ -14,12 +14,12 @@ public:
     ~IdleState();
 
     const char* name() const override { return "Idle"; }
-    void onEnter(OtaContext& ctx) override;
-    void onExit(OtaContext& ctx) override;
-    void handle(OtaContext& ctx, const OtaEvent& event) override;
+    void onEnter(OtaStateMachine& machine) override;
+    void onExit(OtaStateMachine& machine) override;
+    void handle(OtaStateMachine& machine, const OtaEvent& event) override;
 
 private:
-    void pollLoop(OtaContext& ctx);
+    void pollLoop(OtaStateMachine& machine);
     void stopAndJoinPollThread();
 
     std::atomic<bool> stopPolling_{false};

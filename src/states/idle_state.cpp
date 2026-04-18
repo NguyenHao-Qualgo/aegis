@@ -1,4 +1,3 @@
-
 #include "aegis/states/idle_state.hpp"
 
 #include <chrono>
@@ -6,11 +5,11 @@
 #include <stdexcept>
 #include <thread>
 
-#include "aegis/ota_context.hpp"
 #include "aegis/ota_event.hpp"
-#include "aegis/util.hpp"
+#include "aegis/ota_state_machine.hpp"
 #include "aegis/states/download_state.hpp"
 #include "aegis/states/failure_state.hpp"
+#include "aegis/util.hpp"
 
 namespace aegis {
 
@@ -28,26 +27,22 @@ void IdleState::stopAndJoinPollThread() {
     }
 }
 
-void IdleState::onEnter(OtaContext& ctx) {
-    ctx.status_.state = OtaState::Idle;
-    ctx.status_.operation = "idle";
-    ctx.status_.progress = 0;
-    ctx.status_.message = "Waiting for update";
-    ctx.save();
-    logDebug(ctx.status_.message);
+void IdleState::onEnter(OtaStateMachine& machine) {
+    machine.setIdle("Waiting for update");
+    logDebug(machine.getStatus().message);
 
-    if (ctx.gcsClient_) {
-        ctx.gcsClient_->reportStatus(ctx.status_);
+    if (machine.gcsClient()) {
+        machine.gcsClient()->reportStatus(machine.getStatus());
         stopPolling_ = false;
-        pollThread_ = std::thread([this, &ctx]() { pollLoop(ctx); });
+        pollThread_ = std::thread([this, &machine]() { pollLoop(machine); });
     }
 }
 
-void IdleState::onExit(OtaContext&) {
+void IdleState::onExit(OtaStateMachine&) {
     stopAndJoinPollThread();
 }
 
-void IdleState::pollLoop(OtaContext& ctx) {
+void IdleState::pollLoop(OtaStateMachine& machine) {
     while (true) {
         std::unique_lock<std::mutex> lock(pollMutex_);
         pollCv_.wait_for(lock, kPollInterval, [this]() { return stopPolling_.load(); });
@@ -55,7 +50,7 @@ void IdleState::pollLoop(OtaContext& ctx) {
 
         if (stopPolling_) break;
 
-        auto update = ctx.gcsClient_->checkForUpdate();
+        auto update = machine.gcsClient()->checkForUpdate();
         if (update) {
             stopPolling_ = true;
             OtaEvent ev;
@@ -64,13 +59,13 @@ void IdleState::pollLoop(OtaContext& ctx) {
             // Dispatch on a separate thread: we cannot call dispatch() directly
             // here because dispatch() would eventually call onExit() on this
             // IdleState, which would try to join pollThread_ — deadlock.
-            std::thread([&ctx, ev]() { ctx.dispatch(ev); }).detach();
+            std::thread([&machine, ev]() { machine.dispatch(ev); }).detach();
             break;
         }
     }
 }
 
-void IdleState::handle(OtaContext& ctx, const OtaEvent& event) {
+void IdleState::handle(OtaStateMachine& machine, const OtaEvent& event) {
     switch (event.type) {
     case OtaEvent::Type::StartInstall:
         try {
@@ -79,16 +74,17 @@ void IdleState::handle(OtaContext& ctx, const OtaEvent& event) {
             }
             stopPolling_ = true;
             pollCv_.notify_all();
-            ctx.status_.bundlePath = event.bundlePath;
-            ctx.status_.lastError.clear();
-            ctx.status_.bootedSlot = ctx.getBooted();
-            ctx.status_.primarySlot = ctx.getPrimary();
-            if (ctx.status_.bootedSlot != ctx.status_.primarySlot) {
+            machine.setBundlePath(event.bundlePath);
+            machine.clearLastError();
+            machine.updateSlots(machine.bootControl().getBootedSlot(),
+                                machine.bootControl().getPrimarySlot());
+            const auto status = machine.getStatus();
+            if (status.bootedSlot != status.primarySlot) {
                 logWarn("Oops, someone has manually set active slot or service restart at Reboot state");
             }
-            ctx.transitionTo(std::make_unique<DownloadState>());
+            machine.transitionTo(std::make_unique<DownloadState>());
         } catch (const std::exception& e) {
-            ctx.transitionTo(std::make_unique<FailureState>(e.what()));
+            machine.transitionTo(std::make_unique<FailureState>(e.what()));
         }
         return;
 

@@ -22,6 +22,7 @@ public:
     ~DbusService();
 
     void run();
+    void stop();
 
 private:
     std::map<std::string, sdbus::Variant> toMap(const OtaStatus& status) const;

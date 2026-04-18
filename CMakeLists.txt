@@ -32,6 +32,7 @@ add_executable(aegis
     src/raw_update_handler.cpp
 
     src/ota_context.cpp
+    src/ota_state_machine.cpp
     src/ota_service.cpp
 
     src/gcs_stub.cpp

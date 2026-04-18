@@ -5,8 +5,8 @@
 #include <memory>
 
 #include "aegis/ota_event.hpp"
-#include "aegis/util.hpp"
 #include "aegis/states/idle_state.hpp"
+#include "aegis/util.hpp"
 
 namespace aegis {
 
@@ -16,27 +16,27 @@ OtaService::OtaService(OtaConfig config,
                        std::vector<std::unique_ptr<IUpdateHandler>> updateHandlers,
                        StateStore stateStore,
                        std::shared_ptr<IGcsClient> gcsClient)
-    : context_(std::move(config),
-               std::move(bootControl),
-               std::move(verifier),
-               std::move(updateHandlers),
-               std::move(stateStore),
-               std::move(gcsClient)) {
+    : machine_(OtaContext(std::move(config),
+                          std::move(bootControl),
+                          std::move(verifier),
+                          std::move(updateHandlers),
+                          std::move(gcsClient)),
+               std::move(stateStore)) {
 }
 
 OtaStatus OtaService::getStatus() const {
-    return context_.getStatus();
+    return machine_.getStatus();
 }
 
 void OtaService::startInstall(const std::string& bundlePath) {
-    const auto status = context_.getStatus();
+    const auto status = machine_.getStatus();
 
     if (status.state == OtaState::Reboot) {
         logWarn("Cancelling pending reboot to start a new install");
-        context_.setState(std::make_unique<IdleState>());
+        machine_.transitionTo(std::make_unique<IdleState>());
     }
 
-    context_.dispatch(OtaEvent{
+    machine_.dispatch(OtaEvent{
         OtaEvent::Type::StartInstall,
         bundlePath,
         ""
@@ -44,43 +44,31 @@ void OtaService::startInstall(const std::string& bundlePath) {
 }
 
 void OtaService::markGood() {
-    context_.dispatch(OtaEvent{
-        OtaEvent::Type::MarkGood,
-        "",
-        ""
-    });
+    machine_.dispatch(OtaEvent{OtaEvent::Type::MarkGood, "", ""});
 }
 
 void OtaService::markBad() {
-    context_.dispatch(OtaEvent{
-        OtaEvent::Type::MarkBad,
-        "",
-        ""
-    });
+    machine_.dispatch(OtaEvent{OtaEvent::Type::MarkBad, "", ""});
 }
 
 void OtaService::resumeAfterBoot() {
-    context_.dispatch(OtaEvent{
-        OtaEvent::Type::ResumeAfterBoot,
-        "",
-        ""
-    });
+    machine_.dispatch(OtaEvent{OtaEvent::Type::ResumeAfterBoot, "", ""});
 }
 
 void OtaService::markActive(const std::string& slot) {
-    context_.markActive(slot);
+    machine_.markActive(slot);
 }
 
 std::string OtaService::getPrimary() const {
-    return context_.getPrimary();
+    return machine_.bootControl().getPrimarySlot();
 }
 
 std::string OtaService::getBooted() const {
-    return context_.getBooted();
+    return machine_.bootControl().getBootedSlot();
 }
 
 void OtaService::setStatusChangedCallback(std::function<void(const OtaStatus&)> cb) {
-    context_.setStatusChangedCallback(std::move(cb));
+    machine_.setStatusChangedCallback(std::move(cb));
 }
 
 }  // namespace aegis
