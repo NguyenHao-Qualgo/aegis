@@ -46,56 +46,25 @@ void OtaStateMachine::init(std::unique_ptr<IOtaState> initialState) {
     state_->onEnter(*this);
 }
 
-// dispatch() runs the current state's event handler.
-//
-// The state is moved out of state_ before handle() is called so that
-// transitionTo() (which may be called from within handle() or from any
-// onEnter() in a chain of transitions) can freely set state_ to the
-// next state without conflicting with dispatch's own state pointer.
-//
-// After handle() returns:
-//   - If state_ is non-null, transitionTo() was called and the entire
-//     transition chain (including all chained onEnter() calls) has already
-//     completed.  We only need to call onExit() on the original state.
-//   - If state_ is still null, no transition occurred; restore the original state.
 void OtaStateMachine::dispatch(const OtaEvent& event) {
     std::unique_ptr<IOtaState> current;
-
     {
         std::scoped_lock lock(mutex_);
-        if (dispatching_) {
-            throw std::runtime_error("OTA dispatch called while another dispatch is in progress");
-        }
-        dispatching_ = true;
         current = std::move(state_);
     }
 
     current->handle(*this, event);
 
-    bool transitioned;
     {
         std::scoped_lock lock(mutex_);
-        transitioned = (state_ != nullptr);
-    }
-
-    if (transitioned) {
-        current->onExit(*this);
-    }
-
-    {
-        std::scoped_lock lock(mutex_);
-        dispatching_ = false;
-        if (!transitioned) {
+        if (state_ == nullptr) {
             state_ = std::move(current);
+        } else {
+            current->onExit(*this);
         }
     }
 }
 
-// transitionTo() may be called from within a state's handle() or onEnter().
-// It always sets the new state immediately and calls onEnter() on it.
-// onExit() on the previous state is called here only when state_ is non-null
-// (i.e. when called from a chained onEnter(), not from the top-level handle()
-// whose original state has been moved into dispatch()'s local `current`).
 void OtaStateMachine::transitionTo(std::unique_ptr<IOtaState> next) {
     if (!next) {
         throw std::runtime_error("Cannot transition to null OTA state");

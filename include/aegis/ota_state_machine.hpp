@@ -68,7 +68,6 @@ private:
 
     std::unique_ptr<IOtaState> state_;
     mutable std::mutex mutex_;
-    bool dispatching_{false};
     std::function<void(const OtaStatus&)> onStatusChanged_;
 };
 
