@@ -1,29 +1,12 @@
 #pragma once
 
-#include <string>
-
-#include "aegis/command_runner.hpp"
+#include "aegis/bootloader/boot_control.hpp"
 #include "aegis/types.hpp"
 
 namespace aegis {
-
-class IBootControl {
+class UBootControl : public IBootControl {
 public:
-    virtual ~IBootControl() = default;
-
-    virtual std::string getBootedSlot() const = 0;
-    virtual std::string getPrimarySlot() const = 0;
-    virtual std::string getInactiveSlot() const = 0;
-    virtual bool isSlotBootable(const std::string& slot) const = 0;
-    virtual void setSlotBootable(const std::string& slot, bool bootable) const = 0;
-    virtual void setPrimarySlot(const std::string& slot) const = 0;
-    virtual void markGood(const std::string& slot) const = 0;
-    virtual void markBad(const std::string& slot) const = 0;
-};
-
-class BootControl : public IBootControl {
-public:
-    BootControl(OtaConfig config, CommandRunner runner);
+    UBootControl(CommandRunner runner);
 
     std::string getBootedSlot() const override;
     std::string getPrimarySlot() const override;
@@ -39,8 +22,7 @@ private:
     void setEnv(const std::string& name, const std::string& value) const;
     std::string statusVar(const std::string& slot) const;
 
-    OtaConfig config_;
     CommandRunner runner_;
 };
 
-}  // namespace aegis
+} // namespace aegis 

@@ -8,7 +8,7 @@
 #include <thread>
 #include <vector>
 
-#include "aegis/boot_control.hpp"
+#include "aegis/bootloader/boot_control.hpp"
 #include "aegis/bundle_manifest.hpp"
 #include "aegis/bundle_verifier.hpp"
 #include "aegis/gcs_client.hpp"

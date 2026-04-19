@@ -1,4 +1,4 @@
-#include "aegis/client.hpp"
+#include "aegis/cli.hpp"
 #include "aegis/util.hpp"
 
 #include <chrono>
@@ -64,7 +64,7 @@ bool isTerminalState(const std::string& state) {
 
 }
 
-int Client::run(const std::vector<std::string>& args) const {
+int Cli::run(const std::vector<std::string>& args) const {
     if (args.empty()) {
         std::cerr << "Usage: aegis <status|install|mark-good|mark-bad|mark-active|get-primary|get-booted>\n";
         return 1;

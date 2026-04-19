@@ -5,7 +5,7 @@
 
 namespace aegis {
 
-class Client {
+class Cli {
 public:
     int run(const std::vector<std::string>& args) const;
 };

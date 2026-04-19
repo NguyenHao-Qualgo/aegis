@@ -22,7 +22,7 @@ add_executable(aegis
     src/types.cpp
     src/util.cpp
     src/command_runner.cpp
-    src/boot_control.cpp
+    src/bootloader/uboot_control.cpp
     src/state_store.cpp
     src/bundle_manifest.cpp
     src/bundle_creator.cpp
@@ -48,7 +48,7 @@ add_executable(aegis
 if (AEGIS_ENABLE_DBUS)
     target_sources(aegis PRIVATE
         src/dbus_service.cpp
-        src/client.cpp
+        src/cli.cpp
     )
 endif()
 

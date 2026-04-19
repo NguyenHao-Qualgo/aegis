@@ -6,10 +6,10 @@
 #include <vector>
 
 #include "aegis/archive_update_handler.hpp"
-#include "aegis/boot_control.hpp"
+#include "aegis/bootloader/uboot_control.hpp"
 #include "aegis/bundle_creator.hpp"
 #include "aegis/bundle_verifier.hpp"
-#include "aegis/client.hpp"
+#include "aegis/cli.hpp"
 #include "aegis/config.hpp"
 #include "aegis/gcs_stub.hpp"
 #include "aegis/ota_service.hpp"
@@ -35,7 +35,7 @@ int Application::run(int argc, char** argv) {
     const auto args = toArgs(argc, argv);
     if (args.empty()) {
 #if defined(AEGIS_ENABLE_DBUS)
-        Client client;
+        Cli client;
         return client.run(args);
 #else
         throw std::runtime_error("This build only supports 'bundle create'");
@@ -95,7 +95,7 @@ int Application::run(int argc, char** argv) {
         const auto config = loader.load(configPath);
         std::filesystem::create_directories(config.dataDirectory);
         CommandRunner runner;
-        auto bootControl = std::make_unique<BootControl>(config, runner);
+        auto bootControl = std::make_unique<UBootControl>(runner);
         auto verifier = std::make_unique<BundleVerifier>();
         std::vector<std::unique_ptr<IUpdateHandler>> updateHandlers;
         updateHandlers.push_back(std::make_unique<ArchiveUpdateHandler>());
@@ -111,7 +111,7 @@ int Application::run(int argc, char** argv) {
     }
 
 #if defined(AEGIS_ENABLE_DBUS)
-    Client client;
+    Cli client;
     return client.run(args);
 #else
     throw std::runtime_error("This build only supports 'bundle create'");

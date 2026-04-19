@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include "aegis/boot_control.hpp"
+#include "aegis/bootloader/boot_control.hpp"
 #include "aegis/bundle_verifier.hpp"
 #include "aegis/gcs_client.hpp"
 #include "aegis/ota_context.hpp"
