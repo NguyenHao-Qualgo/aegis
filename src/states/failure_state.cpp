@@ -19,6 +19,7 @@ void FailureState::onEnter(OtaStateMachine& machine) {
     if (auto* gcs = machine.gcsClient()) {
         gcs->reportStatus(machine.getStatus());
     }
+    machine.transitionTo(std::make_unique<IdleState>());
 }
 
 void FailureState::handle(OtaStateMachine& machine, const OtaEvent& event) {

@@ -17,6 +17,12 @@ namespace {
 
 volatile sig_atomic_t gInterrupted = 0;
 
+void signalHandler(int signum) {
+    logInfo("Ctrl+C pressed. Exiting aegis installation client...");
+    logInfo("Note that this will not abort the installation running in the aegis service!");
+    gInterrupted = 1;
+}
+
 std::map<std::string, sdbus::Variant> fetchStatus(sdbus::IProxy& proxy, const sdbus::InterfaceName& interfaceName) {
     std::map<std::string, sdbus::Variant> status;
     proxy.callMethod("GetStatus").onInterface(interfaceName).storeResultsTo(status);
@@ -64,6 +70,9 @@ int Client::run(const std::vector<std::string>& args) const {
         return 1;
     }
 
+    std::signal(SIGINT,  signalHandler);
+    std::signal(SIGTERM, signalHandler);
+
     const sdbus::BusName serviceName{"de.skytrack.Aegis"};
     const sdbus::InterfaceName interfaceName{"de.skytrack.Aegis1"};
     const sdbus::ObjectPath objectPath{"/de/skytrack/Aegis"};
@@ -108,7 +117,7 @@ int Client::run(const std::vector<std::string>& args) const {
             .onInterface(interfaceName)
             .withArguments(args[1]);
 
-        while (!done) {
+        while (!done && !gInterrupted) {
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
 
