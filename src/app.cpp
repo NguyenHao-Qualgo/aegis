@@ -5,15 +5,15 @@
 #include <syslog.h>
 #include <vector>
 
-#include "aegis/archive_update_handler.hpp"
+#include "aegis/installer/archive_update_handler.hpp"
 #include "aegis/bootloader/uboot_control.hpp"
-#include "aegis/bundle_creator.hpp"
-#include "aegis/bundle_verifier.hpp"
+#include "aegis/bundle/bundle_creator.hpp"
+#include "aegis/bundle/bundle_verifier.hpp"
 #include "aegis/cli.hpp"
 #include "aegis/config.hpp"
 #include "aegis/gcs_stub.hpp"
 #include "aegis/ota_service.hpp"
-#include "aegis/raw_update_handler.hpp"
+#include "aegis/installer/raw_update_handler.hpp"
 #include "aegis/state_store.hpp"
 #include "aegis/util.hpp"
 

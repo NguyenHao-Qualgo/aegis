@@ -24,12 +24,12 @@ add_executable(aegis
     src/command_runner.cpp
     src/bootloader/uboot_control.cpp
     src/state_store.cpp
-    src/bundle_manifest.cpp
-    src/bundle_creator.cpp
-    src/bundle_verifier.cpp
-    src/bundle_extractor.cpp
-    src/archive_update_handler.cpp
-    src/raw_update_handler.cpp
+    src/bundle/bundle_manifest.cpp
+    src/bundle/bundle_creator.cpp
+    src/bundle/bundle_verifier.cpp
+    src/bundle/bundle_extractor.cpp
+    src/installer/archive_update_handler.cpp
+    src/installer/raw_update_handler.cpp
 
     src/ota_context.cpp
     src/ota_state_machine.cpp

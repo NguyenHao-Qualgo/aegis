@@ -1,4 +1,4 @@
-#include "aegis/bundle_creator.hpp"
+#include "aegis/bundle/bundle_creator.hpp"
 
 #include <filesystem>
 #include <fstream>
@@ -14,7 +14,7 @@
 #include <openssl/pem.h>
 #include <openssl/x509.h>
 
-#include "aegis/bundle_manifest.hpp"
+#include "aegis/bundle/bundle_manifest.hpp"
 #include "aegis/util.hpp"
 
 namespace aegis {

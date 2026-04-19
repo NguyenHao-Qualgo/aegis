@@ -1,4 +1,4 @@
-#include "aegis/bundle_extractor.hpp"
+#include "aegis/bundle/bundle_extractor.hpp"
 
 #include <algorithm>
 #include <cstdint>

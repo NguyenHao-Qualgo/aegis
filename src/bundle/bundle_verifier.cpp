@@ -1,4 +1,4 @@
-#include "aegis/bundle_verifier.hpp"
+#include "aegis/bundle/bundle_verifier.hpp"
 
 #include <algorithm>
 #include <filesystem>

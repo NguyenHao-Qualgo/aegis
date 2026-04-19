@@ -1,4 +1,4 @@
-#include "aegis/bundle_manifest.hpp"
+#include "aegis/bundle/bundle_manifest.hpp"
 
 #include <algorithm>
 #include <fstream>

@@ -4,7 +4,7 @@
 #include <memory>
 #include <stdexcept>
 
-#include "aegis/bundle_manifest.hpp"
+#include "aegis/bundle/bundle_manifest.hpp"
 #include "aegis/ota_state_machine.hpp"
 #include "aegis/states/failure_state.hpp"
 #include "aegis/states/reboot_state.hpp"

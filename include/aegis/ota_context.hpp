@@ -5,11 +5,11 @@
 #include <vector>
 
 #include "aegis/bootloader/boot_control.hpp"
-#include "aegis/bundle_verifier.hpp"
+#include "aegis/bundle/bundle_verifier.hpp"
 #include "aegis/config.hpp"
 #include "aegis/gcs_client.hpp"
 #include "aegis/types.hpp"
-#include "aegis/update_handler.hpp"
+#include "aegis/installer/update_handler.hpp"
 
 namespace aegis {
 

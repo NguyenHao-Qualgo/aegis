@@ -4,7 +4,7 @@
 #include <optional>
 #include <string>
 
-#include "aegis/bundle_manifest.hpp"
+#include "aegis/bundle/bundle_manifest.hpp"
 #include "aegis/types.hpp"
 
 namespace aegis {

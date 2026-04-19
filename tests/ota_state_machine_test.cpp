@@ -9,8 +9,8 @@
 #include <vector>
 
 #include "aegis/bootloader/boot_control.hpp"
-#include "aegis/bundle_manifest.hpp"
-#include "aegis/bundle_verifier.hpp"
+#include "aegis/bundle/bundle_manifest.hpp"
+#include "aegis/bundle/bundle_verifier.hpp"
 #include "aegis/gcs_client.hpp"
 #include "aegis/ota_context.hpp"
 #include "aegis/ota_event.hpp"
@@ -22,7 +22,7 @@
 #include "aegis/states/idle_state.hpp"
 #include "aegis/states/reboot_state.hpp"
 #include "aegis/types.hpp"
-#include "aegis/update_handler.hpp"
+#include "aegis/installer/update_handler.hpp"
 
 using namespace aegis;
 using ::testing::_;

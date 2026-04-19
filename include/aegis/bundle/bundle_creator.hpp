@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-#include "aegis/bundle_manifest.hpp"
+#include "aegis/bundle/bundle_manifest.hpp"
 #include "aegis/command_runner.hpp"
 
 namespace aegis {

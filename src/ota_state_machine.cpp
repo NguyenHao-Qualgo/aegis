@@ -3,7 +3,7 @@
 #include <filesystem>
 #include <stdexcept>
 
-#include "aegis/bundle_extractor.hpp"
+#include "aegis/bundle/bundle_extractor.hpp"
 #include "aegis/command_runner.hpp"
 #include "aegis/states/commit_state.hpp"
 #include "aegis/states/failure_state.hpp"
