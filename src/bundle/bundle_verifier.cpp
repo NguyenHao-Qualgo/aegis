@@ -38,6 +38,20 @@ std::string opensslError() {
     return result.empty() ? "unknown error" : result;
 }
 
+int x509VerifyCallback(int ok, X509_STORE_CTX* ctx) {
+    if (!ok) {
+        const int err = X509_STORE_CTX_get_error(ctx);
+        const int depth = X509_STORE_CTX_get_error_depth(ctx);
+        X509* cert = X509_STORE_CTX_get_current_cert(ctx);
+        char subject[256] = "<unknown>";
+        if (cert) X509_NAME_oneline(X509_get_subject_name(cert), subject, sizeof(subject));
+        logWarn("x509 verify error at depth " + std::to_string(depth) +
+                ": " + X509_verify_cert_error_string(err) +
+                " [" + subject + "]");
+    }
+    return ok;
+}
+
 }  // namespace
 
 std::string BundleVerifier::sha256(const std::string& path) const {
@@ -153,6 +167,9 @@ std::optional<BundleManifest> BundleVerifier::verifyBundle(const std::string& bu
         throw std::runtime_error("Failed to load keyring '" + config.keyringPath + "': " + opensslError());
     }
 
+    X509_STORE_set_flags(store.get(), X509_V_FLAG_PARTIAL_CHAIN | X509_V_FLAG_NO_CHECK_TIME);
+    X509_STORE_set_verify_cb(store.get(), x509VerifyCallback);
+
     // Parse DER-encoded CMS from memory
     BioPtr cmsBio(BIO_new_mem_buf(cmsData.data(), static_cast<int>(cmsData.size())), BIO_free);
     if (!cmsBio) {
@@ -199,7 +216,7 @@ std::optional<BundleManifest> BundleVerifier::verifyBundle(const std::string& bu
     const auto manifest = io.loadFromFile(manifestPath.string());
     std::filesystem::remove_all(workDir);
 
-    if (manifest.compatible != config.compatible) {
+    if (!config.compatible.empty() && manifest.compatible != config.compatible) {
         throw std::runtime_error("Bundle compatible mismatch");
     }
     logInfo("CMS signature verified  compatible=" + manifest.compatible +

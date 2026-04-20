@@ -12,7 +12,7 @@ find_package(PkgConfig REQUIRED)
 find_package(OpenSSL REQUIRED)
 
 pkg_check_modules(LIBARCHIVE REQUIRED IMPORTED_TARGET libarchive)
-pkg_check_modules(EFIVAR REQUIRED IMPORTED_TARGET efivar)
+pkg_check_modules(EFIVAR IMPORTED_TARGET efivar)
 
 if (AEGIS_ENABLE_DBUS)
     find_package(sdbus-c++ REQUIRED)
@@ -59,7 +59,6 @@ target_include_directories(aegis PRIVATE
 
 target_link_libraries(aegis PRIVATE
     PkgConfig::LIBARCHIVE
-    PkgConfig::EFIVAR
     OpenSSL::SSL
     OpenSSL::Crypto
 )

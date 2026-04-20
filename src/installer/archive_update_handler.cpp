@@ -2,17 +2,56 @@
 
 #include <archive.h>
 #include <archive_entry.h>
+#include <cerrno>
+#include <cstring>
 #include <filesystem>
+#include <fstream>
+#include <iomanip>
+#include <sstream>
 #include <stdexcept>
 #include <sys/mount.h>
 #include <unistd.h>
 
+#include <openssl/evp.h>
+
+#include "aegis/bundle/bundle_extractor.hpp"
 #include "aegis/command_runner.hpp"
 #include "aegis/util.hpp"
 
 namespace aegis {
 
 namespace {
+
+std::string sha256OfFile(const std::string& path) {
+    EVP_MD_CTX* ctx = EVP_MD_CTX_new();
+    if (!ctx || EVP_DigestInit_ex(ctx, EVP_sha256(), nullptr) != 1) {
+        EVP_MD_CTX_free(ctx);
+        throw std::runtime_error("Failed to initialize SHA-256 context");
+    }
+
+    std::ifstream file(path, std::ios::binary);
+    if (!file) {
+        EVP_MD_CTX_free(ctx);
+        throw std::runtime_error("Cannot open file for SHA-256: " + path);
+    }
+
+    char buf[65536];
+    while (file.read(buf, sizeof(buf)) || file.gcount() > 0) {
+        EVP_DigestUpdate(ctx, buf, static_cast<std::size_t>(file.gcount()));
+    }
+
+    uint8_t digest[EVP_MAX_MD_SIZE];
+    unsigned int len = 0;
+    EVP_DigestFinal_ex(ctx, digest, &len);
+    EVP_MD_CTX_free(ctx);
+
+    std::ostringstream hex;
+    hex << std::hex << std::setfill('0');
+    for (unsigned int i = 0; i < len; ++i) {
+        hex << std::setw(2) << static_cast<int>(digest[i]);
+    }
+    return hex.str();
+}
 
 std::filesystem::path sanitizeArchivePath(const std::string& path) {
     auto relative = std::filesystem::path(path).lexically_normal();
@@ -178,8 +217,34 @@ void ArchiveUpdateHandler::install(const std::string& payloadPath, const SlotCon
         }
     } catch (...) {
         ::umount(mountPoint.c_str());
+        std::filesystem::remove_all(workDir);
         throw;
     }
+}
+
+void ArchiveUpdateHandler::installFromBundle(const std::string& bundlePath,
+                                              std::uint64_t bundlePayloadSize,
+                                              const std::string& entryName,
+                                              const std::string& expectedSha256,
+                                              const SlotConfig& slot,
+                                              const std::string& workDir) const {
+    BundleExtractor extractor;
+    extractor.extractEntry(bundlePath, bundlePayloadSize, entryName, workDir);
+
+    const auto payloadPath = (std::filesystem::path(workDir) /
+                              std::filesystem::path(entryName).filename()).string();
+
+    if (!expectedSha256.empty()) {
+        logInfo("Verifying SHA-256 of " + payloadPath);
+        const auto computed = sha256OfFile(payloadPath);
+        if (computed != expectedSha256) {
+            std::filesystem::remove_all(workDir);
+            throw std::runtime_error("SHA256 mismatch for '" + entryName +
+                                     "': expected " + expectedSha256 + ", got " + computed);
+        }
+    }
+
+    install(payloadPath, slot, workDir);
 }
 
 }  // namespace aegis

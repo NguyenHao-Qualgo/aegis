@@ -9,8 +9,6 @@
     <method name="GetStatus">
       <arg name="status" type="a{sv}" direction="out"/>
     </method>
-    <method name="MarkGood"/>
-    <method name="MarkBad"/>
     <method name="MarkActive">
       <arg name="slot" type="s" direction="in"/>
     </method>

@@ -43,14 +43,6 @@ void OtaService::startInstall(const std::string& bundlePath) {
     });
 }
 
-void OtaService::markGood() {
-    machine_.dispatch(OtaEvent{OtaEvent::Type::MarkGood, "", ""});
-}
-
-void OtaService::markBad() {
-    machine_.dispatch(OtaEvent{OtaEvent::Type::MarkBad, "", ""});
-}
-
 void OtaService::resumeAfterBoot() {
     machine_.dispatch(OtaEvent{OtaEvent::Type::ResumeAfterBoot, "", ""});
 }

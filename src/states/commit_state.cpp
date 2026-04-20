@@ -11,7 +11,9 @@ namespace aegis {
 void CommitState::onEnter(OtaStateMachine& machine) {
     machine.clearLastError();
     machine.setProgress(OtaState::Commit, "commit", 100,
-                        "Booted into expected slot; waiting for mark-good");
+                        "Booted into expected slot");
+    // report to gcs
+    machine.transitionTo(std::make_unique<IdleState>());
 }
 
 void CommitState::handle(OtaStateMachine& machine, const OtaEvent& event) {

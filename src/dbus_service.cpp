@@ -55,16 +55,6 @@ DbusService::DbusService(OtaService& service)
                 return toMap(service_.getStatus());
             }),
 
-        sdbus::registerMethod("MarkGood")
-            .implementedAs([this]() {
-                service_.markGood();
-            }),
-
-        sdbus::registerMethod("MarkBad")
-            .implementedAs([this]() {
-                service_.markBad();
-            }),
-
         sdbus::registerMethod("MarkActive")
             .withInputParamNames("slot")
             .implementedAs([this](const std::string& slot) {

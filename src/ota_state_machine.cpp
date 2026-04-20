@@ -203,16 +203,6 @@ std::string OtaStateMachine::downloadBundle(const std::string& url) {
     return destPath;
 }
 
-std::string OtaStateMachine::extractBundle(const std::string& bundlePath) {
-    const auto workDir = joinPath(context_.config().dataDirectory, "bundle-work");
-    std::filesystem::remove_all(workDir);
-    std::filesystem::create_directories(workDir);
-
-    BundleExtractor extractor;
-    extractor.extract(bundlePath, workDir, context_.verifier().payloadSize(bundlePath));
-    return workDir;
-}
-
 void OtaStateMachine::markActive(const std::string& slot) {
     if (!context_.bootControl().isSlotBootable(slot)) {
         throw std::runtime_error("Slot is not bootable: " + slot);

@@ -66,7 +66,7 @@ bool isTerminalState(const std::string& state) {
 
 int Cli::run(const std::vector<std::string>& args) const {
     if (args.empty()) {
-        std::cerr << "Usage: aegis <status|install|mark-good|mark-bad|mark-active|get-primary|get-booted>\n";
+        std::cerr << "Usage: aegis <status|install|mark-active|get-primary|get-booted>\n";
         return 1;
     }
 
@@ -126,14 +126,6 @@ int Cli::run(const std::vector<std::string>& args) const {
         if (!terminalError.empty()) {
             throw std::runtime_error(terminalError);
         }
-        return 0;
-    }
-    if (cmd == "mark-good") {
-        proxy->callMethod("MarkGood").onInterface(interfaceName);
-        return 0;
-    }
-    if (cmd == "mark-bad") {
-        proxy->callMethod("MarkBad").onInterface(interfaceName);
         return 0;
     }
     if (cmd == "mark-active") {

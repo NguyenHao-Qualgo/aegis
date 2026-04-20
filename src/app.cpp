@@ -80,6 +80,39 @@ int Application::run(int argc, char** argv) {
             std::cout << "Created bundle: " << options.outputBundle << '\n';
             return 0;
         }
+        if (args.size() >= 2 && args[1] == "verify") {
+            const auto keyring = getOptionValue(args, "--keyring");
+            // positional bundle path: first non-option argument after "verify"
+            std::string bundlePath;
+            for (std::size_t i = 2; i < args.size(); ++i) {
+                if (args[i].size() > 2 && args[i][0] == '-' && args[i][1] == '-') {
+                    ++i; // skip option value
+                    continue;
+                }
+                bundlePath = args[i];
+                break;
+            }
+            if (bundlePath.empty()) {
+                throw std::runtime_error("bundle verify requires a bundle file argument");
+            }
+            if (keyring.empty()) {
+                throw std::runtime_error("bundle verify requires --keyring <path>");
+            }
+
+            OtaConfig config;
+            config.keyringPath = keyring;
+
+            BundleVerifier verifier;
+            const auto manifest = verifier.verifyBundle(bundlePath, config);
+            if (!manifest) {
+                std::cout << "Unsigned bundle (no signature present)\n";
+            } else {
+                std::cout << "Signature OK\n";
+                std::cout << "  compatible : " << manifest->compatible << '\n';
+                std::cout << "  version    : " << manifest->version << '\n';
+            }
+            return 0;
+        }
         throw std::runtime_error("Unsupported bundle command");
     }
 

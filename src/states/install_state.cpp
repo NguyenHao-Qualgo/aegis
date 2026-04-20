@@ -4,6 +4,7 @@
 #include <memory>
 #include <stdexcept>
 
+#include "aegis/bundle/bundle_extractor.hpp"
 #include "aegis/bundle/bundle_manifest.hpp"
 #include "aegis/ota_state_machine.hpp"
 #include "aegis/states/failure_state.hpp"
@@ -14,25 +15,32 @@ namespace aegis {
 
 void InstallState::onEnter(OtaStateMachine& machine) {
     try {
+        const auto& bundlePath = machine.getStatus().bundlePath;
+        const auto& config = machine.config();
+        const auto payloadSize = machine.verifier().payloadSize(bundlePath);
+
         machine.setProgress(OtaState::Install, "verify", 20, "Verifying bundle signature");
 
-        auto manifest = machine.verifier().verifyBundle(machine.getStatus().bundlePath,
-                                                        machine.config());
+        auto manifest = machine.verifier().verifyBundle(bundlePath, config);
         if (manifest) {
             machine.setBundleVersion(manifest->version);
         }
 
-        machine.setProgress(OtaState::Install, "extract", 40, "Extracting bundle");
+        // Resolve full manifest: from CMS for signed bundles, or by extracting
+        // manifest.ini only for unsigned bundles (avoids touching large payloads).
+        BundleManifest fullManifest;
+        if (manifest) {
+            fullManifest = *manifest;
+        } else {
+            const auto workDir = joinPath(config.dataDirectory, "bundle-work");
+            std::filesystem::remove_all(workDir);
+            std::filesystem::create_directories(workDir);
+            machine.setInstallPath(workDir);
 
-        machine.setInstallPath(machine.extractBundle(machine.getStatus().bundlePath));
-
-        const auto fullManifest = manifest
-            ? *manifest
-            : machine.verifier().loadManifest(machine.getStatus().installPath, machine.config());
-
-        machine.setProgress(OtaState::Install, "install", 60, "Verifying payloads");
-
-        machine.verifier().verifyPayloads(fullManifest, machine.getStatus().installPath);
+            BundleExtractor extractor;
+            extractor.extractEntry(bundlePath, payloadSize, "manifest.ini", workDir);
+            fullManifest = machine.verifier().loadManifest(workDir, config);
+        }
 
         const auto* rootfsImage = fullManifest.findImageBySlotClass("rootfs");
         if (!rootfsImage) {
@@ -40,17 +48,21 @@ void InstallState::onEnter(OtaStateMachine& machine) {
         }
 
         const auto targetSlotName = machine.bootControl().getInactiveSlot();
-        const auto& targetSlot = machine.config().slotByBootname(targetSlotName);
-        const auto payloadPath = joinPath(machine.getStatus().installPath, rootfsImage->filename);
-
+        const auto& targetSlot = config.slotByBootname(targetSlotName);
         machine.setTargetSlot(targetSlotName);
         machine.setBundleVersion(fullManifest.version);
-        machine.setProgress(OtaState::Install, "install", 70, "Installing payload");
 
-        machine.updateHandlerFor(rootfsImage->imagetype).install(
-            payloadPath,
+        machine.setProgress(OtaState::Install, "install", 60, "Installing payload");
+
+        machine.updateHandlerFor(rootfsImage->imagetype).installFromBundle(
+            bundlePath,
+            payloadSize,
+            rootfsImage->filename,
+            rootfsImage->sha256,
             targetSlot,
-            joinPath(machine.config().dataDirectory, "installer-work"));
+            joinPath(config.dataDirectory, "installer-work"));
+
+        std::filesystem::remove_all(joinPath(config.dataDirectory, "installer-work"));
 
         machine.bootControl().setSlotBootable(targetSlotName, true);
         machine.bootControl().setPrimarySlot(targetSlotName);

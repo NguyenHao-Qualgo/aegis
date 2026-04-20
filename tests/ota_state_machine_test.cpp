@@ -62,13 +62,6 @@ public:
     MOCK_METHOD(void, reportStatus, (const OtaStatus&), (override));
 };
 
-class MockUpdateHandler : public IUpdateHandler {
-public:
-    MOCK_METHOD(bool, supportsImageType, (const std::string&), (const, override));
-    MOCK_METHOD(void, install,
-                (const std::string&, const SlotConfig&, const std::string&), (const, override));
-};
-
 // ---------------------------------------------------------------------------
 // Test fixture helpers
 // ---------------------------------------------------------------------------

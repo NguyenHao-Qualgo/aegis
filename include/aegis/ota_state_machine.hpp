@@ -54,7 +54,6 @@ public:
 
     // Higher-level domain operations
     std::string downloadBundle(const std::string& url);
-    std::string extractBundle(const std::string& bundlePath);
     void markActive(const std::string& slot);
     void discardPendingRebootState();
 
