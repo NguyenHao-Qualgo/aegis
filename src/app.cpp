@@ -6,7 +6,7 @@
 #include <vector>
 
 #include "aegis/installer/archive_update_handler.hpp"
-#include "aegis/bootloader/uboot_control.hpp"
+#include "aegis/bootloader/boot_control_factory.hpp"
 #include "aegis/bundle/bundle_creator.hpp"
 #include "aegis/bundle/bundle_verifier.hpp"
 #include "aegis/cli.hpp"
@@ -95,7 +95,7 @@ int Application::run(int argc, char** argv) {
         const auto config = loader.load(configPath);
         std::filesystem::create_directories(config.dataDirectory);
         CommandRunner runner;
-        auto bootControl = std::make_unique<UBootControl>(runner);
+        auto bootControl =  BootControlFactory::create(config.bootloader, runner);
         auto verifier = std::make_unique<BundleVerifier>();
         std::vector<std::unique_ptr<IUpdateHandler>> updateHandlers;
         updateHandlers.push_back(std::make_unique<ArchiveUpdateHandler>());

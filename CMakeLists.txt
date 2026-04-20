@@ -10,7 +10,10 @@ option(AEGIS_BUILD_TESTS "Build unit tests" ON)
 
 find_package(PkgConfig REQUIRED)
 find_package(OpenSSL REQUIRED)
-pkg_check_modules(LIBARCHIVE REQUIRED libarchive)
+
+pkg_check_modules(LIBARCHIVE REQUIRED IMPORTED_TARGET libarchive)
+pkg_check_modules(EFIVAR REQUIRED IMPORTED_TARGET efivar)
+
 if (AEGIS_ENABLE_DBUS)
     find_package(sdbus-c++ REQUIRED)
 endif()
@@ -23,6 +26,7 @@ add_executable(aegis
     src/util.cpp
     src/command_runner.cpp
     src/bootloader/uboot_control.cpp
+    src/bootloader/nvboot_control.cpp
     src/state_store.cpp
     src/bundle/bundle_manifest.cpp
     src/bundle/bundle_creator.cpp
@@ -30,13 +34,10 @@ add_executable(aegis
     src/bundle/bundle_extractor.cpp
     src/installer/archive_update_handler.cpp
     src/installer/raw_update_handler.cpp
-
     src/ota_context.cpp
     src/ota_state_machine.cpp
     src/ota_service.cpp
-
     src/gcs_stub.cpp
-
     src/states/idle_state.cpp
     src/states/download_state.cpp
     src/states/install_state.cpp
@@ -54,11 +55,11 @@ endif()
 
 target_include_directories(aegis PRIVATE
     include
-    ${LIBARCHIVE_INCLUDE_DIRS}
 )
 
 target_link_libraries(aegis PRIVATE
-    ${LIBARCHIVE_LIBRARIES}
+    PkgConfig::LIBARCHIVE
+    PkgConfig::EFIVAR
     OpenSSL::SSL
     OpenSSL::Crypto
 )

@@ -67,6 +67,10 @@ OtaConfig ConfigLoader::load(const std::string& path) const {
     if (config.slots.size() != 2) throw std::runtime_error("Exactly 2 rootfs slots are required");
     config.slotByBootname("A");
     config.slotByBootname("B");
+
+    logInfo("Loaded config:");
+    logInfo("  compatible: " + config.compatible);
+    logInfo("  bootloader: " + toString(config.bootloader));
     return config;
 }
 
