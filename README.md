@@ -1,125 +1,92 @@
-# Aegis single-binary OTA starter
+# Simple C++ Layer
 
-One executable provides:
+This folder contains the new C++ implementation for the simplified SWUpdate flow.
 
-- `aegis daemon`
-- `aegis status`
-- `aegis install <bundle>`
-- `aegis mark-good`
-- `aegis mark-bad`
-- `aegis mark-active <A|B>`
-- `aegis bundle create ...`
+It is intentionally isolated from the original SWUpdate build. You can configure
+and build this folder on its own with its local `CMakeLists.txt`.
 
-## Running As A Service
+- [swupdate.cpp](/home/hao-nna/swupdate/cpp/swupdate.cpp) exposes only two flows:
+  `pack` to create `.swu` archives in `cpio` `crc/newc` format, and
+  `install` to parse and install `.swu` packages from C++ code.
+- [install_core.hpp](/home/hao-nna/swupdate/cpp/install_core.hpp) contains the
+  first standalone installer core:
+  streaming cpio parsing, detached `sw-description` signature verification,
+  minimal `sw-description` parsing, handler dispatch, and
+  AES-CBC payload decryption.
+- [raw_handler.cpp](/home/hao-nna/swupdate/cpp/raw_handler.cpp) is the first
+  C++ port shaped after SWUpdate's original `raw_handler.c`.
+- [archive_handler.cpp](/home/hao-nna/swupdate/cpp/archive_handler.cpp) is the
+  first C++ port shaped after SWUpdate's original `archive_handler.c`.
+- The supported `sw-description` subset for now is the `images:` list with
+  `filename`, `type`, `device`, `path`, `sha256`, `encrypted`, `ivt`,
+  `preserve-attributes`, `create-destination`, and `atomic-install`.
+- `sw-description.sig` is expected directly after `sw-description` in the archive.
+- Runtime dependency for install is `libarchive`; signature verification and
+  AES-CBC decryption are handled in-process via OpenSSL library calls.
 
-A systemd unit is provided at `systemd/aegis.service`.
+## Standalone build
 
-It runs:
-
-```bash
-/usr/bin/aegis daemon --config /etc/aegis/system.conf
-```
-
-and uses `Restart=always` so the daemon is brought back automatically if it exits.
-
-## Bundle creation
-
-Aegis can now create bundles from a manifest file, closer to the way RAUC bundles are assembled.
-
-Recommended layout:
-
-```text
-bundle-input/
-  manifest.ini
-  rootfs.tar.gz
-  boot.tar.gz
-```
-
-Example manifest:
-
-```ini
-[update]
-compatible=qemuarm64
-version=1.0.0
-
-[bundle]
-format=plain
-
-[image.rootfs]
-slot-class=rootfs
-source-type=file
-type=archive
-filename=rootfs.tar.gz
-
-[image.boot]
-slot-class=boot
-source-type=file
-type=file
-filename=boot.tar.gz
-```
-
-Create a bundle from that directory:
+From the `cpp/` directory:
 
 ```bash
-aegis bundle create \
-  --cert cert.pem \
-  --key key.pem \
-  --manifest bundle-input/manifest.ini \
-  --output qemuarm64-1.0.0.aegisb
+cmake -S . -B build
+cmake --build build
 ```
 
-`sha256` and `size` are filled in automatically during bundle creation.
-When `--cert` and `--key` are provided, Aegis signs the finalized manifest with CMS and appends it to the bundle.
-The daemon verifies signed bundles against `keyring.path` from the system config.
-
-The older artifact-driven CLI is still supported:
-
-Example:
+The produced binary is:
 
 ```bash
-aegis bundle create \
-  --compatible qemuarm64 \
-  --version 1.0.0 \
-  --format plain \
-  --cert cert.pem \
-  --key key.pem \
-  --output qemuarm64-1.0.0.aegisb \
-  --artifact rootfs:archive:/tmp/rootfs.tar.gz \
-  --artifact boot:file:/tmp/boot.tar.gz
+./build/swupdate_cpp
 ```
 
-Artifact syntax:
+## Quick SWU generation
 
-```text
---artifact <slot-class>:<type>:<path>
+Generate a test RSA keypair for this C++ flow:
+
+```bash
+chmod +x ./gen_test_keys.sh
+./gen_test_keys.sh --outdir ./keys --name qemuarm64
 ```
 
-Supported bundle image `type` values in this starter are free-form metadata, but recommended values are:
+This produces:
 
-- `archive` for tar/tar.gz payloads
-- `raw` for raw images such as `rootfs.ext4`
-- `file` for generic files
-
-The generated `manifest.ini` uses RAUC-like image sections:
-
-```ini
-[update]
-compatible=qemuarm64
-version=1.0.0
-
-[bundle]
-format=plain
-
-[image.rootfs]
-slot-class=rootfs
-source-type=file
-type=archive
-filename=rootfs.tar.gz
-sha256=...
-size=...
+```bash
+./keys/qemuarm64.key.pem
+./keys/qemuarm64.public.pem
 ```
 
-## Current installer limitation
+There is also a helper script to generate a signed `.swu` for testing:
 
-The current OTA installer path in this starter still installs only the `rootfs` image when its manifest `type=archive`.
-That keeps the daemon minimal while the bundle format is already moved closer to a RAUC-style multi-image manifest.
+```bash
+chmod +x ./gen_swu.sh
+./gen_swu.sh \
+  --output update.swu \
+  --swupdate ./build/swupdate_cpp \
+  --type raw \
+  --payload rootfs.ext4 \
+  --dest /dev/mmcblk0p2 \
+  --sign-key priv.pem
+```
+
+To add more payloads into the same `.swu`, use `--add-payload`:
+
+```bash
+./gen_swu.sh \
+  --output update.swu \
+  --swupdate ./build/swupdate_cpp \
+  --type tar \
+  --payload rootfs.tar.bz2 \
+  --dest /tmp/swupdate-test \
+  --add-payload raw rootfs.ext4 /dev/vda3 \
+  --sign-key priv.pem \
+  --create-destination \
+  --preserve-attributes
+```
+
+For encrypted payloads, add:
+
+```bash
+  --encrypt \
+  --aes-key-hex <64-hex-key> \
+  --aes-iv-hex <32-hex-iv>
+```
