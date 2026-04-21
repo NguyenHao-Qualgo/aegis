@@ -48,9 +48,8 @@ public:
     // Context service accessors (forwarded from OtaContext)
     const OtaConfig& config() const;
     const IBootControl& bootControl() const;
-    const IBundleVerifier& verifier() const;
+
     IGcsClient* gcsClient() const;
-    const IUpdateHandler& updateHandlerFor(const std::string& imageType) const;
 
     // Higher-level domain operations
     std::string downloadBundle(const std::string& url);

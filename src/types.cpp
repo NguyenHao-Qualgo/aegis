@@ -4,15 +4,6 @@
 
 namespace aegis {
 
-const SlotConfig& OtaConfig::slotByBootname(const std::string& bootname) const {
-    for (const auto& slot : slots) {
-        if (slot.bootname == bootname) {
-            return slot;
-        }
-    }
-    throw std::runtime_error("Unknown slot bootname: " + bootname);
-}
-
 std::string toString(BootloaderType value) {
     switch (value) {
         case BootloaderType::UBoot: return "uboot";

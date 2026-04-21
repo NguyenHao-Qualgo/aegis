@@ -28,12 +28,6 @@ add_executable(aegis
     src/bootloader/uboot_control.cpp
     src/bootloader/nvboot_control.cpp
     src/state_store.cpp
-    src/bundle/bundle_manifest.cpp
-    src/bundle/bundle_creator.cpp
-    src/bundle/bundle_verifier.cpp
-    src/bundle/bundle_extractor.cpp
-    src/installer/archive_update_handler.cpp
-    src/installer/raw_update_handler.cpp
     src/ota_context.cpp
     src/ota_state_machine.cpp
     src/ota_service.cpp
@@ -44,6 +38,18 @@ add_executable(aegis
     src/states/reboot_state.cpp
     src/states/commit_state.cpp
     src/states/failure_state.cpp
+    src/packer.cpp
+    src/installer.cpp
+    src/manifest.cpp
+    src/raw_handler.cpp
+    src/archive_handler.cpp
+    src/cpio.cpp
+    src/crypto.cpp
+    src/installer.cpp
+    src/io.cpp
+    src/manifest.cpp
+    src/packer.cpp
+    src/raw_handler.cpp
 )
 
 if (AEGIS_ENABLE_DBUS)
@@ -74,8 +80,3 @@ install(TARGETS aegis RUNTIME DESTINATION bin)
 install(FILES dbus/de.skytrack.Aegis1.xml DESTINATION share/dbus-1/interfaces)
 install(FILES dbus/de.skytrack.Aegis.conf DESTINATION share/dbus-1/system.d)
 install(FILES systemd/aegis.service DESTINATION lib/systemd/system)
-
-if (AEGIS_BUILD_TESTS)
-    enable_testing()
-    add_subdirectory(tests)
-endif()

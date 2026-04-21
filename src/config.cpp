@@ -1,76 +1,103 @@
 #include "aegis/config.hpp"
 
+#include <algorithm>
+#include <cctype>
 #include <fstream>
+#include <sstream>
 #include <stdexcept>
+#include <string>
 
 #include "aegis/util.hpp"
 
 namespace aegis {
+namespace {
 
-OtaConfig ConfigLoader::load(const std::string& path) const {
-    std::ifstream ifs(path);
-    if (!ifs) {
-        throw std::runtime_error("Cannot open config: " + path);
+std::string strip_quotes(const std::string& value) {
+    if (value.size() >= 2) {
+        const char first = value.front();
+        const char last = value.back();
+        if ((first == '"' && last == '"') || (first == '\'' && last == '\'')) {
+            return value.substr(1, value.size() - 2);
+        }
+    }
+    return value;
+}
+
+bool is_comment_or_empty(const std::string& line) {
+    if (line.empty()) {
+        return true;
+    }
+    return line[0] == '#' || line[0] == ';';
+}
+
+bool is_section_header(const std::string& line, std::string& section_name) {
+    if (line.size() >= 3 && line.front() == '[' && line.back() == ']') {
+        section_name = trim(line.substr(1, line.size() - 2));
+        return true;
+    }
+    return false;
+}
+
+void assign_key(OtaConfig& config, const std::string& key, const std::string& value) {
+    if (key == "public-key") {
+        config.public_key = value;
+    } else if (key == "aes-key") {
+        config.aes_key = value;
+    } else if (key == "data-directory") {
+        config.data_directory = value;
+    }
+}
+
+}  // namespace
+
+OtaConfig ConfigLoader::load(const std::string& path) {
+    std::ifstream input(path);
+    if (!input.is_open()) {
+        throw std::runtime_error("failed to open config: " + path);
     }
 
     OtaConfig config;
     std::string line;
-    std::string section;
-    SlotConfig currentSlot;
-    bool inSlot = false;
+    std::string current_section;
+    std::size_t line_number = 0;
 
-    auto flushSlot = [&]() {
-        if (inSlot) {
-            config.slots.push_back(currentSlot);
-            currentSlot = {};
-            inSlot = false;
+    while (std::getline(input, line)) {
+        ++line_number;
+
+        if (!line.empty() && line.back() == '\r') {
+            line.pop_back();
         }
-    };
 
-    while (std::getline(ifs, line)) {
-        line = trim(line);
-        if (line.empty() || startsWith(line, "#") || startsWith(line, ";")) {
+        const std::string stripped = trim(line);
+        if (is_comment_or_empty(stripped)) {
             continue;
         }
-        if (line.front() == '[' && line.back() == ']') {
-            flushSlot();
-            section = line.substr(1, line.size() - 2);
-            if (startsWith(section, "slot.rootfs.")) {
-                inSlot = true;
-                currentSlot.name = section.substr(5);
-            }
-            continue;
-        }
-        const auto pos = line.find('=');
-        if (pos == std::string::npos) {
-            continue;
-        }
-        const auto key = trim(line.substr(0, pos));
-        const auto value = trim(line.substr(pos + 1));
 
-        if (section == "system") {
-            if (key == "compatible") config.compatible = value;
-            else if (key == "bootloader") config.bootloader = parseBootloaderType(value);
-            else if (key == "data-directory") config.dataDirectory = value;
-        } else if (section == "keyring") {
-            if (key == "path") config.keyringPath = value;
-        } else if (startsWith(section, "slot.rootfs.")) {
-            if (key == "device") currentSlot.device = value;
-            else if (key == "type") currentSlot.type = parseSlotType(value);
-            else if (key == "bootname") currentSlot.bootname = value;
+        std::string section_name;
+        if (is_section_header(stripped, section_name)) {
+            current_section = section_name;
+            continue;
         }
+
+        const std::size_t eq_pos = stripped.find('=');
+        if (eq_pos == std::string::npos) {
+            throw std::runtime_error(
+                "invalid config line " + std::to_string(line_number) + " in " + path + ": missing '='");
+        }
+
+        const std::string key = trim(stripped.substr(0, eq_pos));
+        const std::string raw_value = trim(stripped.substr(eq_pos + 1));
+        const std::string value = strip_quotes(raw_value);
+
+        // Accept:
+        // 1. no section at all
+        // 2. [update] section
+        if (current_section.empty() || current_section == "update") {
+            assign_key(config, key, value);
+        }
+        logDebug("Config: " + key + " = " + value);
     }
-    flushSlot();
 
-    if (config.compatible.empty()) throw std::runtime_error("Missing system.compatible");
-    if (config.dataDirectory.empty()) throw std::runtime_error("Missing system.data-directory");
-    if (config.slots.size() != 2) throw std::runtime_error("Exactly 2 rootfs slots are required");
-    config.slotByBootname("A");
-    config.slotByBootname("B");
-
-    logInfo("Loaded config:");
-    logInfo("  compatible: " + config.compatible);
-    logInfo("  bootloader: " + toString(config.bootloader));
     return config;
 }
 

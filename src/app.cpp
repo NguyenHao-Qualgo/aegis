@@ -1,14 +1,15 @@
 #include "aegis/app.hpp"
 
+#include <cstdlib>
+#include <cstring>
 #include <filesystem>
+#include <fstream>
 #include <iostream>
-#include <syslog.h>
-#include <vector>
+#include <string>
+#include <string_view>
 
 #include "aegis/installer/archive_update_handler.hpp"
 #include "aegis/bootloader/boot_control_factory.hpp"
-#include "aegis/bundle/bundle_creator.hpp"
-#include "aegis/bundle/bundle_verifier.hpp"
 #include "aegis/cli.hpp"
 #include "aegis/config.hpp"
 #include "aegis/gcs_stub.hpp"
@@ -16,6 +17,7 @@
 #include "aegis/installer/raw_update_handler.hpp"
 #include "aegis/state_store.hpp"
 #include "aegis/util.hpp"
+#include "aegis/packer.hpp"
 
 #if defined(AEGIS_ENABLE_DBUS)
 #include "aegis/dbus_service.hpp"
@@ -24,11 +26,92 @@
 namespace aegis {
 
 namespace {
+constexpr const char *kDefaultConfigPath = "/etc/aegis.conf";
+
+[[noreturn]] void fail(const std::string &message) {
+    std::cerr << "error: " << message << '\n';
+    std::exit(EXIT_FAILURE);
+}
+
 std::vector<std::string> toArgs(int argc, char** argv) {
     std::vector<std::string> args;
     for (int i = 1; i < argc; ++i) args.emplace_back(argv[i]);
     return args;
 }
+
+std::string usage() {
+    return
+        "Usage:\n"
+        "  swupdate install --image <file|-> [--verbose]\n"
+        "  swupdate pack --output <file.swu> --sw-description <file> [--sw-description-sig <file>] <payload>...\n"
+        "\n"
+        "Install reads " + std::string(kDefaultConfigPath) + " for:\n"
+        "  public-key   = /path/to/update.pub.pem\n"
+        "  aes-key      = /path/to/update.aes   (optional)\n"
+        "  active-slot  = A | B                  (installer writes to the opposite slot)\n"
+        "\n"
+        "Examples:\n"
+        "  swupdate install --image update.swu\n"
+        "  cat update.swu | swupdate install --image -\n"
+        "  swupdate pack --output update.swu --sw-description sw-description --sw-description-sig sw-description.sig rootfs.ext4.enc\n";
+}
+
+
+std::string take_value(int &index, int argc, char **argv, const std::string &flag_name) {
+    if (index + 1 >= argc) {
+        fail("Missing value for " + flag_name);
+    }
+    ++index;
+    return argv[index];
+}
+
+bool is_flag(const char *arg, const char *short_flag, const char *long_flag) {
+    return std::strcmp(arg, short_flag) == 0 || std::strcmp(arg, long_flag) == 0;
+}
+
+void ensure_readable_file(const std::string &path, const std::string &label) {
+    std::ifstream input(path, std::ios::binary);
+    if (!input) {
+        fail("cannot open " + label + ": " + path);
+    }
+}
+
+PackOptions parse_pack(int argc, char **argv, int start_index) {
+    PackOptions options;
+
+    for (int i = start_index; i < argc; ++i) {
+        if (is_flag(argv[i], "-o", "--output")) {
+            options.output_path = take_value(i, argc, argv, "--output");
+        } else if (std::strcmp(argv[i], "--sw-description") == 0) {
+            options.sw_description = take_value(i, argc, argv, "--sw-description");
+        } else if (std::strcmp(argv[i], "--sw-description-sig") == 0) {
+            options.sw_description_sig = take_value(i, argc, argv, "--sw-description-sig");
+        } else if (is_flag(argv[i], "-h", "--help")) {
+            std::cout << usage();
+            std::exit(EXIT_SUCCESS);
+        } else {
+            options.payloads.emplace_back(argv[i]);
+        }
+    }
+
+    if (options.output_path.empty()) {
+        fail("pack requires --output");
+    }
+    if (options.sw_description.empty()) {
+        fail("pack requires --sw-description");
+    }
+
+    ensure_readable_file(options.sw_description, "sw-description");
+    if (!options.sw_description_sig.empty()) {
+        ensure_readable_file(options.sw_description_sig, "sw-description signature");
+    }
+    for (const auto &payload : options.payloads) {
+        ensure_readable_file(payload, "payload");
+    }
+
+    return options;
+}
+
 }
 
 int Application::run(int argc, char** argv) {
@@ -38,82 +121,16 @@ int Application::run(int argc, char** argv) {
         Cli client;
         return client.run(args);
 #else
-        throw std::runtime_error("This build only supports 'bundle create'");
+        fail("This build only supports 'bundle create'");
 #endif
     }
 
-    if (args[0] == "bundle") {
-        if (args.size() >= 2 && args[1] == "create") {
-            BundleCreateOptions options;
-            options.compatible = getOptionValue(args, "--compatible");
-            options.version = getOptionValue(args, "--version");
-            options.outputBundle = getOptionValue(args, "--output");
-            options.manifestPath = getOptionValue(args, "--manifest");
-            options.sourceDirectory = getOptionValue(args, "--source-dir");
-            options.certPath = getOptionValue(args, "--cert");
-            options.keyPath = getOptionValue(args, "--key");
-            const auto format = getOptionValue(args, "--format");
-            if (!format.empty()) options.format = format;
-
-            for (size_t i = 0; i < args.size(); ++i) {
-                if (args[i] == "--artifact") {
-                    if (i + 1 >= args.size()) {
-                        throw std::runtime_error("--artifact requires a value");
-                    }
-                    options.artifacts.push_back(BundleCreator::parseArtifactSpec(args[i + 1]));
-                    ++i;
-                }
-            }
-
-            const bool usingManifest = !options.manifestPath.empty();
-            if (usingManifest) {
-                if (options.outputBundle.empty()) {
-                    throw std::runtime_error("bundle create with --manifest requires --output");
-                }
-            } else if (options.compatible.empty() || options.version.empty() || options.outputBundle.empty() || options.artifacts.empty()) {
-                throw std::runtime_error(
-                    "bundle create requires either --manifest <manifest.ini> --output <bundle> "
-                    "or --compatible --version --output and at least one --artifact <slot-class>:<type>:<path>");
-            }
-            BundleCreator creator(CommandRunner{});
-            creator.create(options);
-            std::cout << "Created bundle: " << options.outputBundle << '\n';
-            return 0;
+    if (args[0] == "pack") {
+        try {
+            return Packer(parse_pack(argc, argv, 2)).pack();
+        } catch (const Error& error) {
+            fail(error.what());
         }
-        if (args.size() >= 2 && args[1] == "verify") {
-            const auto keyring = getOptionValue(args, "--keyring");
-            // positional bundle path: first non-option argument after "verify"
-            std::string bundlePath;
-            for (std::size_t i = 2; i < args.size(); ++i) {
-                if (args[i].size() > 2 && args[i][0] == '-' && args[i][1] == '-') {
-                    ++i; // skip option value
-                    continue;
-                }
-                bundlePath = args[i];
-                break;
-            }
-            if (bundlePath.empty()) {
-                throw std::runtime_error("bundle verify requires a bundle file argument");
-            }
-            if (keyring.empty()) {
-                throw std::runtime_error("bundle verify requires --keyring <path>");
-            }
-
-            OtaConfig config;
-            config.keyringPath = keyring;
-
-            BundleVerifier verifier;
-            const auto manifest = verifier.verifyBundle(bundlePath, config);
-            if (!manifest) {
-                std::cout << "Unsigned bundle (no signature present)\n";
-            } else {
-                std::cout << "Signature OK\n";
-                std::cout << "  compatible : " << manifest->compatible << '\n';
-                std::cout << "  version    : " << manifest->version << '\n';
-            }
-            return 0;
-        }
-        throw std::runtime_error("Unsupported bundle command");
     }
 
     if (args[0] == "daemon") {
@@ -122,20 +139,16 @@ int Application::run(int argc, char** argv) {
 #else
         logInfo("Starting aegis daemon");
 
-        const auto configPath = getOptionValue(args, "--config").empty() ? std::string("/etc/aegis/system.conf") : getOptionValue(args, "--config");
+        const auto configPath = getOptionValue(args, "--config").empty() ? std::string(kDefaultConfigPath) : getOptionValue(args, "--config");
         logInfo("Loading config: " + configPath);
         ConfigLoader loader;
         const auto config = loader.load(configPath);
-        std::filesystem::create_directories(config.dataDirectory);
+        std::filesystem::create_directories(config.data_directory);
         CommandRunner runner;
-        auto bootControl =  BootControlFactory::create(config.bootloader, runner);
-        auto verifier = std::make_unique<BundleVerifier>();
-        std::vector<std::unique_ptr<IUpdateHandler>> updateHandlers;
-        updateHandlers.push_back(std::make_unique<ArchiveUpdateHandler>());
-        updateHandlers.push_back(std::make_unique<RawUpdateHandler>());
-        StateStore stateStore(joinPath(config.dataDirectory, "ota-state.env"));
+        auto bootControl =  BootControlFactory::create(BootloaderType::UBoot, runner);
+        StateStore stateStore(joinPath(config.data_directory, "ota-state.env"));
         auto gcsClient = std::make_shared<GcsStub>();
-        OtaService service(config, std::move(bootControl), std::move(verifier), std::move(updateHandlers), stateStore, std::move(gcsClient));
+        OtaService service(config, std::move(bootControl), stateStore, std::move(gcsClient));
         service.resumeAfterBoot();
         DbusService dbus(service);
         dbus.run();

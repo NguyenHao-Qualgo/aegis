@@ -105,7 +105,6 @@ std::map<std::string, sdbus::Variant> DbusService::toMap(const OtaStatus& status
         {"LastError", sdbus::Variant(status.lastError)},
         {"BootedSlot", sdbus::Variant(status.bootedSlot)},
         {"PrimarySlot", sdbus::Variant(status.primarySlot)},
-        {"TargetSlot", sdbus::Variant(status.targetSlot ? *status.targetSlot : std::string{})},
         {"BundleVersion", sdbus::Variant(status.bundleVersion)}
     };
 }

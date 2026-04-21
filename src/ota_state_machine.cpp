@@ -3,7 +3,6 @@
 #include <filesystem>
 #include <stdexcept>
 
-#include "aegis/bundle/bundle_extractor.hpp"
 #include "aegis/command_runner.hpp"
 #include "aegis/states/commit_state.hpp"
 #include "aegis/states/failure_state.hpp"
@@ -181,23 +180,15 @@ const IBootControl& OtaStateMachine::bootControl() const {
     return context_.bootControl();
 }
 
-const IBundleVerifier& OtaStateMachine::verifier() const {
-    return context_.verifier();
-}
-
 IGcsClient* OtaStateMachine::gcsClient() const {
     return context_.gcsClient();
-}
-
-const IUpdateHandler& OtaStateMachine::updateHandlerFor(const std::string& imageType) const {
-    return context_.updateHandlerFor(imageType);
 }
 
 std::string OtaStateMachine::downloadBundle(const std::string& url) {
     if (url.find_first_of("'\"\\;&|`$<>!\n\r") != std::string::npos) {
         throw std::runtime_error("Unsafe characters in bundle URL");
     }
-    const auto destPath = joinPath(context_.config().dataDirectory, "bundle-download");
+    const auto destPath = joinPath(context_.config().data_directory, "bundle-download");
     CommandRunner runner;
     runner.runOrThrow("curl -fsSL --max-time 300 -o '" + destPath + "' '" + url + "'");
     return destPath;

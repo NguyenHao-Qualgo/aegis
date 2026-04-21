@@ -4,7 +4,7 @@ Description=Aegis OTA daemon
 [Service]
 Type=dbus
 BusName=de.skytrack.Aegis
-ExecStart=/usr/bin/aegis daemon --config /etc/aegis/system.conf
+ExecStart=/usr/bin/aegis daemon --config /etc/aegis.conf
 Restart=on-failure
 RestartSec=5min
 

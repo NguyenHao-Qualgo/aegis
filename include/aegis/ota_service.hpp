@@ -6,7 +6,6 @@
 #include <vector>
 
 #include "aegis/bootloader/boot_control.hpp"
-#include "aegis/bundle/bundle_verifier.hpp"
 #include "aegis/gcs_client.hpp"
 #include "aegis/ota_context.hpp"
 #include "aegis/ota_state_machine.hpp"
@@ -20,8 +19,6 @@ class OtaService {
 public:
     OtaService(OtaConfig config,
                std::unique_ptr<IBootControl> bootControl,
-               std::unique_ptr<IBundleVerifier> verifier,
-               std::vector<std::unique_ptr<IUpdateHandler>> updateHandlers,
                StateStore stateStore,
                std::shared_ptr<IGcsClient> gcsClient = nullptr);
 

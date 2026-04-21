@@ -35,7 +35,6 @@ OtaStatus StateStore::load() const {
         else if (key == "last_error") status.lastError = value;
         else if (key == "booted_slot") status.bootedSlot = value;
         else if (key == "primary_slot") status.primarySlot = value;
-        else if (key == "target_slot" && !value.empty()) status.targetSlot = value;
         else if (key == "bundle_version") status.bundleVersion = value;
     }
     return status;
@@ -50,7 +49,6 @@ void StateStore::save(const OtaStatus& status) const {
     os << "last_error=" << status.lastError << '\n';
     os << "booted_slot=" << status.bootedSlot << '\n';
     os << "primary_slot=" << status.primarySlot << '\n';
-    os << "target_slot=" << (status.targetSlot ? *status.targetSlot : "") << '\n';
     os << "bundle_version=" << status.bundleVersion << '\n';
     writeFile(path_, os.str());
 }

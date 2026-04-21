@@ -8,7 +8,7 @@ namespace aegis {
 
 class ConfigLoader {
 public:
-    OtaConfig load(const std::string& path) const;
+    OtaConfig load(const std::string& path);
 };
 
 }  // namespace aegis

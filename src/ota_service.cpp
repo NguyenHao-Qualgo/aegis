@@ -12,14 +12,10 @@ namespace aegis {
 
 OtaService::OtaService(OtaConfig config,
                        std::unique_ptr<IBootControl> bootControl,
-                       std::unique_ptr<IBundleVerifier> verifier,
-                       std::vector<std::unique_ptr<IUpdateHandler>> updateHandlers,
                        StateStore stateStore,
                        std::shared_ptr<IGcsClient> gcsClient)
     : machine_(OtaContext(std::move(config),
                           std::move(bootControl),
-                          std::move(verifier),
-                          std::move(updateHandlers),
                           std::move(gcsClient)),
                std::move(stateStore)) {
 }

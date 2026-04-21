@@ -1,8 +1,10 @@
 #pragma once
 
+#include <cstdint>
 #include <optional>
 #include <string>
 #include <vector>
+#include <stdexcept>
 
 namespace aegis {
 
@@ -32,13 +34,9 @@ struct SlotConfig {
 };
 
 struct OtaConfig {
-    std::string compatible;
-    BootloaderType bootloader{BootloaderType::UBoot};
-    std::string dataDirectory;
-    std::string keyringPath;
-    std::vector<SlotConfig> slots;
-
-    const SlotConfig& slotByBootname(const std::string& bootname) const;
+    std::string public_key;
+    std::string aes_key;
+    std::string data_directory;
 };
 
 struct OtaStatus {
@@ -60,10 +58,56 @@ struct OtaStatus {
     std::string installPath;
 };
 
+struct InstallOptions {
+    OtaConfig config;
+    std::string image_path;
+    std::string target_slot;
+    bool verbose = true;
+};
+
+struct AesMaterial {
+    std::string key_hex;
+    std::string iv_hex;
+};
+
+struct ManifestEntry {
+    std::string filename;
+    std::string type;
+    std::string device;
+    std::string path;
+    std::string filesystem;
+    std::string sha256;
+    std::string ivt;
+    bool encrypted = false;
+    bool preserve_attributes = false;
+    bool create_destination = false;
+    bool atomic_install = false;
+    bool installed = false;
+};
+
+struct CpioEntry {
+    std::string name;
+    std::uint64_t size = 0;
+    std::uint32_t checksum = 0;
+};
+
 std::string toString(BootloaderType value);
 std::string toString(SlotType value);
 std::string toString(OtaState value);
 BootloaderType parseBootloaderType(const std::string& value);
 SlotType parseSlotType(const std::string& value);
+
+constexpr std::size_t kIoBufferSize = 64 * 1024;
+constexpr std::size_t kCpioHeaderSize = 110;
+constexpr char kTrailerName[] = "TRAILER!!!";
+
+class Error : public std::runtime_error {
+public:
+    using std::runtime_error::runtime_error;
+};
+
+[[noreturn]] inline void fail_runtime(const std::string &message) {
+    throw Error(message);
+}
 
 }  // namespace aegis
