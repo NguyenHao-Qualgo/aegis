@@ -3,7 +3,7 @@
 #include <filesystem>
 #include <memory>
 
-#include "aegis/ota_state_machine.hpp"
+#include "aegis/core/ota_state_machine.hpp"
 #include "aegis/states/failure_state.hpp"
 #include "aegis/states/install_state.hpp"
 

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "aegis/bootloader/boot_control.hpp"
-#include "aegis/types.hpp"
+#include "aegis/core/types.hpp"
 
 namespace aegis {
 class UBootControl : public IBootControl {

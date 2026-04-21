@@ -20,36 +20,38 @@ endif()
 
 add_executable(aegis
     src/main.cpp
-    src/app.cpp
-    src/config.cpp
-    src/types.cpp
-    src/util.cpp
-    src/command_runner.cpp
+    src/app/app.cpp
+    src/config/config.cpp
+    src/core/types.cpp
+    src/common/util.cpp
+    src/io/command_runner.cpp
     src/bootloader/uboot_control.cpp
     src/bootloader/nvboot_control.cpp
-    src/state_store.cpp
-    src/bundle/bundle_manifest.cpp
-    src/bundle/bundle_creator.cpp
-    src/bundle/bundle_verifier.cpp
-    src/bundle/bundle_extractor.cpp
-    src/installer/archive_update_handler.cpp
-    src/installer/raw_update_handler.cpp
-    src/ota_context.cpp
-    src/ota_state_machine.cpp
-    src/ota_service.cpp
-    src/gcs_stub.cpp
+    src/config/state_store.cpp
+    src/core/ota_context.cpp
+    src/core/ota_state_machine.cpp
+    src/core/ota_service.cpp
+    src/service/gcs_stub.cpp
     src/states/idle_state.cpp
     src/states/download_state.cpp
     src/states/install_state.cpp
     src/states/reboot_state.cpp
     src/states/commit_state.cpp
     src/states/failure_state.cpp
+    src/installer/packer.cpp
+    src/installer/installer.cpp
+    src/installer/manifest.cpp
+    src/installer/raw_handler.cpp
+    src/installer/archive_handler.cpp
+    src/io/cpio.cpp
+    src/crypto/crypto.cpp
+    src/io/io.cpp
 )
 
 if (AEGIS_ENABLE_DBUS)
     target_sources(aegis PRIVATE
-        src/dbus_service.cpp
-        src/cli.cpp
+        src/service/dbus_service.cpp
+        src/app/cli.cpp
     )
 endif()
 
@@ -74,8 +76,3 @@ install(TARGETS aegis RUNTIME DESTINATION bin)
 install(FILES dbus/de.skytrack.Aegis1.xml DESTINATION share/dbus-1/interfaces)
 install(FILES dbus/de.skytrack.Aegis.conf DESTINATION share/dbus-1/system.d)
 install(FILES systemd/aegis.service DESTINATION lib/systemd/system)
-
-if (AEGIS_BUILD_TESTS)
-    enable_testing()
-    add_subdirectory(tests)
-endif()

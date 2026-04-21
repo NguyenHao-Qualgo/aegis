@@ -6,8 +6,8 @@
 #include "aegis/bootloader/boot_control.hpp"
 #include "aegis/bootloader/uboot_control.hpp"
 #include "aegis/bootloader/nvboot_control.hpp"
-#include "aegis/config.hpp"
-#include "aegis/types.hpp"
+#include "aegis/config/config.hpp"
+#include "aegis/core/types.hpp"
 
 namespace aegis {
 

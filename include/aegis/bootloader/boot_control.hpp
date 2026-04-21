@@ -3,8 +3,8 @@
 #include <string>
 #include <memory>
 
-#include "aegis/command_runner.hpp"
-#include "aegis/types.hpp"
+#include "aegis/io/command_runner.hpp"
+#include "aegis/core/types.hpp"
 
 namespace aegis {
 

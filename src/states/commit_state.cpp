@@ -2,7 +2,7 @@
 
 #include <memory>
 
-#include "aegis/ota_state_machine.hpp"
+#include "aegis/core/ota_state_machine.hpp"
 #include "aegis/states/failure_state.hpp"
 #include "aegis/states/idle_state.hpp"
 
