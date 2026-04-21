@@ -72,6 +72,11 @@ if (AEGIS_ENABLE_DBUS)
     target_compile_definitions(aegis PRIVATE AEGIS_ENABLE_DBUS=1)
 endif()
 
+if (AEGIS_BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(tests)
+endif()
+
 install(TARGETS aegis RUNTIME DESTINATION bin)
 install(FILES dbus/de.skytrack.Aegis1.xml DESTINATION share/dbus-1/interfaces)
 install(FILES dbus/de.skytrack.Aegis.conf DESTINATION share/dbus-1/system.d)

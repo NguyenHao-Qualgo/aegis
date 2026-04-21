@@ -4,7 +4,7 @@ set -euo pipefail
 usage() {
     cat <<'EOF'
 Usage:
-  gen_swu.sh
+  gen_update.sh
     --output <update.swu>
     --swupdate <path-to-swupdate_cpp>
     --slotclass <name>                    # e.g. ROOTFS
@@ -26,7 +26,7 @@ Behavior:
 Example:
    AES_KEY=$(openssl rand -hex 32)
    AES_IV=$(openssl rand -hex 16)
-  ./gen_swu.sh \
+  ./gen_update.sh \
     --output update.swu \
     --swupdate ./build/swupdate_cpp \
     --slotclass ROOTFS \

@@ -58,8 +58,7 @@ This produces:
 There is also a helper script to generate a signed `.swu` for testing:
 
 ```bash
-chmod +x ./gen_swu.sh
-./gen_swu.sh \
+./gen_update.sh \
   --output update.swu \
   --swupdate ./build/swupdate_cpp \
   --type raw \
@@ -71,7 +70,7 @@ chmod +x ./gen_swu.sh
 To add more payloads into the same `.swu`, use `--add-payload`:
 
 ```bash
-./gen_swu.sh \
+./gen_update.sh \
   --output update.swu \
   --swupdate ./build/swupdate_cpp \
   --type tar \
