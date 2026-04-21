@@ -2,7 +2,7 @@
 
 #include <string>
 
-#include "aegis/ota_state.hpp"
+#include "aegis/core/ota_state.hpp"
 
 namespace aegis {
 

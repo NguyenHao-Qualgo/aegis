@@ -4,11 +4,11 @@
 #include <memory>
 #include <stdexcept>
 
-#include "aegis/ota_state_machine.hpp"
+#include "aegis/core/ota_state_machine.hpp"
 #include "aegis/states/failure_state.hpp"
 #include "aegis/states/reboot_state.hpp"
-#include "aegis/util.hpp"
-#include "aegis/installer.hpp"
+#include "aegis/common/util.hpp"
+#include "aegis/installer/installer.hpp"
 
 namespace aegis {
 
@@ -21,12 +21,15 @@ void InstallState::onEnter(OtaStateMachine& machine) {
     options.image_path = machine.getStatus().bundlePath;
     PackageInstaller installer(options);
     try {
-        installer.install();
+        installer.install(machine);
     } catch (const aegis::Error &error) {
         logError("installation failed: " + std::string(error.what()));
         machine.transitionTo(std::make_unique<FailureState>(error.what()));
         return;
     }
+    machine.setProgress(OtaState::Install, "activate", 99, "Activating target slot");
+    machine.bootControl().setSlotBootable(options.target_slot , true);
+    machine.bootControl().setPrimarySlot(options.target_slot);
     machine.transitionTo(std::make_unique<RebootState>());
 }
 

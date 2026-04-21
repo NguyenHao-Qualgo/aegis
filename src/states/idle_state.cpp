@@ -5,11 +5,11 @@
 #include <stdexcept>
 #include <thread>
 
-#include "aegis/ota_event.hpp"
-#include "aegis/ota_state_machine.hpp"
+#include "aegis/core/ota_event.hpp"
+#include "aegis/core/ota_state_machine.hpp"
 #include "aegis/states/download_state.hpp"
 #include "aegis/states/failure_state.hpp"
-#include "aegis/util.hpp"
+#include "aegis/common/util.hpp"
 
 namespace aegis {
 

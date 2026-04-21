@@ -3,11 +3,11 @@
 #include <memory>
 #include <stdexcept>
 
-#include "aegis/ota_state_machine.hpp"
+#include "aegis/core/ota_state_machine.hpp"
 #include "aegis/states/commit_state.hpp"
 #include "aegis/states/failure_state.hpp"
 #include "aegis/states/idle_state.hpp"
-#include "aegis/util.hpp"
+#include "aegis/common/util.hpp"
 
 namespace aegis {
 

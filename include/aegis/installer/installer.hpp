@@ -1,0 +1,20 @@
+#pragma once
+
+#include "aegis/installer/handlers.hpp"
+#include "aegis/core/types.hpp"
+#include "aegis/core/ota_state_machine.hpp"
+
+namespace aegis {
+
+class PackageInstaller {
+public:
+    explicit PackageInstaller(const InstallOptions &options);
+    int install(OtaStateMachine& machine);
+
+private:
+    const InstallOptions &options_;
+    RawHandler     raw_handler_;
+    ArchiveHandler archive_handler_;
+};
+
+}  // namespace aegis

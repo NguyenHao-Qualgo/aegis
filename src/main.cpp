@@ -1,7 +1,7 @@
 #include <exception>
 #include <iostream>
 
-#include "aegis/app.hpp"
+#include "aegis/app/app.hpp"
 
 int main(int argc, char** argv) {
     try {

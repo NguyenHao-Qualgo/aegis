@@ -2,7 +2,7 @@
 
 #include <stdexcept>
 
-#include "aegis/util.hpp"
+#include "aegis/common/util.hpp"
 
 namespace aegis {
 

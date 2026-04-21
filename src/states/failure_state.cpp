@@ -3,9 +3,9 @@
 #include <memory>
 #include <utility>
 
-#include "aegis/ota_state_machine.hpp"
+#include "aegis/core/ota_state_machine.hpp"
 #include "aegis/states/idle_state.hpp"
-#include "aegis/util.hpp"
+#include "aegis/common/util.hpp"
 
 namespace aegis {
 
