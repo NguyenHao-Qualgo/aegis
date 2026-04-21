@@ -45,8 +45,7 @@ target_link_libraries(aegis_testable PUBLIC
 )
 
 if (AEGIS_ENABLE_COVERAGE)
-    target_compile_options(aegis_testable PUBLIC
-        --coverage -O0 -g -fprofile-arcs -ftest-coverage)
+    target_compile_options(aegis_testable PUBLIC --coverage -O0 -g)
     target_link_options(aegis_testable PUBLIC --coverage)
 endif()
 
@@ -76,19 +75,37 @@ aegis_test(test_ota_state_machine)
 if (AEGIS_ENABLE_COVERAGE)
     add_custom_target(coverage
         COMMENT "Generating HTML coverage report in ${CMAKE_BINARY_DIR}/coverage_report/"
+        COMMAND ${CMAKE_COMMAND} -E echo "Cleaning old gcda files"
+        COMMAND /bin/sh -c "find ${CMAKE_BINARY_DIR} -name '*.gcda' -delete"
+
+        COMMAND ${CMAKE_COMMAND} -E echo "Running tests"
         COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure -j4
+
+        COMMAND ${CMAKE_COMMAND} -E echo "Capturing coverage"
         COMMAND lcov
             --capture
             --directory ${CMAKE_BINARY_DIR}
             --output-file ${CMAKE_BINARY_DIR}/coverage.info
-            --exclude "*/tests/*"
-            --exclude "/usr/*"
-            --exclude "*/gtest*"
-            --exclude "*/_deps/*"
+            --ignore-errors mismatch
+            --rc geninfo_unexecuted_blocks=1
+
+        COMMAND ${CMAKE_COMMAND} -E echo "Filtering coverage"
+        COMMAND lcov
+            --remove ${CMAKE_BINARY_DIR}/coverage.info
+            "/usr/*"
+            "*/tests/*"
+            "*/gtest*"
+            "*/_deps/*"
+            --output-file ${CMAKE_BINARY_DIR}/coverage.filtered.info
+            --ignore-errors mismatch,unused
+
+        COMMAND ${CMAKE_COMMAND} -E echo "Generating HTML report"
         COMMAND genhtml
-            ${CMAKE_BINARY_DIR}/coverage.info
+            ${CMAKE_BINARY_DIR}/coverage.filtered.info
             --output-directory ${CMAKE_BINARY_DIR}/coverage_report
-        COMMAND lcov --list ${CMAKE_BINARY_DIR}/coverage.info
+            --ignore-errors empty
+
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+        VERBATIM
     )
 endif()
