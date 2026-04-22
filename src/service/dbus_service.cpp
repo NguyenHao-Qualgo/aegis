@@ -41,11 +41,11 @@ DbusService::DbusService(OtaService& service)
                 LOG_I("DBus Install returned (async)");
             }),
 
-        // sdbus::registerMethod("Cancel")
-        //     .implementedAs([this]() {
-        //         LOG_I("DBus Cancel called");
-        //         service_.cancelInstall();
-        //     }),
+        sdbus::registerMethod("Cancel")
+            .implementedAs([this]() {
+                LOG_I("DBus Cancel called");
+                service_.cancelInstall();
+            }),
 
         sdbus::registerMethod("GetStatus")
             .withOutputParamNames("status")

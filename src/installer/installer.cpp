@@ -2,12 +2,9 @@
 
 #include <cstdlib>
 #include <fcntl.h>
-#include <functional>
-#include <optional>
 #include <unistd.h>
 
 #include "aegis/common/logging.hpp"
-#include "aegis/installer/cancel.hpp"
 #include "aegis/installer/install_context.hpp"
 #include "aegis/installer/install_signal_scope.hpp"
 #include "aegis/installer/manifest.hpp"
@@ -21,13 +18,7 @@ PackageInstaller::PackageInstaller(const InstallOptions &options) : options_(opt
 
 int PackageInstaller::install(OtaStateMachine& machine, std::stop_token stop) {
     ScopedInstallSignalHandlers signal_scope;
-    CancelSource cancel_source;
-    const std::function<void()> forward_cancel = [&cancel_source]() { cancel_source.request(); };
-    const std::optional<std::stop_callback<std::function<void()>>> stop_callback =
-        stop.stop_possible()
-            ? std::optional<std::stop_callback<std::function<void()>>>(std::in_place, stop, forward_cancel)
-            : std::nullopt;
-    const InstallContext ctx{machine, cancel_source.token(), ScopedInstallSignalHandlers::cancel_signal_flag()};
+    const InstallContext ctx{machine, stop, ScopedInstallSignalHandlers::cancel_signal_flag()};
 
     ctx.check_cancel();
     machine.setProgress(OtaState::Install, "verify", 15, "Verifying package signature");

@@ -11,7 +11,6 @@
 #include "aegis/config/state_store.hpp"
 #include "aegis/core/ota_context.hpp"
 #include "aegis/core/ota_state_machine.hpp"
-#include "aegis/installer/cancel.hpp"
 #include "aegis/installer/install_context.hpp"
 #include "aegis/installer/payload_streamer.hpp"
 #include "aegis/states/idle_state.hpp"
@@ -43,8 +42,8 @@ protected:
 
 TEST_F(InstallCancelTest, StopTokenCancelsPlainPayloadMidStream) {
     auto machine = make_machine();
-    CancelSource cancel_source;
-    InstallContext ctx{machine, cancel_source.token(), nullptr};
+    std::stop_source stop_source;
+    InstallContext ctx{machine, stop_source.get_token(), nullptr};
     PayloadStreamer streamer(ctx);
 
     std::vector<char> payload(kIoBufferSize * 2, 'x');
@@ -68,7 +67,7 @@ TEST_F(InstallCancelTest, StopTokenCancelsPlainPayloadMidStream) {
 
     auto sink = [&](const char* data, std::size_t len) {
         written.append(data, len);
-        cancel_source.request();
+        stop_source.request_stop();
     };
 
     EXPECT_THROW(streamer.stream_plain(reader, entry, sink, ""), Error);

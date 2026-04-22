@@ -24,6 +24,16 @@ OtaStatus OtaService::getStatus() const {
     return machine_.getStatus();
 }
 
+bool OtaService::isInstallActive(const OtaStatus& status) const {
+    return status.state == OtaState::Download || status.state == OtaState::Install;
+}
+
+void OtaService::reapFinishedInstallLocked(const OtaStatus& status) {
+    if (installThread_.joinable() && !isInstallActive(status)) {
+        installThread_.join();
+    }
+}
+
 void OtaService::startInstall(const std::string& bundlePath) {
     std::scoped_lock lock(installMutex_);
     const auto status = machine_.getStatus();
@@ -33,11 +43,7 @@ void OtaService::startInstall(const std::string& bundlePath) {
         machine_.transitionTo(std::make_unique<IdleState>());
     }
 
-    if (installThread_.joinable() &&
-        status.state != OtaState::Download &&
-        status.state != OtaState::Install) {
-        installThread_.join();
-    }
+    reapFinishedInstallLocked(status);
 
     if (installThread_.joinable()) {
         throw std::runtime_error("Install already in progress");
@@ -50,6 +56,7 @@ void OtaService::startInstall(const std::string& bundlePath) {
             LOG_I("Install finished");
         } catch (const std::exception& e) {
             LOG_E(std::string("Install failed: ") + e.what());
+            machine_.clearInstallStopToken();
         }
     });
 }
@@ -60,8 +67,7 @@ void OtaService::runInstall(std::stop_token stop, std::string bundlePath) {
         machine_.dispatch(OtaEvent{
             OtaEvent::Type::StartInstall,
             std::move(bundlePath),
-            "",
-            stop
+            ""
         });
     } catch (...) {
         machine_.clearInstallStopToken();
@@ -72,13 +78,14 @@ void OtaService::runInstall(std::stop_token stop, std::string bundlePath) {
 
 void OtaService::cancelInstall() {
     std::scoped_lock lock(installMutex_);
+    reapFinishedInstallLocked(machine_.getStatus());
     if (installThread_.joinable()) {
         installThread_.request_stop();
     }
 }
 
 void OtaService::resumeAfterBoot() {
-    machine_.dispatch(OtaEvent{OtaEvent::Type::ResumeAfterBoot, "", "", {}});
+    machine_.dispatch(OtaEvent{OtaEvent::Type::ResumeAfterBoot, "", ""});
 }
 
 void OtaService::markActive(const std::string& slot) {

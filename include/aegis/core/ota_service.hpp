@@ -5,7 +5,6 @@
 #include <mutex>
 #include <string>
 #include <thread>
-#include <vector>
 
 #include "aegis/bootloader/boot_control.hpp"
 #include "aegis/service/gcs_client.hpp"
@@ -38,6 +37,9 @@ public:
     void setStatusChangedCallback(std::function<void(const OtaStatus&)> cb);
 
 private:
+    bool isInstallActive(const OtaStatus& status) const;
+    void reapFinishedInstallLocked(const OtaStatus& status);
+
     void runInstall(std::stop_token stop, std::string bundlePath);
 
     OtaStateMachine machine_;
