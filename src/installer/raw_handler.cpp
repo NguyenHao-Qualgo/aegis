@@ -105,67 +105,12 @@ void install_raw_image(StreamReader &reader,
     LOG_I("raw handler: completed direct stream write to '" + target.string() + "'");
 }
 
-void install_raw_file(StreamReader &reader,
-                      const CpioEntry &cpio_entry,
-                      const ManifestEntry &entry,
-                      const AesMaterial *aes) {
-    if (entry.path.empty()) {
-        fail_runtime("raw file missing path for " + entry.filename);
-    }
-
-    fs::path path = entry.path;
-    fs::path tmp_path = entry.atomic_install ? fs::path(entry.path + ".tmp") : path;
-    LOG_I("raw handler: target file='" + path.string() + "', temp='" +
-               tmp_path.string() + "', atomic=" + std::string(entry.atomic_install ? "true" : "false"));
-
-    if (entry.create_destination) {
-        ensure_parent_dir(path);
-    }
-
-    FileDescriptor out;
-    out.reset(::open(tmp_path.c_str(), O_CREAT | O_TRUNC | O_WRONLY, 0644));
-    if (!out) {
-        fail_runtime("cannot open destination file " + tmp_path.string());
-    }
-    auto sink = [&](const char *data, std::size_t len) {
-        write_all_fd(out.get(), data, len);
-    };
-
-    if (entry.encrypted) {
-        if (!aes) {
-            fail_runtime("encrypted payload requires --aes-key");
-        }
-        stream_encrypted_payload(reader, cpio_entry, *aes, entry.ivt, sink, entry.sha256);
-    } else {
-        stream_plain_payload(reader, cpio_entry, sink, entry.sha256);
-    }
-
-    if (::fsync(out.get()) != 0) {
-        fail_runtime("fsync failed for " + tmp_path.string());
-    }
-
-    if (entry.atomic_install) {
-        out.reset();
-        std::error_code ec;
-        fs::rename(tmp_path, path, ec);
-        if (ec) {
-            fail_runtime("rename failed from " + tmp_path.string() + " to " + path.string());
-        }
-    }
-
-    LOG_I("raw handler: completed streamed file install to '" + path.string() + "'");
-}
-
 }  // namespace
 
 void RawHandler::install(StreamReader &reader,
                          const CpioEntry &cpio_entry,
                          const ManifestEntry &entry,
                          const AesMaterial *aes) {
-    if (!entry.path.empty()) {
-        install_raw_file(reader, cpio_entry, entry, aes);
-        return;
-    }
     install_raw_image(reader, cpio_entry, entry, aes);
 }
 
