@@ -2,7 +2,7 @@
 
 Aegis is a C++17 OTA utility that can:
 
-- create signed SWUpdate-style `.swu` bundles with `aegis pack`
+- create signed `.swu` bundles with `aegis pack`
 - stream-install signed bundles without unpacking the whole archive first
 - handle `raw`, `archive`, and `tar` payload entries
 - verify `sw-description` signatures and optionally decrypt AES-CBC payloads
@@ -39,27 +39,15 @@ Additional dependencies:
 - `sdbus-c++` when `AEGIS_ENABLE_DBUS=ON`
 - `lcov` and `genhtml` if you want the coverage target
 
+## Documentation
+
+- [Bundle Guide](docs/bundle.md)
+- [Daemon Guide](docs/daemon.md)
+- [CLI Guide](docs/cli.md)
+
 ## Native Build
 
-Pack-only build:
-
-```bash
-cmake -S . -B build -DAEGIS_ENABLE_DBUS=OFF
-cmake --build build --parallel
-```
-
-Run the unit tests:
-
-```bash
-ctest --test-dir build --output-on-failure
-```
-
-The generated binary is:
-
-```bash
-./build/aegis
-```
-
+Pack-only build
 There is also a helper script that configures coverage, builds, runs the tests, and generates an HTML report:
 
 ```bash
@@ -77,8 +65,13 @@ cmake --build build --parallel
 
 With that build, `aegis` supports:
 
+daemon systemd service
 ```bash
-aegis daemon --config /etc/skytrack/system.conf
+aegis daemon --config /etc/skytrack/system.
+```
+
+cli
+```bash
 aegis status
 aegis install /data/update.swu
 aegis mark-active A
@@ -86,76 +79,4 @@ aegis get-primary
 aegis get-booted
 ```
 
-The default daemon config path is `/etc/skytrack/system.conf`. The loader accepts either top-level keys or an `[update]` section with these entries:
-
-```ini
-[update]
-public-key=/etc/skytrack/test.public.pem
-aes-key=/etc/skytrack/aes.key
-data-directory=/var/lib/aegis
-bootloader-type=nvidia
-```
-
-Notes:
-
-- `bootloader-type` accepts `nvidia` or defaults to the U-Boot backend
-- U-Boot runtime support expects `fw_printenv` and `fw_setenv`
-- NVIDIA runtime support expects `nvbootctrl` and the UEFI helper script used by Jetson systems
-- install paths that write devices, mount filesystems, or modify boot state generally require root privileges
-
-## Creating Test Keys
-
-Generate a local RSA keypair plus an AES material file:
-
-```bash
-./gen_test_keys.sh
-```
-
-This creates:
-
-```bash
-./test-keys/test.private.pem
-./test-keys/test.public.pem
-./test-keys/aes.key
-```
-
-The script stops if `./test-keys` already exists.
-
-## Creating A Bundle
-
-`aegis pack` only assembles the archive. If you also want placeholder replacement and manifest signing, use `gen_update.sh`.
-
-Quick smoke example:
-
-```bash
-./gen_update.sh \
-  --output /tmp/update.swu \
-  --aegis ./build/aegis \
-  --sw-description ./sw-description.default \
-  --sign-key ./test-keys/test.private.pem \
-  --payload ./test
-```
-
-That command:
-
-- copies `sw-description.default`
-- replaces `__FILENAME__`, `__ENCRYPTED__`, `__SHA256__`, and `__IVT__`
-- signs the final `sw-description`
-- calls `aegis pack` to create the `.swu`
-
-To emit an encrypted payload, add:
-
-```bash
-  --aes-key-hex <64-hex-key> \
-  --aes-iv-hex <32-hex-iv>
-```
-
-If you already have a ready-to-pack `sw-description` and its detached signature, the low-level packing command is:
-
-```bash
-./build/aegis pack \
-  --output update.swu \
-  --sw-description sw-description \
-  --sw-description-sig sw-description.sig \
-  payload.bin
-```
+See [docs/daemon.md](docs/daemon.md) for the DBus API and `busctl` examples, and [docs/cli.md](docs/cli.md) for CLI usage.
