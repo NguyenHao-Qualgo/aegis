@@ -117,6 +117,7 @@ void OtaStateMachine::setIdle(const std::string& message) {
     status_.operation = "idle";
     status_.progress = 0;
     status_.message = message;
+    status_.targetSlot.reset();
 }
 
 void OtaStateMachine::setFailure(const std::string& error, const std::string& message) {
