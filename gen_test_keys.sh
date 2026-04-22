@@ -1,73 +1,43 @@
 #!/usr/bin/env bash
+
 set -euo pipefail
 
-usage() {
-    cat <<'EOF'
-Usage:
-  gen_test_keys.sh [--outdir <dir>] [--name <prefix>] [--bits <rsa-bits>]
+BASE="${PWD}/test-keys"
+PRIVATE_KEY="${BASE}/test.private.pem"
+PUBLIC_KEY="${BASE}/test.public.pem"
+AES_KEY_FILE="${BASE}/aes.key"
+BITS="${BITS:-3072}"
 
-Examples:
-  ./gen_test_keys.sh
-  ./gen_test_keys.sh --outdir ./keys --name qemuarm64
-EOF
+print_usage_vars() {
+    echo
+    echo "Done! Add to your Yocto recipe/local.conf:"
+    echo "AEGIS_PRIVATE_KEY=\"${PRIVATE_KEY}\""
+    echo "AEGIS_PUBLIC_KEY=\"${PUBLIC_KEY}\""
+    echo "AEGIS_AES_FILE=\"${AES_KEY_FILE}\""
+    echo
 }
 
-fail() {
-    echo "error: $*" >&2
+if [[ -d "${BASE}" ]]; then
+    echo "Error: ${BASE} already exists, aborting." >&2
+    print_usage_vars
     exit 1
-}
-
-require_cmd() {
-    command -v "$1" >/dev/null 2>&1 || fail "missing required command: $1"
-}
-
-OUTDIR=""
-NAME="swupdate-test"
-BITS="2048"
-
-while [[ $# -gt 0 ]]; do
-    case "$1" in
-        --outdir)
-            OUTDIR="${2:-}"
-            shift 2
-            ;;
-        --name)
-            NAME="${2:-}"
-            shift 2
-            ;;
-        --bits)
-            BITS="${2:-}"
-            shift 2
-            ;;
-        -h|--help)
-            usage
-            exit 0
-            ;;
-        *)
-            fail "unknown argument: $1"
-            ;;
-    esac
-done
-
-require_cmd openssl
-
-if [[ -z "${OUTDIR}" ]]; then
-    OUTDIR="./keys"
 fi
 
-mkdir -p "${OUTDIR}"
+mkdir -p "${BASE}"
 
-PRIVATE_KEY="${OUTDIR}/${NAME}.key.pem"
-PUBLIC_KEY="${OUTDIR}/${NAME}.public.pem"
-
+echo "Generating RSA private key..."
 openssl genrsa -out "${PRIVATE_KEY}" "${BITS}"
+
+echo "Generating RSA public key..."
 openssl rsa -in "${PRIVATE_KEY}" -pubout -out "${PUBLIC_KEY}"
 
-echo "Created private key: ${PRIVATE_KEY}"
-echo "Created public key:  ${PUBLIC_KEY}"
-echo
-echo "Use for SWU generation:"
-echo "  --sign-key ${PRIVATE_KEY}"
-echo
-echo "Use for target install:"
-echo "  --public-key ${PUBLIC_KEY}"
+echo "Generating AES key file..."
+AES_KEY_HEX="$(openssl rand -hex 32)"
+AES_IV_HEX="$(openssl rand -hex 16)"
+
+cat > "${AES_KEY_FILE}" <<EOF
+${AES_KEY_HEX}
+${AES_IV_HEX}
+EOF
+
+print_usage_vars
