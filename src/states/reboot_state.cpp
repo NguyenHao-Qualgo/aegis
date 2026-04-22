@@ -14,6 +14,8 @@ namespace aegis {
 void RebootState::onEnter(OtaStateMachine& machine) {
     machine.setTargetSlot(machine.bootControl().getInactiveSlot());
     machine.setProgress(OtaState::Reboot, "reboot", 100, "Ready to reboot");
+    // reboot
+    LOG_I("Rebooting system now...");
 }
 
 void RebootState::onExit(OtaStateMachine& machine) {

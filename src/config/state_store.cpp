@@ -50,6 +50,7 @@ void StateStore::save(const OtaStatus& status) const {
     os << "booted_slot=" << status.bootedSlot << '\n';
     os << "primary_slot=" << status.primarySlot << '\n';
     os << "bundle_version=" << status.bundleVersion << '\n';
+    os << "target_slot=" << status.targetSlot.value_or("") << '\n';
     writeFile(path_, os.str());
 }
 
