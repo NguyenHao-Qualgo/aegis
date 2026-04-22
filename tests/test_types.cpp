@@ -44,7 +44,7 @@ TEST(TypesParseTest, SlotTypeInvalidThrows) {
 }
 
 TEST(TypesConstantsTest, IoBufferSize) {
-    EXPECT_EQ(kIoBufferSize, 64u * 1024u);
+    EXPECT_EQ(kIoBufferSize, 1024u * 1024u);
 }
 
 TEST(TypesConstantsTest, CpioHeaderSize) {

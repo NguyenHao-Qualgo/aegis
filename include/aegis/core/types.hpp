@@ -99,7 +99,7 @@ std::string toString(OtaState value);
 BootloaderType parseBootloaderType(const std::string& value);
 SlotType parseSlotType(const std::string& value);
 
-constexpr std::size_t kIoBufferSize = 64 * 1024;
+constexpr std::size_t kIoBufferSize = 1024 * 1024;
 constexpr std::size_t kCpioHeaderSize = 110;
 constexpr char kTrailerName[] = "TRAILER!!!";
 
