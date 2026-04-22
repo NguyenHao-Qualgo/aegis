@@ -75,6 +75,7 @@ struct AesMaterial {
 struct ManifestEntry {
     std::string filename;
     std::string type;
+    std::string compress;
     std::string device;
     std::string path;
     std::string filesystem;

@@ -152,6 +152,22 @@ TEST(ManifestParseTest, EncryptedEntry) {
     EXPECT_EQ(entries[0].ivt, "0011223344556677");
 }
 
+TEST(ManifestParseTest, CompressedEntry) {
+    const std::string manifest = R"(
+        software = {
+            images: ({
+                filename = "rootfs.ext4.gz";
+                type = "raw";
+                device = "/dev/sda1";
+                compress = "zlib";
+            });
+        }
+    )";
+    const auto entries = parse_manifest(manifest);
+    ASSERT_EQ(entries.size(), 1u);
+    EXPECT_EQ(entries[0].compress, "zlib");
+}
+
 TEST(ManifestParseTest, BoolFields) {
     const std::string manifest = R"(
         software = {

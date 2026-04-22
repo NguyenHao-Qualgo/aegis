@@ -17,6 +17,8 @@ set(AEGIS_TESTABLE_SOURCES
     ${CMAKE_SOURCE_DIR}/src/installer/packer.cpp
     ${CMAKE_SOURCE_DIR}/src/installer/installer.cpp
     ${CMAKE_SOURCE_DIR}/src/installer/install_signal_scope.cpp
+    ${CMAKE_SOURCE_DIR}/src/installer/handler_utils.cpp
+    ${CMAKE_SOURCE_DIR}/src/installer/archive_support.cpp
     ${CMAKE_SOURCE_DIR}/src/installer/raw_handler.cpp
     ${CMAKE_SOURCE_DIR}/src/installer/archive_handler.cpp
     ${CMAKE_SOURCE_DIR}/src/crypto/crypto.cpp
@@ -44,6 +46,7 @@ target_link_libraries(aegis_testable PUBLIC
     PkgConfig::LIBARCHIVE
     OpenSSL::SSL
     OpenSSL::Crypto
+    ZLIB::ZLIB
     fmt::fmt
 )
 

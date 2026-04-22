@@ -10,6 +10,7 @@ option(AEGIS_BUILD_TESTS "Build unit tests" ON)
 
 find_package(PkgConfig REQUIRED)
 find_package(OpenSSL REQUIRED)
+find_package(ZLIB REQUIRED)
 find_package(spdlog REQUIRED)
 find_package(fmt REQUIRED)
 
@@ -43,6 +44,8 @@ add_executable(aegis
     src/installer/packer.cpp
     src/installer/installer.cpp
     src/installer/install_signal_scope.cpp
+    src/installer/handler_utils.cpp
+    src/installer/archive_support.cpp
     src/installer/manifest.cpp
     src/installer/raw_handler.cpp
     src/installer/archive_handler.cpp
@@ -67,6 +70,7 @@ target_link_libraries(aegis PRIVATE
     PkgConfig::LIBARCHIVE
     OpenSSL::SSL
     OpenSSL::Crypto
+    ZLIB::ZLIB
     spdlog::spdlog_header_only
     fmt::fmt
 )

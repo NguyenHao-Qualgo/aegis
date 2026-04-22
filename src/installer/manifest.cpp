@@ -87,6 +87,7 @@ std::vector<ManifestEntry> parse_manifest(const std::string &sw_description, con
         ManifestEntry entry;
         entry.filename            = field_value(object, "filename");
         entry.type                = field_value(object, "type");
+        entry.compress            = field_value(object, "compress");
         entry.device              = field_value(object, "device");
         entry.path                = field_value(object, "path");
         entry.filesystem          = field_value(object, "filesystem");
