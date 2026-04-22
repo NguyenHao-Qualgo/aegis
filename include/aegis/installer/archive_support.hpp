@@ -45,6 +45,7 @@ struct ScopedMount {
 struct ExtractData {
     int flags = 0;
     int exitval = -1;
+    std::size_t extracted_entries = 0;
     std::string fifo_path;
     std::string error_detail;
 };

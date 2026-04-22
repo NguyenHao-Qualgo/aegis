@@ -142,6 +142,7 @@ void extract_archive_to_disk(ExtractData* data) {
             (void)archive_entry_pathname(entry);
         }
 
+        ++data->extracted_entries;
         if (archive_write_header(ext, entry) != ARCHIVE_OK) {
             data->error_detail = std::string("archive_write_header failed: ") +
                                  (archive_error_string(ext) ? archive_error_string(ext) : "unknown");
@@ -157,6 +158,12 @@ void extract_archive_to_disk(ExtractData* data) {
                                  (archive_error_string(ext) ? archive_error_string(ext) : "unknown");
             goto out;
         }
+    }
+
+    if (data->extracted_entries == 0) {
+        data->error_detail =
+            "archive payload contained no extractable entries; check manifest type/compression";
+        goto out;
     }
 
     exitval = 0;

@@ -104,12 +104,16 @@ void ArchiveHandler::install(const InstallContext& ctx,
     }
 
     PayloadStreamer streamer(ctx);
-    auto sink = [&](const char* data, std::size_t len) {
-        write_all_checked(fdout.get(), data, len, ctx, "write failed: archive extractor closed the FIFO");
-    };
 
     LOG_I("archive handler: writing payload bytes from SWU stream into FIFO");
-    stream_payload(streamer, reader, cpio_entry, entry, aes, sink);
+    stream_payload_to_fd(streamer,
+                         reader,
+                         cpio_entry,
+                         entry,
+                         aes,
+                         ctx,
+                         fdout.get(),
+                         "write failed: archive extractor closed the FIFO");
 
     fdout.reset();
     if (extractor.joinable()) {

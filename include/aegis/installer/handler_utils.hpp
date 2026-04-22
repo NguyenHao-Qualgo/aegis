@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <string>
 
 #include "aegis/common/error.hpp"
 #include "aegis/installer/payload_streamer.hpp"
@@ -12,6 +13,15 @@ void write_all_checked(int fd,
                        std::size_t len,
                        const InstallContext& ctx,
                        const std::string& broken_pipe_message = {});
+
+void stream_payload_to_fd(PayloadStreamer& streamer,
+                          StreamReader& reader,
+                          const CpioEntry& cpio_entry,
+                          const ManifestEntry& entry,
+                          const AesMaterial* aes,
+                          const InstallContext& ctx,
+                          int out_fd,
+                          const std::string& broken_pipe_message = {});
 
 template <typename Sink>
 void stream_payload(PayloadStreamer& streamer,
