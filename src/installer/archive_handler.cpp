@@ -27,6 +27,7 @@ namespace aegis {
 namespace {
 
 constexpr char kFifoName[] = "archivfifo";
+constexpr std::size_t kArchiveReadBlockSize = 1024 * 1024;
 int debug = 0;
 
 struct RestoreCwd {
@@ -143,7 +144,7 @@ void extract(ExtractData* data) {
     archive_read_support_format_all(a);
     archive_read_support_filter_all(a);
 
-    if (archive_read_open_filename(a, data->fifo_path.c_str(), 4096) != ARCHIVE_OK) {
+    if (archive_read_open_filename(a, data->fifo_path.c_str(), kArchiveReadBlockSize) != ARCHIVE_OK) {
         data->error_detail = std::string("archive_read_open_filename failed: ") +
                              (archive_error_string(a) ? archive_error_string(a) : "unknown");
         goto out;
@@ -376,7 +377,6 @@ void ArchiveHandler::install(const InstallContext& ctx,
         fail_runtime(message);
     }
 
-    ::sync();
     LOG_I("archive handler: completed streamed extraction into '" + target.string() + "'");
 }
 
