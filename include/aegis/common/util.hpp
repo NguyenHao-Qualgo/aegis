@@ -19,4 +19,9 @@ std::string shellQuote(const std::string& value);
 std::string getOptionValue(const std::vector<std::string>& args, const std::string& option);
 bool hasOption(const std::vector<std::string>& args, const std::string& option);
 
+
+std::string detectFilesystemType(const std::string& device);
+bool hasFilesystemType(const std::string& device, const std::string& expectedType);
+void makeExt4Filesystem(const std::string& device, bool force);
+
 }  // namespace aegis

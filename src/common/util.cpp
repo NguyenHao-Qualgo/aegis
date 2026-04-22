@@ -8,6 +8,7 @@
 #include <sstream>
 #include <stdexcept>
 
+#include "aegis/io/command_runner.hpp"
 namespace aegis {
 
 bool startsWith(const std::string& value, const std::string& prefix) {
@@ -97,6 +98,34 @@ bool hasOption(const std::vector<std::string>& args, const std::string& option) 
         }
     }
     return false;
+}
+
+std::string detectFilesystemType(const std::string& device) {
+    CommandRunner runner;
+    const auto result =
+        runner.run("lsblk -no FSTYPE " + shellQuote(device) + " 2>/dev/null");
+
+    if (result.exitCode != 0) {
+        return {};
+    }
+
+    return trim(result.output);
+}
+
+bool hasFilesystemType(const std::string& device, const std::string& expectedType) {
+    return detectFilesystemType(device) == expectedType;
+}
+
+void makeExt4Filesystem(const std::string& device, bool force) {
+    CommandRunner runner;
+
+    std::string command = "mkfs.ext4 ";
+    if (force) {
+        command += "-F ";
+    }
+    command += shellQuote(device);
+
+    runner.runOrThrow(command);
 }
 
 }  // namespace aegis

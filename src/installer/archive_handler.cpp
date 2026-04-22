@@ -13,6 +13,7 @@
 
 #include "aegis/io/io.hpp"
 #include "aegis/common/logging.hpp"
+#include "aegis/common/util.hpp"
 #include "aegis/crypto/payload.hpp"
 #include "aegis/core/types.hpp"
 
@@ -250,6 +251,12 @@ void install_archive_image(StreamReader &reader,
     if (entry.filesystem.empty()) {
         fail_runtime("archive handler missing filesystem for " + entry.filename);
     }
+
+    if (!hasFilesystemType(entry.device, entry.filesystem)) {
+        fail_runtime("archive handler unsupported filesystem for " + entry.device);
+    }
+
+    makeExt4Filesystem(entry.device, true);
 
     const fs::path mountpoint = fs::temp_directory_path() /
                                 ("aegis-mnt-" + std::to_string(::getpid()));
