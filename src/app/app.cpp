@@ -129,7 +129,6 @@ int Application::run(int argc, char** argv) {
 #if !defined(AEGIS_ENABLE_DBUS)
         throw std::runtime_error("Daemon support is disabled in this build");
 #else
-        // TODO read conf and set log level accordingly
         AppLog::Init(AppLog::Level::debug, nullptr, "aegis-daemon");
         LOG_I("Starting aegis daemon");
 
@@ -139,7 +138,7 @@ int Application::run(int argc, char** argv) {
         const auto config = loader.load(configPath);
         std::filesystem::create_directories(config.data_directory);
         CommandRunner runner;
-        auto bootControl =  BootControlFactory::create(BootloaderType::UBoot, runner);
+        auto bootControl = BootControlFactory::create(config.bootloader_type, runner);
         StateStore stateStore(joinPath(config.data_directory, "ota-state.env"));
         auto gcsClient = std::make_shared<GcsStub>();
         OtaService service(config, std::move(bootControl), stateStore, std::move(gcsClient));

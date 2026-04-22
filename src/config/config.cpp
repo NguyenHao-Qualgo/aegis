@@ -45,8 +45,13 @@ void assign_key(OtaConfig& config, const std::string& key, const std::string& va
         config.aes_key = value;
     } else if (key == "data-directory") {
         config.data_directory = value;
-    }
-}
+    } else if (key == "bootloader-type") {
+        if (value == "nvidia") {
+            config.bootloader_type = BootloaderType::Nvidia;
+        } else {
+            config.bootloader_type = BootloaderType::UBoot;
+        }
+    }}
 
 }  // namespace
 

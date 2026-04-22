@@ -38,6 +38,7 @@ struct OtaConfig {
     std::string public_key;
     std::string aes_key;
     std::string data_directory;
+    BootloaderType bootloader_type{BootloaderType::Nvidia};
 };
 
 struct OtaStatus {
