@@ -6,8 +6,10 @@
 #include <filesystem>
 #include <locale.h>
 #include <pthread.h>
+#include <sys/mount.h>
 #include <sys/stat.h>
 #include <thread>
+#include <unistd.h>
 
 #include "aegis/io/io.hpp"
 #include "aegis/common/logging.hpp"
@@ -48,6 +50,31 @@ struct UnlinkPath {
     ~UnlinkPath() {
         if (!path.empty()) {
             ::unlink(path.c_str());
+        }
+    }
+};
+
+struct RemoveTree {
+    fs::path path;
+
+    ~RemoveTree() {
+        if (!path.empty()) {
+            std::error_code ec;
+            fs::remove_all(path, ec);
+        }
+    }
+};
+
+struct ScopedMount {
+    fs::path mountpoint;
+    bool mounted = false;
+
+    ~ScopedMount() {
+        if (mounted) {
+            ::sync();
+            if (::umount(mountpoint.c_str()) != 0) {
+                LOG_E("failed to unmount '" + mountpoint.string() + "'");
+            }
         }
     }
 };
@@ -117,7 +144,7 @@ void extract(ExtractData *data) {
     }
 
     LOG_I("archive handler: libarchive opened FIFO '" + data->fifo_path +
-               "' and is consuming streamed payload data");
+          "' and is consuming streamed payload data");
 
     for (;;) {
         const int r = archive_read_next_header(a, &entry);
@@ -179,6 +206,35 @@ out:
     data->exitval = exitval;
 }
 
+fs::path make_target_extract_path(const fs::path &mountpoint, const std::string &entry_path) {
+    if (entry_path.empty()) {
+        return mountpoint;
+    }
+
+    fs::path rel = fs::path(entry_path).is_absolute()
+        ? fs::path(entry_path).relative_path()
+        : fs::path(entry_path);
+
+    return mountpoint / rel;
+}
+
+void mount_target_device(const ManifestEntry &entry, const fs::path &mountpoint) {
+    if (entry.device.empty()) {
+        fail_runtime("archive handler missing device for " + entry.filename);
+    }
+    if (entry.filesystem.empty()) {
+        fail_runtime("archive handler missing filesystem for " + entry.filename);
+    }
+
+    if (::mount(entry.device.c_str(),
+                mountpoint.c_str(),
+                entry.filesystem.c_str(),
+                0,
+                nullptr) != 0) {
+        fail_runtime("failed to mount '" + entry.device + "' on '" + mountpoint.string() + "'");
+    }
+}
+
 void install_archive_image(StreamReader &reader,
                            const CpioEntry &cpio_entry,
                            const ManifestEntry &entry,
@@ -187,11 +243,36 @@ void install_archive_image(StreamReader &reader,
         fail_runtime("archive handler missing path for " + entry.filename);
     }
 
-    fs::path target = entry.path;
-    LOG_I("archive handler: target path='" + target.string() +
-               "', extraction via FIFO + libarchive");
+    if (entry.device.empty()) {
+        fail_runtime("archive handler missing device for " + entry.filename);
+    }
+
+    if (entry.filesystem.empty()) {
+        fail_runtime("archive handler missing filesystem for " + entry.filename);
+    }
+
+    const fs::path mountpoint = fs::temp_directory_path() /
+                                ("aegis-mnt-" + std::to_string(::getpid()));
     std::error_code ec;
-    if (entry.create_destination) {
+    fs::create_directories(mountpoint, ec);
+    if (ec) {
+        fail_runtime("cannot create mountpoint " + mountpoint.string());
+    }
+    RemoveTree mountpoint_guard{mountpoint};
+
+    LOG_I("archive handler: mounting device='" + entry.device +
+          "' filesystem='" + entry.filesystem +
+          "' at '" + mountpoint.string() + "'");
+
+    mount_target_device(entry, mountpoint);
+    ScopedMount scoped_mount{mountpoint, true};
+
+    const fs::path target = make_target_extract_path(mountpoint, entry.path);
+
+    LOG_I("archive handler: target path='" + target.string() +
+          "', extraction via FIFO + libarchive");
+
+    if (entry.create_destination || !fs::exists(target)) {
         fs::create_directories(target, ec);
         if (ec) {
             fail_runtime("cannot create destination " + target.string());
@@ -208,14 +289,15 @@ void install_archive_image(StreamReader &reader,
         fail_runtime("chdir failed for " + target.string());
     }
 
-    fs::path fifo = fs::temp_directory_path() / kFifoName;
+    fs::path fifo = fs::temp_directory_path() /
+                    ("archivfifo-" + std::to_string(::getpid()));
     ::unlink(fifo.c_str());
     if (::mkfifo(fifo.c_str(), 0600) != 0) {
         fail_runtime("FIFO cannot be created in archive handler");
     }
     UnlinkPath fifo_guard{fifo.string()};
     LOG_I("archive handler: created FIFO '" + fifo.string() +
-               "' for streamed archive extraction");
+          "' for streamed archive extraction");
 
     ExtractData extract_data{};
     extract_data.fifo_path = fifo.string();
