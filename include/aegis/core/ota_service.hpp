@@ -2,7 +2,9 @@
 
 #include <functional>
 #include <memory>
+#include <mutex>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include "aegis/bootloader/boot_control.hpp"
@@ -24,6 +26,7 @@ public:
     OtaStatus getStatus() const;
 
     void startInstall(const std::string& bundlePath);
+    void cancelInstall();
     void markGood();
     void markBad();
     void markActive(const std::string& slot);
@@ -35,7 +38,11 @@ public:
     void setStatusChangedCallback(std::function<void(const OtaStatus&)> cb);
 
 private:
+    void runInstall(std::stop_token stop, std::string bundlePath);
+
     OtaStateMachine machine_;
+    mutable std::mutex installMutex_;
+    std::jthread installThread_;
 };
 
 }  // namespace aegis

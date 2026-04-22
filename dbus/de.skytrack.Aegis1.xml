@@ -6,6 +6,7 @@
     <method name="Install">
       <arg name="bundle" type="s" direction="in"/>
     </method>
+    <method name="Cancel"/>
     <method name="GetStatus">
       <arg name="status" type="a{sv}" direction="out"/>
     </method>

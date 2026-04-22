@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stop_token>
 #include <string>
 
 namespace aegis {
@@ -16,6 +17,7 @@ struct OtaEvent {
     Type type {};
     std::string bundlePath;
     std::string message;
+    std::stop_token stop;
 };
 
 }  // namespace aegis

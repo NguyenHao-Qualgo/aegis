@@ -21,7 +21,7 @@ void InstallState::onEnter(OtaStateMachine& machine) {
     options.image_path = machine.getStatus().bundlePath;
     PackageInstaller installer(options);
     try {
-        installer.install(machine);
+        installer.install(machine, machine.installStopToken());
     } catch (const aegis::Error &error) {
         LOG_E("installation failed: " + std::string(error.what()));
         machine.transitionTo(std::make_unique<FailureState>(error.what()));

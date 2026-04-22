@@ -4,6 +4,7 @@
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <stop_token>
 #include <string>
 
 #include "aegis/core/ota_context.hpp"
@@ -44,6 +45,9 @@ public:
     void updateSlots(std::string booted, std::string primary);
     void clearLastError();
     void clearWorkflowData();  // clears targetSlot, bundleVersion, lastError
+    void setInstallStopToken(std::stop_token stop);
+    std::stop_token installStopToken() const;
+    void clearInstallStopToken();
 
     // Context service accessors (forwarded from OtaContext)
     const OtaConfig& config() const;
@@ -67,6 +71,7 @@ private:
     std::unique_ptr<IOtaState> state_;
     mutable std::mutex mutex_;
     std::function<void(const OtaStatus&)> onStatusChanged_;
+    std::stop_token installStopToken_;
 };
 
 }  // namespace aegis

@@ -25,6 +25,7 @@ OtaStatus OtaService::getStatus() const {
 }
 
 void OtaService::startInstall(const std::string& bundlePath) {
+    std::scoped_lock lock(installMutex_);
     const auto status = machine_.getStatus();
 
     if (status.state == OtaState::Reboot) {
@@ -32,15 +33,52 @@ void OtaService::startInstall(const std::string& bundlePath) {
         machine_.transitionTo(std::make_unique<IdleState>());
     }
 
-    machine_.dispatch(OtaEvent{
-        OtaEvent::Type::StartInstall,
-        bundlePath,
-        ""
+    if (installThread_.joinable() &&
+        status.state != OtaState::Download &&
+        status.state != OtaState::Install) {
+        installThread_.join();
+    }
+
+    if (installThread_.joinable()) {
+        throw std::runtime_error("Install already in progress");
+    }
+
+    installThread_ = std::jthread([this, bundlePath](std::stop_token stop) {
+        try {
+            LOG_I("Install thread started");
+            runInstall(stop, bundlePath);
+            LOG_I("Install finished");
+        } catch (const std::exception& e) {
+            LOG_E(std::string("Install failed: ") + e.what());
+        }
     });
 }
 
+void OtaService::runInstall(std::stop_token stop, std::string bundlePath) {
+    machine_.setInstallStopToken(stop);
+    try {
+        machine_.dispatch(OtaEvent{
+            OtaEvent::Type::StartInstall,
+            std::move(bundlePath),
+            "",
+            stop
+        });
+    } catch (...) {
+        machine_.clearInstallStopToken();
+        throw;
+    }
+    machine_.clearInstallStopToken();
+}
+
+void OtaService::cancelInstall() {
+    std::scoped_lock lock(installMutex_);
+    if (installThread_.joinable()) {
+        installThread_.request_stop();
+    }
+}
+
 void OtaService::resumeAfterBoot() {
-    machine_.dispatch(OtaEvent{OtaEvent::Type::ResumeAfterBoot, "", ""});
+    machine_.dispatch(OtaEvent{OtaEvent::Type::ResumeAfterBoot, "", "", {}});
 }
 
 void OtaService::markActive(const std::string& slot) {

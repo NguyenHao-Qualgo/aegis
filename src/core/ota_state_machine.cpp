@@ -168,6 +168,21 @@ void OtaStateMachine::clearWorkflowData() {
     status_.lastError.clear();
 }
 
+void OtaStateMachine::setInstallStopToken(std::stop_token stop) {
+    std::scoped_lock lock(mutex_);
+    installStopToken_ = stop;
+}
+
+std::stop_token OtaStateMachine::installStopToken() const {
+    std::scoped_lock lock(mutex_);
+    return installStopToken_;
+}
+
+void OtaStateMachine::clearInstallStopToken() {
+    std::scoped_lock lock(mutex_);
+    installStopToken_ = {};
+}
+
 void OtaStateMachine::setStatusChangedCallback(std::function<void(const OtaStatus&)> cb) {
     std::scoped_lock lock(mutex_);
     onStatusChanged_ = std::move(cb);

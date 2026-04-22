@@ -36,18 +36,16 @@ DbusService::DbusService(OtaService& service)
                                        "Install already in progress");
                 }
 
-                std::thread([this, bundle]() {
-                    try {
-                        LOG_I("Install thread started");
-                        service_.startInstall(bundle);
-                        LOG_I("Install finished");
-                    } catch (const std::exception& e) {
-                        LOG_E(std::string("Install failed: ") + e.what());
-                    }
-                }).detach();
+                service_.startInstall(bundle);
 
                 LOG_I("DBus Install returned (async)");
             }),
+
+        // sdbus::registerMethod("Cancel")
+        //     .implementedAs([this]() {
+        //         LOG_I("DBus Cancel called");
+        //         service_.cancelInstall();
+        //     }),
 
         sdbus::registerMethod("GetStatus")
             .withOutputParamNames("status")
@@ -136,6 +134,15 @@ void DbusService::signalLoop() {
 
 void DbusService::run() {
     connection_->enterEventLoop();
+}
+
+void DbusService::stop() {
+    service_.cancelInstall();
+    stopSignals_ = true;
+    signalCv_.notify_all();
+    if (connection_) {
+        connection_->leaveEventLoop();
+    }
 }
 
 }  // namespace aegis

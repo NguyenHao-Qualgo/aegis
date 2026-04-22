@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <csignal>
 #include <string>
 #include <string_view>
 
@@ -143,7 +144,23 @@ int Application::run(int argc, char** argv) {
         auto gcsClient = std::make_shared<GcsStub>();
         OtaService service(config, std::move(bootControl), stateStore, std::move(gcsClient));
         service.resumeAfterBoot();
+
+        sigset_t signal_set;
+        ::sigemptyset(&signal_set);
+        ::sigaddset(&signal_set, SIGINT);
+        ::sigaddset(&signal_set, SIGTERM);
+        if (::pthread_sigmask(SIG_BLOCK, &signal_set, nullptr) != 0) {
+            throw std::runtime_error("failed to block daemon signals");
+        }
+
         DbusService dbus(service);
+        std::thread([&dbus, signal_set]() mutable {
+            int signum = 0;
+            if (::sigwait(&signal_set, &signum) == 0) {
+                LOG_I("Received stop signal " + std::to_string(signum) + ", stopping daemon");
+                dbus.stop();
+            }
+        }).detach();
         dbus.run();
         return 0;
 #endif
