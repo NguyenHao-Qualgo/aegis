@@ -3,6 +3,7 @@
 #include <iostream>
 
 #include "aegis/core/types.hpp"
+#include "aegis/common/logging.hpp"
 
 namespace aegis {
 
@@ -16,12 +17,10 @@ std::optional<GcsUpdateInfo> GcsStub::checkForUpdate() {
 }
 
 void GcsStub::reportStatus(const OtaStatus& status) {
-    std::cout << "[gcs-stub] state=" << toString(status.state)
-              << " op=" << status.operation
-              << " progress=" << status.progress << "%";
-    if (!status.message.empty()) std::cout << " msg=" << status.message;
-    if (!status.lastError.empty()) std::cout << " error=" << status.lastError;
-    std::cout << '\n';
+    LOG_I("[gcs-stub] state={} op={} progress={}%", toString(status.state), status.operation, status.progress);
+    if (!status.message.empty()) LOG_I(" msg={}", status.message);
+    if (!status.lastError.empty()) LOG_I(" error={}", status.lastError);
+    LOG_I("");
 }
 
 }  // namespace aegis

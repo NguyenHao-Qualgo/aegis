@@ -43,14 +43,8 @@ std::string usage() {
         "  swupdate install --image <file|-> [--verbose]\n"
         "  swupdate pack --output <file.swu> --sw-description <file> [--sw-description-sig <file>] <payload>...\n"
         "\n"
-        "Install reads " + std::string(kDefaultConfigPath) + " for:\n"
-        "  public-key   = /path/to/update.pub.pem\n"
-        "  aes-key      = /path/to/update.aes   (optional)\n"
-        "  active-slot  = A | B                  (installer writes to the opposite slot)\n"
-        "\n"
         "Examples:\n"
         "  swupdate install --image update.swu\n"
-        "  cat update.swu | swupdate install --image -\n"
         "  swupdate pack --output update.swu --sw-description sw-description --sw-description-sig sw-description.sig rootfs.ext4.enc\n";
 }
 
@@ -85,7 +79,7 @@ PackOptions parse_pack(int argc, char **argv, int start_index) {
         } else if (std::strcmp(argv[i], "--sw-description-sig") == 0) {
             options.sw_description_sig = take_value(i, argc, argv, "--sw-description-sig");
         } else if (is_flag(argv[i], "-h", "--help")) {
-            std::cout << usage();
+            LOG_W(usage());
             std::exit(EXIT_SUCCESS);
         } else {
             options.payloads.emplace_back(argv[i]);
@@ -135,7 +129,8 @@ int Application::run(int argc, char** argv) {
 #if !defined(AEGIS_ENABLE_DBUS)
         throw std::runtime_error("Daemon support is disabled in this build");
 #else
-        AppLog::Init(AppLog::Level::info, nullptr, "aegis-daemon");
+        // TODO read conf and set log level accordingly
+        AppLog::Init(AppLog::Level::debug, nullptr, "aegis-daemon");
         LOG_I("Starting aegis daemon");
 
         const auto configPath = getOptionValue(args, "--config").empty() ? std::string(kDefaultConfigPath) : getOptionValue(args, "--config");
@@ -157,7 +152,6 @@ int Application::run(int argc, char** argv) {
 
 #if defined(AEGIS_ENABLE_DBUS)
     Cli client;
-    AppLog::Init(AppLog::Level::info, nullptr, "aegis-cli");
     return client.run(args);
 #else
     throw std::runtime_error("This build only supports 'bundle create'");
