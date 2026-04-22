@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include "aegis/common/util.hpp"
-#include "aegis/common/logger.hpp"
+#include "aegis/common/logging.hpp"
 #include <filesystem>
 
 using namespace aegis;
@@ -128,20 +128,4 @@ TEST(TimestampTest, NotEmpty) {
 TEST(TimestampTest, ContainsT) {
     // ISO 8601 format like "2024-01-01T00:00:00Z"
     EXPECT_NE(currentTimestamp().find('T'), std::string::npos);
-}
-
-TEST(LoggerTest, AllLevelsNoThrow) {
-    EXPECT_NO_THROW(logDebug("debug"));
-    EXPECT_NO_THROW(logInfo("info"));
-    EXPECT_NO_THROW(logWarn("warn"));
-    EXPECT_NO_THROW(logError("error"));
-}
-
-TEST(LoggerTest, StreamLoggingToggle) {
-    setStreamLogging(true);
-    EXPECT_TRUE(streamLoggingEnabled());
-    EXPECT_NO_THROW(logStream("trace msg"));
-    setStreamLogging(false);
-    EXPECT_FALSE(streamLoggingEnabled());
-    EXPECT_NO_THROW(logStream("suppressed"));
 }

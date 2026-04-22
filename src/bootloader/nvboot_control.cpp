@@ -46,9 +46,9 @@ std::string NVBootControl::getBootedSlot() const {
         const auto out = runCapture("nvbootctrl get-current-slot");
         if (out == "0") return "A";
         if (out == "1") return "B";
-        logWarn("Unexpected nvbootctrl get-current-slot output: '" + out + "', defaulting to A");
+        LOG_W("Unexpected nvbootctrl get-current-slot output: '" + out + "', defaulting to A");
     } catch (const std::exception& e) {
-        logWarn(std::string("nvbootctrl get-current-slot failed: ") + e.what());
+        LOG_W(std::string("nvbootctrl get-current-slot failed: ") + e.what());
     }
     return "A";
 }
@@ -61,13 +61,13 @@ std::string NVBootControl::getPrimarySlot() const {
         if (pos != std::string::npos && pos + marker.size() < out.size()) {
             const std::string slot(1, out[pos + marker.size()]);
             if (isValidSlotName(slot)) {
-                logDebug("Active rootfs slot: " + slot);
+                LOG_D("Active rootfs slot: " + slot);
                 return slot;
             }
         }
-        logWarn("Failed to parse active rootfs slot from: " + out);
+        LOG_W("Failed to parse active rootfs slot from: " + out);
     } catch (const std::exception& e) {
-        logWarn(std::string("nvbootctrl dump-slots-info failed: ") + e.what());
+        LOG_W(std::string("nvbootctrl dump-slots-info failed: ") + e.what());
     }
     return "A";
 }
@@ -88,9 +88,9 @@ bool NVBootControl::isSlotBootable(const std::string& slot) const {
             const auto line = out.substr(pos, lineEnd == std::string::npos ? std::string::npos : lineEnd - pos);
             return line.find("status: normal") != std::string::npos;
         }
-        logWarn("Could not find slot " + std::string(num) + " in dump-slots-info output");
+        LOG_W("Could not find slot " + std::string(num) + " in dump-slots-info output");
     } catch (const std::exception& e) {
-        logWarn(std::string("isSlotBootable failed: ") + e.what());
+        LOG_W(std::string("isSlotBootable failed: ") + e.what());
     }
     return false;
 }
@@ -98,7 +98,7 @@ bool NVBootControl::isSlotBootable(const std::string& slot) const {
 void NVBootControl::setSlotBootable(const std::string& slot, bool bootable) const {
     validateSlotName(slot);
     if (!bootable) {
-        logWarn("setSlotBootable(false) is not supported on NVIDIA Jetson; ignored for slot " + slot);
+        LOG_W("setSlotBootable(false) is not supported on NVIDIA Jetson; ignored for slot " + slot);
         return;
     }
     const auto varname = std::string("RootfsStatus") + (slot == "A" ? "SlotA" : "SlotB");
@@ -123,7 +123,7 @@ void NVBootControl::markGood(const std::string& slot) const {
 }
 
 void NVBootControl::markBad(const std::string& slot) const {
-    logWarn("markBad is not supported on NVIDIA Jetson; slot " + slot +
+    LOG_W("markBad is not supported on NVIDIA Jetson; slot " + slot +
             " will be abandoned via bootloader retry-count exhaustion");
 }
 

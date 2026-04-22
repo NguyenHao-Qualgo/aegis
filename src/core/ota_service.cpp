@@ -28,7 +28,7 @@ void OtaService::startInstall(const std::string& bundlePath) {
     const auto status = machine_.getStatus();
 
     if (status.state == OtaState::Reboot) {
-        logWarn("Cancelling pending reboot to start a new install");
+        LOG_W("Cancelling pending reboot to start a new install");
         machine_.transitionTo(std::make_unique<IdleState>());
     }
 

@@ -95,7 +95,7 @@ OtaConfig ConfigLoader::load(const std::string& path) {
         if (current_section.empty() || current_section == "update") {
             assign_key(config, key, value);
         }
-        logDebug("Config: " + key + " = " + value);
+        LOG_D("Config: " + key + " = " + value);
     }
 
     return config;

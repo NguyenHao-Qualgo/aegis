@@ -24,10 +24,10 @@
 namespace aegis {
 
 namespace {
-constexpr const char *kDefaultConfigPath = "/etc/aegis.conf";
+constexpr const char *kDefaultConfigPath = "/etc/skytrack/system.conf";
 
 [[noreturn]] void fail(const std::string &message) {
-    std::cerr << "error: " << message << '\n';
+    LOG_E(message);
     std::exit(EXIT_FAILURE);
 }
 
@@ -135,10 +135,11 @@ int Application::run(int argc, char** argv) {
 #if !defined(AEGIS_ENABLE_DBUS)
         throw std::runtime_error("Daemon support is disabled in this build");
 #else
-        logInfo("Starting aegis daemon");
+        AppLog::Init(AppLog::Level::info, nullptr, "aegis-daemon");
+        LOG_I("Starting aegis daemon");
 
         const auto configPath = getOptionValue(args, "--config").empty() ? std::string(kDefaultConfigPath) : getOptionValue(args, "--config");
-        logInfo("Loading config: " + configPath);
+        LOG_I("Loading config: " + configPath);
         ConfigLoader loader;
         const auto config = loader.load(configPath);
         std::filesystem::create_directories(config.data_directory);
@@ -156,6 +157,7 @@ int Application::run(int argc, char** argv) {
 
 #if defined(AEGIS_ENABLE_DBUS)
     Cli client;
+    AppLog::Init(AppLog::Level::info, nullptr, "aegis-cli");
     return client.run(args);
 #else
     throw std::runtime_error("This build only supports 'bundle create'");

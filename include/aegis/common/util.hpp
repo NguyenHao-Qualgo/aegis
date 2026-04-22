@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 
-#include "aegis/common/logger.hpp"
+#include "aegis/common/logging.hpp"
 
 namespace aegis {
 

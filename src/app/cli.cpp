@@ -18,8 +18,8 @@ namespace {
 volatile sig_atomic_t gInterrupted = 0;
 
 void signalHandler(int signum) {
-    logInfo("Ctrl+C pressed. Exiting aegis installation client...");
-    logInfo("Note that this will not abort the installation running in the aegis service!");
+    LOG_I("Ctrl+C pressed. Exiting aegis installation client...");
+    LOG_I("Note that this will not abort the installation running in the aegis service!");
     gInterrupted = 1;
 }
 
@@ -66,7 +66,7 @@ bool isTerminalState(const std::string& state) {
 
 int Cli::run(const std::vector<std::string>& args) const {
     if (args.empty()) {
-        std::cerr << "Usage: aegis <status|install|mark-active|get-primary|get-booted>\n";
+        LOG_E("Usage: aegis <status|install|mark-active|get-primary|get-booted>");
         return 1;
     }
 

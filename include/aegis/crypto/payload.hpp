@@ -9,7 +9,7 @@
 
 #include "aegis/io/cpio.hpp"
 #include "aegis/crypto/crypto.hpp"
-#include "aegis/common/logger.hpp"
+#include "aegis/common/logging.hpp"
 #include "aegis/crypto/sha256.hpp"
 #include "aegis/core/types.hpp"
 
@@ -25,7 +25,7 @@ void stream_plain_payload(StreamReader &reader,
     std::uint32_t checksum  = 0;
     Sha256 sha;
 
-    logStream("streaming payload '" + entry.name + "' directly from SWU stream, size=" +
+    LOG_I("streaming payload '" + entry.name + "' directly from SWU stream, size=" +
                std::to_string(entry.size) + " bytes");
 
     while (remaining > 0) {
@@ -42,7 +42,7 @@ void stream_plain_payload(StreamReader &reader,
     if (!expected_sha256.empty() && sha.final_hex() != expected_sha256) {
         fail_runtime("sha256 mismatch for " + entry.name);
     }
-    logStream("finished streaming payload '" + entry.name + "', streamed=" +
+    LOG_I("finished streaming payload '" + entry.name + "', streamed=" +
                std::to_string(entry.size) + " bytes");
 }
 
@@ -69,7 +69,7 @@ void stream_encrypted_payload(StreamReader &reader,
         fail_runtime("EVP_DecryptInit_ex failed" + (errors.empty() ? std::string() : "\n" + errors));
     }
 
-    logStream("streaming encrypted payload '" + entry.name +
+    LOG_I("streaming encrypted payload '" + entry.name +
                "' through in-process OpenSSL AES-CBC decrypt without extracting SWU");
 
     std::array<char, kIoBufferSize> inbuf{};
@@ -108,7 +108,7 @@ void stream_encrypted_payload(StreamReader &reader,
     if (!expected_sha256.empty() && encrypted_sha.final_hex() != expected_sha256) {
         fail_runtime("sha256 mismatch for " + entry.name);
     }
-    logStream("finished decrypted streaming for payload '" + entry.name + "'");
+    LOG_I("finished decrypted streaming for payload '" + entry.name + "'");
 }
 
 }  // namespace aegis

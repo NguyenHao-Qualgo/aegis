@@ -29,7 +29,7 @@ void IdleState::stopAndJoinPollThread() {
 
 void IdleState::onEnter(OtaStateMachine& machine) {
     machine.setIdle("Waiting for update");
-    logDebug(machine.getStatus().message);
+    LOG_D(machine.getStatus().message);
 
     if (machine.gcsClient()) {
         machine.gcsClient()->reportStatus(machine.getStatus());
@@ -80,7 +80,7 @@ void IdleState::handle(OtaStateMachine& machine, const OtaEvent& event) {
                                 machine.bootControl().getPrimarySlot());
             const auto status = machine.getStatus();
             if (status.bootedSlot != status.primarySlot) {
-                logWarn("Oops, someone has manually set active slot or service restart at Reboot state");
+                LOG_W("Oops, someone has manually set active slot or service restart at Reboot state");
             }
             machine.transitionTo(std::make_unique<DownloadState>());
         } catch (const std::exception& e) {

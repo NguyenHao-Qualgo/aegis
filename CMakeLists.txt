@@ -10,6 +10,8 @@ option(AEGIS_BUILD_TESTS "Build unit tests" ON)
 
 find_package(PkgConfig REQUIRED)
 find_package(OpenSSL REQUIRED)
+find_package(spdlog REQUIRED)
+find_package(fmt REQUIRED)
 
 pkg_check_modules(LIBARCHIVE REQUIRED IMPORTED_TARGET libarchive)
 pkg_check_modules(EFIVAR IMPORTED_TARGET efivar)
@@ -46,6 +48,7 @@ add_executable(aegis
     src/io/cpio.cpp
     src/crypto/crypto.cpp
     src/io/io.cpp
+    src/common/logging.cpp
 )
 
 if (AEGIS_ENABLE_DBUS)
@@ -63,7 +66,11 @@ target_link_libraries(aegis PRIVATE
     PkgConfig::LIBARCHIVE
     OpenSSL::SSL
     OpenSSL::Crypto
+    spdlog::spdlog_header_only
+    fmt::fmt
 )
+
+add_compile_definitions(SPDLOG_FMT_EXTERNAL)
 
 if (AEGIS_ENABLE_DBUS)
     target_link_libraries(aegis PRIVATE

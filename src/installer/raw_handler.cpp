@@ -6,7 +6,7 @@
 #include <sys/stat.h>
 
 #include "aegis/io/io.hpp"
-#include "aegis/common/logger.hpp"
+#include "aegis/common/logging.hpp"
 #include "aegis/crypto/payload.hpp"
 #include "aegis/core/types.hpp"
 
@@ -72,7 +72,7 @@ void install_raw_image(StreamReader &reader,
     }
 
     const fs::path target = entry.device;
-    logStream("raw handler: target device='" + target.string() +
+    LOG_I("raw handler: target device='" + target.string() +
                "', mode=direct stream write");
     int prot_stat = blkprotect(target, false);
     if (prot_stat < 0) {
@@ -102,7 +102,7 @@ void install_raw_image(StreamReader &reader,
         (void)blkprotect(target, true);
     }
 
-    logStream("raw handler: completed direct stream write to '" + target.string() + "'");
+    LOG_I("raw handler: completed direct stream write to '" + target.string() + "'");
 }
 
 void install_raw_file(StreamReader &reader,
@@ -115,7 +115,7 @@ void install_raw_file(StreamReader &reader,
 
     fs::path path = entry.path;
     fs::path tmp_path = entry.atomic_install ? fs::path(entry.path + ".tmp") : path;
-    logStream("raw handler: target file='" + path.string() + "', temp='" +
+    LOG_I("raw handler: target file='" + path.string() + "', temp='" +
                tmp_path.string() + "', atomic=" + std::string(entry.atomic_install ? "true" : "false"));
 
     if (entry.create_destination) {
@@ -153,7 +153,7 @@ void install_raw_file(StreamReader &reader,
         }
     }
 
-    logStream("raw handler: completed streamed file install to '" + path.string() + "'");
+    LOG_I("raw handler: completed streamed file install to '" + path.string() + "'");
 }
 
 }  // namespace

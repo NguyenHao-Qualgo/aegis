@@ -10,7 +10,7 @@
 #include <thread>
 
 #include "aegis/io/io.hpp"
-#include "aegis/common/logger.hpp"
+#include "aegis/common/logging.hpp"
 #include "aegis/crypto/payload.hpp"
 #include "aegis/core/types.hpp"
 
@@ -116,7 +116,7 @@ void extract(ExtractData *data) {
         goto out;
     }
 
-    logStream("archive handler: libarchive opened FIFO '" + data->fifo_path +
+    LOG_I("archive handler: libarchive opened FIFO '" + data->fifo_path +
                "' and is consuming streamed payload data");
 
     for (;;) {
@@ -188,7 +188,7 @@ void install_archive_image(StreamReader &reader,
     }
 
     fs::path target = entry.path;
-    logStream("archive handler: target path='" + target.string() +
+    LOG_I("archive handler: target path='" + target.string() +
                "', extraction via FIFO + libarchive");
     std::error_code ec;
     if (entry.create_destination) {
@@ -214,7 +214,7 @@ void install_archive_image(StreamReader &reader,
         fail_runtime("FIFO cannot be created in archive handler");
     }
     UnlinkPath fifo_guard{fifo.string()};
-    logStream("archive handler: created FIFO '" + fifo.string() +
+    LOG_I("archive handler: created FIFO '" + fifo.string() +
                "' for streamed archive extraction");
 
     ExtractData extract_data{};
@@ -227,7 +227,7 @@ void install_archive_image(StreamReader &reader,
 
     std::thread extractor([&]() { extract(&extract_data); });
     JoinThread extractor_guard{&extractor};
-    logStream("archive handler: started extraction thread");
+    LOG_I("archive handler: started extraction thread");
 
     FileDescriptor fdout(::open(fifo.c_str(), O_WRONLY));
     if (!fdout) {
@@ -238,7 +238,7 @@ void install_archive_image(StreamReader &reader,
         write_all_fd(fdout.get(), data, len);
     };
 
-    logStream("archive handler: writing payload bytes from SWU stream into FIFO");
+    LOG_I("archive handler: writing payload bytes from SWU stream into FIFO");
 
     if (entry.encrypted) {
         if (!aes) {
@@ -263,7 +263,7 @@ void install_archive_image(StreamReader &reader,
     }
 
     ::sync();
-    logStream("archive handler: completed streamed extraction into '" + target.string() + "'");
+    LOG_I("archive handler: completed streamed extraction into '" + target.string() + "'");
 }
 
 }  // namespace

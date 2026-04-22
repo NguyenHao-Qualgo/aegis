@@ -28,7 +28,7 @@ DbusService::DbusService(OtaService& service)
         sdbus::registerMethod("Install")
             .withInputParamNames("bundle")
             .implementedAs([this](const std::string& bundle) {
-                logInfo("DBus Install called");
+                LOG_I("DBus Install called");
 
                 const auto state = service_.getStatus().state;
                 if (state == OtaState::Download || state == OtaState::Install) {
@@ -38,15 +38,15 @@ DbusService::DbusService(OtaService& service)
 
                 std::thread([this, bundle]() {
                     try {
-                        logInfo("Install thread started");
+                        LOG_I("Install thread started");
                         service_.startInstall(bundle);
-                        logInfo("Install finished");
+                        LOG_I("Install finished");
                     } catch (const std::exception& e) {
-                        logError(std::string("Install failed: ") + e.what());
+                        LOG_E(std::string("Install failed: ") + e.what());
                     }
                 }).detach();
 
-                logInfo("DBus Install returned (async)");
+                LOG_I("DBus Install returned (async)");
             }),
 
         sdbus::registerMethod("GetStatus")

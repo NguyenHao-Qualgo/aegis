@@ -31,6 +31,7 @@ set(AEGIS_TESTABLE_SOURCES
     ${CMAKE_SOURCE_DIR}/src/states/reboot_state.cpp
     ${CMAKE_SOURCE_DIR}/src/states/commit_state.cpp
     ${CMAKE_SOURCE_DIR}/src/states/failure_state.cpp
+    ${CMAKE_SOURCE_DIR}/src/common/logging.cpp
 )
 
 add_library(aegis_testable STATIC ${AEGIS_TESTABLE_SOURCES})
@@ -42,6 +43,7 @@ target_link_libraries(aegis_testable PUBLIC
     PkgConfig::LIBARCHIVE
     OpenSSL::SSL
     OpenSSL::Crypto
+    fmt::fmt
 )
 
 if (AEGIS_ENABLE_COVERAGE)

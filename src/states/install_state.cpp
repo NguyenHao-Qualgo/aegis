@@ -23,7 +23,7 @@ void InstallState::onEnter(OtaStateMachine& machine) {
     try {
         installer.install(machine);
     } catch (const aegis::Error &error) {
-        logError("installation failed: " + std::string(error.what()));
+        LOG_E("installation failed: " + std::string(error.what()));
         machine.transitionTo(std::make_unique<FailureState>(error.what()));
         return;
     }

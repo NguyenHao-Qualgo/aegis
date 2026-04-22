@@ -15,7 +15,7 @@ FailureState::FailureState(std::string error)
 
 void FailureState::onEnter(OtaStateMachine& machine) {
     machine.setFailure(error_);
-    logError("OTA failure: " + error_);
+    LOG_E("OTA failure: " + error_);
     if (auto* gcs = machine.gcsClient()) {
         gcs->reportStatus(machine.getStatus());
     }

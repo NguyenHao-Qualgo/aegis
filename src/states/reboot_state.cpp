@@ -37,12 +37,12 @@ void RebootState::handle(OtaStateMachine& machine, const OtaEvent& event) {
             }
 
             if (booted == *status.targetSlot) {
-                logInfo("Booted into expected slot " + booted + " — transitioning to Commit");
+                LOG_I("Booted into expected slot " + booted + " — transitioning to Commit");
                 machine.transitionTo(std::make_unique<CommitState>());
                 return;
             }
 
-            logWarn("Slot mismatch: expected " + *status.targetSlot +
+            LOG_W("Slot mismatch: expected " + *status.targetSlot +
                     " but booted into " + booted + " (possible watchdog rollback)");
 
             // Rollback: point primary slot back to the slot we actually booted
@@ -51,9 +51,9 @@ void RebootState::handle(OtaStateMachine& machine, const OtaEvent& event) {
             try {
                 machine.bootControl().setPrimarySlot(booted);
                 machine.updateSlots(booted, booted);
-                logInfo("Primary slot reset to " + booted);
+                LOG_I("Primary slot reset to " + booted);
             } catch (const std::exception& e) {
-                logWarn("Failed to reset primary slot to " + booted + ": " + e.what());
+                LOG_W("Failed to reset primary slot to " + booted + ": " + e.what());
             }
 
             machine.transitionTo(std::make_unique<FailureState>(
