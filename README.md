@@ -1,91 +1,161 @@
-# Simple C++ Layer
+# Aegis
 
-This folder contains the new C++ implementation for the simplified SWUpdate flow.
+Aegis is a C++17 OTA utility that can:
 
-It is intentionally isolated from the original SWUpdate build. You can configure
-and build this folder on its own with its local `CMakeLists.txt`.
+- create signed SWUpdate-style `.swu` bundles with `aegis pack`
+- stream-install signed bundles without unpacking the whole archive first
+- handle `raw`, `archive`, and `tar` payload entries
+- verify `sw-description` signatures and optionally decrypt AES-CBC payloads
+- manage A/B slot activation through U-Boot or NVIDIA boot-control backends
 
-- [swupdate.cpp](/home/hao-nna/swupdate/cpp/swupdate.cpp) exposes only two flows:
-  `pack` to create `.swu` archives in `cpio` `crc/newc` format, and
-  `install` to parse and install `.swu` packages from C++ code.
-- [install_core.hpp](/home/hao-nna/swupdate/cpp/install_core.hpp) contains the
-  first standalone installer core:
-  streaming cpio parsing, detached `sw-description` signature verification,
-  minimal `sw-description` parsing, handler dispatch, and
-  AES-CBC payload decryption.
-- [raw_handler.cpp](/home/hao-nna/swupdate/cpp/raw_handler.cpp) is the first
-  C++ port shaped after SWUpdate's original `raw_handler.c`.
-- [archive_handler.cpp](/home/hao-nna/swupdate/cpp/archive_handler.cpp) is the
-  first C++ port shaped after SWUpdate's original `archive_handler.c`.
-- The supported `sw-description` subset for now is the `images:` list with
-  `filename`, `type`, `device`, `path`, `sha256`, `encrypted`, `ivt`,
-  `preserve-attributes`, `create-destination`, and `atomic-install`.
-- `sw-description.sig` is expected directly after `sw-description` in the archive.
-- Runtime dependency for install is `libarchive`; signature verification and
-  AES-CBC decryption are handled in-process via OpenSSL library calls.
+When built with DBus support, the same binary also exposes an OTA daemon and a small CLI client for `status`, `install`, `mark-active`, `get-primary`, and `get-booted`.
 
-## Standalone build
+## Repository Highlights
 
-From the `cpp/` directory:
+- `src/installer/packer.cpp`: writes `.swu` archives in `cpio crc/newc` format
+- `src/installer/installer.cpp`: streaming installer for signed `.swu` bundles
+- `src/installer/raw_handler.cpp`: raw image/file writer
+- `src/installer/archive_handler.cpp`: streamed archive extraction through `libarchive`
+- `src/service/dbus_service.cpp`: DBus daemon surface
+- `sw-description.default`: example A/B rootfs manifest template
+- `gen_update.sh`: helper that fills the manifest template, signs it, and packs the bundle
+- `gen_test_keys.sh`: helper that creates local test RSA/AES materials
 
-```bash
-cmake -S . -B build
-cmake --build build
-```
+## Build Requirements
 
-The produced binary is:
+Required for all builds:
 
-```bash
-./build/swupdate_cpp
-```
+- CMake 3.16+
+- a C++17 compiler
+- `pkg-config`
+- OpenSSL
+- `libarchive`
+- `fmt`
+- `spdlog`
 
-## Quick SWU generation
+Additional dependencies:
 
-Generate a test RSA keypair for this C++ flow:
+- `GTest` when `AEGIS_BUILD_TESTS=ON` (default)
+- `sdbus-c++` when `AEGIS_ENABLE_DBUS=ON`
+- `lcov` and `genhtml` if you want the coverage target
 
-```bash
-chmod +x ./gen_test_keys.sh
-./gen_test_keys.sh --outdir ./keys --name qemuarm64
-```
+## Native Build
 
-This produces:
+Pack-only build:
 
 ```bash
-./keys/qemuarm64.key.pem
-./keys/qemuarm64.public.pem
+cmake -S . -B build -DAEGIS_ENABLE_DBUS=OFF
+cmake --build build --parallel
 ```
 
-There is also a helper script to generate a signed `.swu` for testing:
+Run the unit tests:
+
+```bash
+ctest --test-dir build --output-on-failure
+```
+
+The generated binary is:
+
+```bash
+./build/aegis
+```
+
+There is also a helper script that configures coverage, builds, runs the tests, and generates an HTML report:
+
+```bash
+./build_and_run_test.sh
+```
+
+## DBus-Enabled Build
+
+Enable DBus support if you want the daemon and client commands:
+
+```bash
+cmake -S . -B build -DAEGIS_ENABLE_DBUS=ON
+cmake --build build --parallel
+```
+
+With that build, `aegis` supports:
+
+```bash
+aegis daemon --config /etc/skytrack/system.conf
+aegis status
+aegis install /data/update.swu
+aegis mark-active A
+aegis get-primary
+aegis get-booted
+```
+
+The default daemon config path is `/etc/skytrack/system.conf`. The loader accepts either top-level keys or an `[update]` section with these entries:
+
+```ini
+[update]
+public-key=/etc/skytrack/test.public.pem
+aes-key=/etc/skytrack/aes.key
+data-directory=/var/lib/aegis
+bootloader-type=nvidia
+```
+
+Notes:
+
+- `bootloader-type` accepts `nvidia` or defaults to the U-Boot backend
+- U-Boot runtime support expects `fw_printenv` and `fw_setenv`
+- NVIDIA runtime support expects `nvbootctrl` and the UEFI helper script used by Jetson systems
+- install paths that write devices, mount filesystems, or modify boot state generally require root privileges
+
+## Creating Test Keys
+
+Generate a local RSA keypair plus an AES material file:
+
+```bash
+./gen_test_keys.sh
+```
+
+This creates:
+
+```bash
+./test-keys/test.private.pem
+./test-keys/test.public.pem
+./test-keys/aes.key
+```
+
+The script stops if `./test-keys` already exists.
+
+## Creating A Bundle
+
+`aegis pack` only assembles the archive. If you also want placeholder replacement and manifest signing, use `gen_update.sh`.
+
+Quick smoke example:
 
 ```bash
 ./gen_update.sh \
-  --output update.swu \
-  --swupdate ./build/swupdate_cpp \
-  --type raw \
-  --payload rootfs.ext4 \
-  --dest /dev/mmcblk0p2 \
-  --sign-key priv.pem
+  --output /tmp/update.swu \
+  --aegis ./build/aegis \
+  --sw-description ./sw-description.default \
+  --sign-key ./test-keys/test.private.pem \
+  --payload ./test
 ```
 
-To add more payloads into the same `.swu`, use `--add-payload`:
+That command:
+
+- copies `sw-description.default`
+- replaces `__FILENAME__`, `__ENCRYPTED__`, `__SHA256__`, and `__IVT__`
+- signs the final `sw-description`
+- calls `aegis pack` to create the `.swu`
+
+To emit an encrypted payload, add:
 
 ```bash
-./gen_update.sh \
-  --output update.swu \
-  --swupdate ./build/swupdate_cpp \
-  --type tar \
-  --payload rootfs.tar.bz2 \
-  --dest /tmp/swupdate-test \
-  --add-payload raw rootfs.ext4 /dev/vda3 \
-  --sign-key priv.pem \
-  --create-destination \
-  --preserve-attributes
-```
-
-For encrypted payloads, add:
-
-```bash
-  --encrypt \
   --aes-key-hex <64-hex-key> \
   --aes-iv-hex <32-hex-iv>
+```
+
+If you already have a ready-to-pack `sw-description` and its detached signature, the low-level packing command is:
+
+```bash
+./build/aegis pack \
+  --output update.swu \
+  --sw-description sw-description \
+  --sw-description-sig sw-description.sig \
+  payload.bin
 ```
