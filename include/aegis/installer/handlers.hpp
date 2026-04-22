@@ -6,11 +6,13 @@ class StreamReader;
 struct CpioEntry;
 struct ManifestEntry;
 struct AesMaterial;
+struct InstallContext;
 
 class IHandler {
 public:
     virtual ~IHandler() = default;
-    virtual void install(StreamReader &reader,
+    virtual void install(const InstallContext& ctx,
+                         StreamReader &reader,
                          const CpioEntry &cpio_entry,
                          const ManifestEntry &entry,
                          const AesMaterial *aes) = 0;
@@ -18,7 +20,8 @@ public:
 
 class RawHandler final : public IHandler {
 public:
-    void install(StreamReader &reader,
+    void install(const InstallContext& ctx,
+                 StreamReader &reader,
                  const CpioEntry &cpio_entry,
                  const ManifestEntry &entry,
                  const AesMaterial *aes) override;
@@ -26,7 +29,8 @@ public:
 
 class ArchiveHandler final : public IHandler {
 public:
-    void install(StreamReader &reader,
+    void install(const InstallContext& ctx,
+                 StreamReader &reader,
                  const CpioEntry &cpio_entry,
                  const ManifestEntry &entry,
                  const AesMaterial *aes) override;

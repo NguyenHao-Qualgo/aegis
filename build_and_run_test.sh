@@ -1,6 +1,9 @@
 #!/bin/bash
 set -euo pipefail
 
-cmake -S . -B build -DAEGIS_ENABLE_COVERAGE=ON -DAEGIS_ENABLE_DBUS=OFF
+cmake -S . -B build \
+    -DAEGIS_ENABLE_COVERAGE=ON \
+    -DAEGIS_ENABLE_DBUS=OFF \
+    -DAEGIS_BUILD_TESTS=ON
 cmake --build build -j$(nproc)
 cmake --build build --target coverage

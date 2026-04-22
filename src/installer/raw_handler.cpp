@@ -1,20 +1,24 @@
 #include "aegis/installer/handlers.hpp"
 
+#include <cerrno>
+#include <cstring>
 #include <fcntl.h>
 #include <filesystem>
 #include <limits.h>
 #include <sys/stat.h>
 
-#include "aegis/io/io.hpp"
+#include "aegis/common/error.hpp"
 #include "aegis/common/logging.hpp"
-#include "aegis/crypto/payload.hpp"
 #include "aegis/core/types.hpp"
+#include "aegis/installer/install_context.hpp"
+#include "aegis/installer/payload_streamer.hpp"
+#include "aegis/io/io.hpp"
 
 namespace aegis {
 
 namespace {
 
-int blkprotect(const fs::path &device, bool on) {
+int blkprotect(const fs::path& device, bool on) {
     char abs_path[PATH_MAX] = {};
     constexpr char unprot_char = '0';
     constexpr char prot_char = '1';
@@ -63,55 +67,85 @@ int blkprotect(const fs::path &device, bool on) {
     return 1;
 }
 
-void install_raw_image(StreamReader &reader,
-                       const CpioEntry &cpio_entry,
-                       const ManifestEntry &entry,
-                       const AesMaterial *aes) {
+void write_all_checked(int fd, const char* data, std::size_t len, const InstallContext& ctx) {
+    while (len > 0) {
+        ctx.check_cancel();
+
+        const ssize_t rc = ::write(fd, data, len);
+        if (rc < 0) {
+            if (errno == EINTR) {
+                continue;
+            }
+            fail_runtime(std::string("write failed: ") + std::strerror(errno));
+        }
+
+        data += rc;
+        len -= static_cast<std::size_t>(rc);
+    }
+}
+
+class BlockProtectionGuard {
+public:
+    explicit BlockProtectionGuard(fs::path device) : device_(std::move(device)) {
+        status_ = blkprotect(device_, false);
+        if (status_ < 0) {
+            fail_runtime("failed to disable block protection for " + device_.string());
+        }
+    }
+
+    ~BlockProtectionGuard() {
+        if (status_ == 1) {
+            (void)blkprotect(device_, true);
+        }
+    }
+
+private:
+    fs::path device_;
+    int status_ = 0;
+};
+
+}  // namespace
+
+void RawHandler::install(const InstallContext& ctx,
+                         StreamReader &reader,
+                         const CpioEntry &cpio_entry,
+                         const ManifestEntry &entry,
+                         const AesMaterial *aes) {
+    ctx.check_cancel();
+
     if (entry.device.empty()) {
         fail_runtime("raw image missing device for " + entry.filename);
     }
 
     const fs::path target = entry.device;
-    LOG_I("raw handler: target device='" + target.string() +
-               "', mode=direct stream write");
-    int prot_stat = blkprotect(target, false);
-    if (prot_stat < 0) {
-        fail_runtime("failed to disable block protection for " + target.string());
-    }
-    FileDescriptor out;
-    out.reset(::open(target.c_str(), O_RDWR));
+    LOG_I("raw handler: target device='" + target.string() + "', mode=direct stream write");
+
+    BlockProtectionGuard protection(target);
+    FileDescriptor out(::open(target.c_str(), O_RDWR));
     if (!out) {
         fail_runtime("cannot open device " + target.string());
     }
 
-    auto sink = [&](const char *data, std::size_t len) {
-        write_all_fd(out.get(), data, len);
+    PayloadStreamer streamer(ctx);
+    auto sink = [&](const char* data, std::size_t len) {
+        write_all_checked(out.get(), data, len, ctx);
     };
 
     if (entry.encrypted) {
         if (!aes) {
             fail_runtime("encrypted payload requires --aes-key");
         }
-        stream_encrypted_payload(reader, cpio_entry, *aes, entry.ivt, sink, entry.sha256);
+        streamer.stream_encrypted(reader, cpio_entry, *aes, entry.ivt, sink, entry.sha256);
     } else {
-        stream_plain_payload(reader, cpio_entry, sink, entry.sha256);
+        streamer.stream_plain(reader, cpio_entry, sink, entry.sha256);
     }
 
-    if (prot_stat == 1) {
-        ::fsync(out.get());
-        (void)blkprotect(target, true);
+    ctx.check_cancel();
+    if (::fsync(out.get()) != 0) {
+        fail_runtime("failed to fsync raw device " + target.string());
     }
 
     LOG_I("raw handler: completed direct stream write to '" + target.string() + "'");
-}
-
-}  // namespace
-
-void RawHandler::install(StreamReader &reader,
-                         const CpioEntry &cpio_entry,
-                         const ManifestEntry &entry,
-                         const AesMaterial *aes) {
-    install_raw_image(reader, cpio_entry, entry, aes);
 }
 
 }  // namespace aegis

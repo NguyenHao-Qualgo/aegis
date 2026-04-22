@@ -1,25 +1,35 @@
 #include "aegis/installer/installer.hpp"
 
-#include <csignal>
 #include <cstdlib>
 #include <fcntl.h>
+#include <functional>
 #include <optional>
 #include <unistd.h>
 
-#include "aegis/io/cpio.hpp"
-#include "aegis/crypto/crypto.hpp"
-#include "aegis/io/io.hpp"
 #include "aegis/common/logging.hpp"
+#include "aegis/installer/cancel.hpp"
+#include "aegis/installer/install_context.hpp"
+#include "aegis/installer/install_signal_scope.hpp"
 #include "aegis/installer/manifest.hpp"
-#include "aegis/crypto/payload.hpp"
+#include "aegis/io/cpio.hpp"
+#include "aegis/io/io.hpp"
+#include "aegis/crypto/crypto.hpp"
 
 namespace aegis {
 
 PackageInstaller::PackageInstaller(const InstallOptions &options) : options_(options) {}
 
-int PackageInstaller::install(OtaStateMachine& machine) {
-    (void)::signal(SIGPIPE, SIG_IGN);
+int PackageInstaller::install(OtaStateMachine& machine, std::stop_token stop) {
+    ScopedInstallSignalHandlers signal_scope;
+    CancelSource cancel_source;
+    const std::function<void()> forward_cancel = [&cancel_source]() { cancel_source.request(); };
+    const std::optional<std::stop_callback<std::function<void()>>> stop_callback =
+        stop.stop_possible()
+            ? std::optional<std::stop_callback<std::function<void()>>>(std::in_place, stop, forward_cancel)
+            : std::nullopt;
+    const InstallContext ctx{machine, cancel_source.token(), ScopedInstallSignalHandlers::cancel_signal_flag()};
 
+    ctx.check_cancel();
     machine.setProgress(OtaState::Install, "verify", 15, "Verifying package signature");
     if (options_.config.public_key.empty()) { fail_runtime("public key is not configured"); }
 
@@ -37,6 +47,7 @@ int PackageInstaller::install(OtaStateMachine& machine) {
                std::string(options_.image_path == "-" ? "stdin" : options_.image_path));
     LOG_I("outer SWU cpio is read sequentially; no full SWU extraction is performed");
 
+    ctx.check_cancel();
     const CpioEntry swdesc = read_cpio_entry(reader);
     if (swdesc.name != "sw-description") { fail_runtime("sw-description must be the first cpio entry"); }
     LOG_I("read cpio entry '" + swdesc.name + "' size=" + std::to_string(swdesc.size));
@@ -61,6 +72,7 @@ int PackageInstaller::install(OtaStateMachine& machine) {
         fail_runtime("signed sw-description is required");
     }
 
+    ctx.check_cancel();
     std::vector<ManifestEntry> entries = parse_manifest(sw_description, options_.target_slot);
     LOG_I("parsed sw-description, applicable images=" + std::to_string(entries.size()) +
                (options_.target_slot.empty() ? "" : " slot=" + options_.target_slot));
@@ -70,6 +82,7 @@ int PackageInstaller::install(OtaStateMachine& machine) {
 
     machine.setProgress(OtaState::Install, "install", 30, "Installing payload");
     for (;;) {
+        ctx.check_cancel();
         if (next.name == kTrailerName) { LOG_I("reached cpio trailer"); break; }
 
         ManifestEntry *manifest = find_manifest_entry(entries, next.name);
@@ -84,7 +97,7 @@ int PackageInstaller::install(OtaStateMachine& machine) {
             IHandler &handler = (manifest->type == "raw")
                 ? static_cast<IHandler &>(raw_handler_)
                 : static_cast<IHandler &>(archive_handler_);
-            handler.install(reader, next, *manifest, aes ? &*aes : nullptr);
+            handler.install(ctx, reader, next, *manifest, aes ? &*aes : nullptr);
             manifest->installed = true;
             LOG_I("handler finished for '" + next.name + "'");
         }
@@ -93,6 +106,7 @@ int PackageInstaller::install(OtaStateMachine& machine) {
         LOG_I("read next cpio entry '" + next.name + "' size=" + std::to_string(next.size));
     }
 
+    ctx.check_cancel();
     machine.setProgress(OtaState::Install, "install", 95, "Installation complete, finalizing");
     for (const auto &entry : entries) {
         if (!entry.installed) { fail_runtime("required image missing from swu: " + entry.filename); }

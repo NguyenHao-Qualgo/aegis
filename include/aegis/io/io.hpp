@@ -86,7 +86,12 @@ public:
         std::size_t done = 0;
         while (done < len) {
             const ssize_t rc = ::read(input_fd_, dst + done, len - done);
-            if (rc < 0) { fail_runtime(std::string("read failed: ") + std::strerror(errno)); }
+            if (rc < 0) {
+                if (errno == EINTR) {
+                    continue;
+                }
+                fail_runtime(std::string("read failed: ") + std::strerror(errno));
+            }
             if (rc == 0) { fail_runtime("unexpected end of stream"); }
             tee(dst + done, static_cast<std::size_t>(rc));
             done += static_cast<std::size_t>(rc);

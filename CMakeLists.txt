@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 project(aegis LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -42,6 +42,7 @@ add_executable(aegis
     src/states/failure_state.cpp
     src/installer/packer.cpp
     src/installer/installer.cpp
+    src/installer/install_signal_scope.cpp
     src/installer/manifest.cpp
     src/installer/raw_handler.cpp
     src/installer/archive_handler.cpp

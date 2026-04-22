@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stop_token>
+
 #include "aegis/installer/handlers.hpp"
 #include "aegis/core/types.hpp"
 #include "aegis/core/ota_state_machine.hpp"
@@ -9,7 +11,7 @@ namespace aegis {
 class PackageInstaller {
 public:
     explicit PackageInstaller(const InstallOptions &options);
-    int install(OtaStateMachine& machine);
+    int install(OtaStateMachine& machine, std::stop_token stop = {});
 
 private:
     const InstallOptions &options_;

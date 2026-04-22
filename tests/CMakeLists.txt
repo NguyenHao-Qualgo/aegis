@@ -16,6 +16,7 @@ set(AEGIS_TESTABLE_SOURCES
     ${CMAKE_SOURCE_DIR}/src/installer/manifest.cpp
     ${CMAKE_SOURCE_DIR}/src/installer/packer.cpp
     ${CMAKE_SOURCE_DIR}/src/installer/installer.cpp
+    ${CMAKE_SOURCE_DIR}/src/installer/install_signal_scope.cpp
     ${CMAKE_SOURCE_DIR}/src/installer/raw_handler.cpp
     ${CMAKE_SOURCE_DIR}/src/installer/archive_handler.cpp
     ${CMAKE_SOURCE_DIR}/src/crypto/crypto.cpp
@@ -73,6 +74,7 @@ aegis_test(test_cpio)
 aegis_test(test_command_runner)
 aegis_test(test_packer)
 aegis_test(test_ota_state_machine)
+aegis_test(test_install_cancel)
 
 if (AEGIS_ENABLE_COVERAGE)
     add_custom_target(coverage

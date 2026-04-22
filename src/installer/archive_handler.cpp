@@ -2,8 +2,11 @@
 
 #include <archive.h>
 #include <archive_entry.h>
+#include <cerrno>
+#include <cstring>
 #include <fcntl.h>
 #include <filesystem>
+#include <limits.h>
 #include <locale.h>
 #include <pthread.h>
 #include <sys/mount.h>
@@ -11,11 +14,13 @@
 #include <thread>
 #include <unistd.h>
 
-#include "aegis/io/io.hpp"
+#include "aegis/common/error.hpp"
 #include "aegis/common/logging.hpp"
 #include "aegis/common/util.hpp"
-#include "aegis/crypto/payload.hpp"
 #include "aegis/core/types.hpp"
+#include "aegis/installer/install_context.hpp"
+#include "aegis/installer/payload_streamer.hpp"
+#include "aegis/io/io.hpp"
 
 namespace aegis {
 
@@ -36,7 +41,7 @@ struct RestoreCwd {
 };
 
 struct JoinThread {
-    std::thread *thread = nullptr;
+    std::thread* thread = nullptr;
 
     ~JoinThread() {
         if (thread != nullptr && thread->joinable()) {
@@ -87,9 +92,9 @@ struct ExtractData {
     std::string error_detail;
 };
 
-int copy_data(struct archive *ar, struct archive *aw, struct archive_entry * /*entry*/) {
+int copy_data(struct archive* ar, struct archive* aw, struct archive_entry*) {
     int r;
-    const void *buff;
+    const void* buff;
     size_t size;
 #if ARCHIVE_VERSION_NUMBER >= 3000000
     int64_t offset;
@@ -115,7 +120,7 @@ int copy_data(struct archive *ar, struct archive *aw, struct archive_entry * /*e
     }
 }
 
-void extract(ExtractData *data) {
+void extract(ExtractData* data) {
 #if defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__)
     locale_t archive_locale = newlocale(LC_CTYPE_MASK, "", static_cast<locale_t>(0));
     locale_t old_locale = static_cast<locale_t>(0);
@@ -124,9 +129,9 @@ void extract(ExtractData *data) {
     }
 #endif
 
-    struct archive *a = archive_read_new();
-    struct archive *ext = archive_write_disk_new();
-    struct archive_entry *entry = nullptr;
+    struct archive* a = archive_read_new();
+    struct archive* ext = archive_write_disk_new();
+    struct archive_entry* entry = nullptr;
     int exitval = -EFAULT;
 
     if (!a || !ext) {
@@ -207,7 +212,7 @@ out:
     data->exitval = exitval;
 }
 
-fs::path make_target_extract_path(const fs::path &mountpoint, const std::string &entry_path) {
+fs::path make_target_extract_path(const fs::path& mountpoint, const std::string& entry_path) {
     if (entry_path.empty()) {
         return mountpoint;
     }
@@ -219,7 +224,7 @@ fs::path make_target_extract_path(const fs::path &mountpoint, const std::string 
     return mountpoint / rel;
 }
 
-void mount_target_device(const ManifestEntry &entry, const fs::path &mountpoint) {
+void mount_target_device(const ManifestEntry& entry, const fs::path& mountpoint) {
     if (entry.device.empty()) {
         fail_runtime("archive handler missing device for " + entry.filename);
     }
@@ -236,30 +241,53 @@ void mount_target_device(const ManifestEntry &entry, const fs::path &mountpoint)
     }
 }
 
-void install_archive_image(StreamReader &reader,
-                           const CpioEntry &cpio_entry,
-                           const ManifestEntry &entry,
-                           const AesMaterial *aes) {
+void write_all_checked(int fd, const char* data, std::size_t len, const InstallContext& ctx) {
+    while (len > 0) {
+        ctx.check_cancel();
+
+        const ssize_t rc = ::write(fd, data, len);
+        if (rc < 0) {
+            if (errno == EINTR) {
+                continue;
+            }
+            if (errno == EPIPE) {
+                fail_runtime("write failed: archive extractor closed the FIFO");
+            }
+            fail_runtime(std::string("write failed: ") + std::strerror(errno));
+        }
+
+        data += rc;
+        len -= static_cast<std::size_t>(rc);
+    }
+}
+
+}  // namespace
+
+void ArchiveHandler::install(const InstallContext& ctx,
+                             StreamReader &reader,
+                             const CpioEntry &cpio_entry,
+                             const ManifestEntry &entry,
+                             const AesMaterial *aes) {
+    ctx.check_cancel();
+
     if (entry.path.empty()) {
         fail_runtime("archive handler missing path for " + entry.filename);
     }
-
     if (entry.device.empty()) {
         fail_runtime("archive handler missing device for " + entry.filename);
     }
-
     if (entry.filesystem.empty()) {
         fail_runtime("archive handler missing filesystem for " + entry.filename);
     }
-
     if (!hasFilesystemType(entry.device, entry.filesystem)) {
         fail_runtime("archive handler unsupported filesystem for " + entry.device);
     }
 
     makeExt4Filesystem(entry.device, true);
+    ctx.check_cancel();
 
-    const fs::path mountpoint = fs::temp_directory_path() /
-                                ("aegis-mnt-" + std::to_string(::getpid()));
+    const fs::path mountpoint =
+        fs::temp_directory_path() / ("aegis-mnt-" + std::to_string(::getpid()));
     std::error_code ec;
     fs::create_directories(mountpoint, ec);
     if (ec) {
@@ -267,17 +295,14 @@ void install_archive_image(StreamReader &reader,
     }
     RemoveTree mountpoint_guard{mountpoint};
 
-    LOG_I("archive handler: mounting device='" + entry.device +
-          "' filesystem='" + entry.filesystem +
-          "' at '" + mountpoint.string() + "'");
+    LOG_I("archive handler: mounting device='" + entry.device + "' filesystem='" +
+          entry.filesystem + "' at '" + mountpoint.string() + "'");
 
     mount_target_device(entry, mountpoint);
     ScopedMount scoped_mount{mountpoint, true};
 
     const fs::path target = make_target_extract_path(mountpoint, entry.path);
-
-    LOG_I("archive handler: target path='" + target.string() +
-          "', extraction via FIFO + libarchive");
+    LOG_I("archive handler: target path='" + target.string() + "', extraction via FIFO + libarchive");
 
     if (entry.create_destination || !fs::exists(target)) {
         fs::create_directories(target, ec);
@@ -297,14 +322,13 @@ void install_archive_image(StreamReader &reader,
     }
 
     fs::path fifo = fs::temp_directory_path() /
-                    ("archivfifo-" + std::to_string(::getpid()));
+                    (std::string(kFifoName) + "-" + std::to_string(::getpid()));
     ::unlink(fifo.c_str());
     if (::mkfifo(fifo.c_str(), 0600) != 0) {
         fail_runtime("FIFO cannot be created in archive handler");
     }
     UnlinkPath fifo_guard{fifo.string()};
-    LOG_I("archive handler: created FIFO '" + fifo.string() +
-          "' for streamed archive extraction");
+    LOG_I("archive handler: created FIFO '" + fifo.string() + "' for streamed archive extraction");
 
     ExtractData extract_data{};
     extract_data.fifo_path = fifo.string();
@@ -323,19 +347,19 @@ void install_archive_image(StreamReader &reader,
         fail_runtime("failed to open FIFO " + fifo.string());
     }
 
-    auto sink = [&](const char *data, std::size_t len) {
-        write_all_fd(fdout.get(), data, len);
+    PayloadStreamer streamer(ctx);
+    auto sink = [&](const char* data, std::size_t len) {
+        write_all_checked(fdout.get(), data, len, ctx);
     };
 
     LOG_I("archive handler: writing payload bytes from SWU stream into FIFO");
-
     if (entry.encrypted) {
         if (!aes) {
             fail_runtime("encrypted payload requires --aes-key");
         }
-        stream_encrypted_payload(reader, cpio_entry, *aes, entry.ivt, sink, entry.sha256);
+        streamer.stream_encrypted(reader, cpio_entry, *aes, entry.ivt, sink, entry.sha256);
     } else {
-        stream_plain_payload(reader, cpio_entry, sink, entry.sha256);
+        streamer.stream_plain(reader, cpio_entry, sink, entry.sha256);
     }
 
     fdout.reset();
@@ -343,6 +367,7 @@ void install_archive_image(StreamReader &reader,
         extractor.join();
     }
 
+    ctx.check_cancel();
     if (extract_data.exitval != 0) {
         std::string message = "archive extraction failed for " + entry.filename;
         if (!extract_data.error_detail.empty()) {
@@ -353,15 +378,6 @@ void install_archive_image(StreamReader &reader,
 
     ::sync();
     LOG_I("archive handler: completed streamed extraction into '" + target.string() + "'");
-}
-
-}  // namespace
-
-void ArchiveHandler::install(StreamReader &reader,
-                             const CpioEntry &cpio_entry,
-                             const ManifestEntry &entry,
-                             const AesMaterial *aes) {
-    install_archive_image(reader, cpio_entry, entry, aes);
 }
 
 }  // namespace aegis

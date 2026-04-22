@@ -1,7 +1,10 @@
 #pragma once
 #include <spdlog/spdlog.h>
 
+#include <fmt/format.h>
+
 #include <memory>
+#include <utility>
 
 constexpr std::size_t APPLOG_CONFIG_DEFAULT_LOG_FILE_SIZE = 10 * 1024 * 1024;
 constexpr std::size_t APPLOG_CONFIG_DEFAULT_LOG_FILE_COUNT = 2;
@@ -26,9 +29,27 @@ class AppLog {
 
         return s_AppLogger;
     };
-    template <typename... Params>
-    inline static std::string Format(const char* file, int line, const char* func, Params&&... params) {
-        return fmt::format("{}:{}::{}(): {}", file, line, func, fmt::format(std::forward<Params>(params)...));
+
+    inline static std::string Format(const char* file, int line, const char* func) {
+        return fmt::format("{}:{}::{}()", file, line, func);
+    }
+
+    template <typename Message>
+    inline static std::string Format(const char* file, int line, const char* func, Message&& message) {
+        return fmt::format("{}:{}::{}(): {}", file, line, func, std::forward<Message>(message));
+    }
+
+    template <typename... Args>
+    inline static std::string Format(const char* file,
+                                     int line,
+                                     const char* func,
+                                     fmt::format_string<Args...> format,
+                                     Args&&... args) {
+        return fmt::format("{}:{}::{}(): {}",
+                           file,
+                           line,
+                           func,
+                           fmt::format(format, std::forward<Args>(args)...));
     }
     static void Flush();
     static void DumpBacktrace();
