@@ -28,6 +28,10 @@ bool OtaService::isInstallActive(const OtaStatus& status) const {
     return status.state == OtaState::Download || status.state == OtaState::Install;
 }
 
+void OtaService::dispatchEvent(const OtaEvent& event) {
+    machine_.dispatch(event);
+}
+
 void OtaService::reapFinishedInstallLocked(const OtaStatus& status) {
     if (installThread_.joinable() && !isInstallActive(status)) {
         installThread_.join();
@@ -40,7 +44,7 @@ void OtaService::startInstall(const std::string& bundlePath) {
 
     if (status.state == OtaState::Reboot) {
         LOG_W("Cancelling pending reboot to start a new install");
-        machine_.transitionTo(std::make_unique<IdleState>());
+        machine_.transitionToIdle();
     }
 
     reapFinishedInstallLocked(status);
@@ -64,7 +68,7 @@ void OtaService::startInstall(const std::string& bundlePath) {
 void OtaService::runInstall(std::stop_token stop, std::string bundlePath) {
     machine_.setInstallStopToken(stop);
     try {
-        machine_.dispatch(OtaEvent{
+        dispatchEvent(OtaEvent{
             OtaEvent::Type::StartInstall,
             std::move(bundlePath),
             ""
@@ -85,7 +89,15 @@ void OtaService::cancelInstall() {
 }
 
 void OtaService::resumeAfterBoot() {
-    machine_.dispatch(OtaEvent{OtaEvent::Type::ResumeAfterBoot, "", ""});
+    dispatchEvent(OtaEvent{OtaEvent::Type::ResumeAfterBoot, "", ""});
+}
+
+void OtaService::markGood() {
+    dispatchEvent(OtaEvent{OtaEvent::Type::MarkGood, "", ""});
+}
+
+void OtaService::markBad() {
+    dispatchEvent(OtaEvent{OtaEvent::Type::MarkBad, "", ""});
 }
 
 void OtaService::markActive(const std::string& slot) {

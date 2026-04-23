@@ -5,14 +5,16 @@
 
 #include "aegis/common/command_runner.hpp"
 #include "aegis/states/commit_state.hpp"
+#include "aegis/states/download_state.hpp"
 #include "aegis/states/failure_state.hpp"
 #include "aegis/states/idle_state.hpp"
+#include "aegis/states/install_state.hpp"
 #include "aegis/states/reboot_state.hpp"
 #include "aegis/common/util.hpp"
 
 namespace aegis {
 
-static std::unique_ptr<IOtaState> stateFromPersisted(const OtaStatus& status) {
+std::unique_ptr<IOtaState> OtaStateMachine::stateFromPersisted(const OtaStatus& status) {
     switch (status.state) {
     case OtaState::Reboot:
         LOG_I("Resuming persisted Reboot state — waiting for ResumeAfterBoot");
@@ -83,6 +85,30 @@ void OtaStateMachine::transitionTo(std::unique_ptr<IOtaState> next) {
     state_->onEnter(*this);
 }
 
+void OtaStateMachine::transitionToIdle() {
+    transitionTo(std::make_unique<IdleState>());
+}
+
+void OtaStateMachine::transitionToDownload() {
+    transitionTo(std::make_unique<DownloadState>());
+}
+
+void OtaStateMachine::transitionToInstall() {
+    transitionTo(std::make_unique<InstallState>());
+}
+
+void OtaStateMachine::transitionToReboot() {
+    transitionTo(std::make_unique<RebootState>());
+}
+
+void OtaStateMachine::transitionToCommit() {
+    transitionTo(std::make_unique<CommitState>());
+}
+
+void OtaStateMachine::transitionToFailure(std::string error) {
+    transitionTo(std::make_unique<FailureState>(std::move(error)));
+}
+
 OtaStatus OtaStateMachine::getStatus() const {
     std::scoped_lock lock(mutex_);
     return status_;
@@ -118,6 +144,7 @@ void OtaStateMachine::setIdle(const std::string& message) {
     status_.progress = 0;
     status_.message = message;
     status_.targetSlot.reset();
+    save();
 }
 
 void OtaStateMachine::setFailure(const std::string& error, const std::string& message) {

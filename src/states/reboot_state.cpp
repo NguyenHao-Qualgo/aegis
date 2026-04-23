@@ -4,9 +4,6 @@
 #include <stdexcept>
 
 #include "aegis/core/ota_state_machine.hpp"
-#include "aegis/states/commit_state.hpp"
-#include "aegis/states/failure_state.hpp"
-#include "aegis/states/idle_state.hpp"
 #include "aegis/common/util.hpp"
 
 namespace aegis {
@@ -25,7 +22,7 @@ void RebootState::onExit(OtaStateMachine& machine) {
 void RebootState::handle(OtaStateMachine& machine, const OtaEvent& event) {
     switch (event.type) {
     case OtaEvent::Type::Reset:
-        machine.transitionTo(std::make_unique<IdleState>());
+        machine.transitionToIdle();
         return;
 
     case OtaEvent::Type::ResumeAfterBoot: {
@@ -41,7 +38,7 @@ void RebootState::handle(OtaStateMachine& machine, const OtaEvent& event) {
 
             if (booted == *status.targetSlot) {
                 LOG_I("Booted into expected slot " + booted + " — transitioning to Commit");
-                machine.transitionTo(std::make_unique<CommitState>());
+                machine.transitionToCommit();
                 return;
             }
 
@@ -59,10 +56,9 @@ void RebootState::handle(OtaStateMachine& machine, const OtaEvent& event) {
                 LOG_W("Failed to reset primary slot to " + booted + ": " + e.what());
             }
 
-            machine.transitionTo(std::make_unique<FailureState>(
-                "Booted slot does not match expected target"));
+            machine.transitionToFailure("Booted slot does not match expected target");
         } catch (const std::exception& e) {
-            machine.transitionTo(std::make_unique<FailureState>(e.what()));
+            machine.transitionToFailure(e.what());
         }
         return;
     }

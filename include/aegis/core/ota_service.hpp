@@ -38,6 +38,7 @@ public:
 
 private:
     bool isInstallActive(const OtaStatus& status) const;
+    void dispatchEvent(const OtaEvent& event);
     void reapFinishedInstallLocked(const OtaStatus& status);
 
     void runInstall(std::stop_token stop, std::string bundlePath);
