@@ -2,7 +2,7 @@
 
 #include <optional>
 
-#include "aegis/service/gcs_client.hpp"
+#include "aegis/core/gcs_client.hpp"
 
 namespace aegis {
 

@@ -8,7 +8,7 @@
 #include <sstream>
 #include <stdexcept>
 
-#include "aegis/io/command_runner.hpp"
+#include "aegis/common/command_runner.hpp"
 namespace aegis {
 
 bool startsWith(const std::string& value, const std::string& prefix) {

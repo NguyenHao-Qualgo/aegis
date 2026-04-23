@@ -1,4 +1,4 @@
-#include "aegis/app/app.hpp"
+#include "aegis/core/application.hpp"
 
 #include <cstdlib>
 #include <cstring>
@@ -10,16 +10,16 @@
 #include <string_view>
 
 #include "aegis/bootloader/boot_control_factory.hpp"
-#include "aegis/app/cli.hpp"
-#include "aegis/config/config.hpp"
-#include "aegis/service/gcs_stub.hpp"
+#include "aegis/core/cli.hpp"
+#include "aegis/common/config.hpp"
+#include "aegis/stub/gcs_stub.hpp"
 #include "aegis/core/ota_service.hpp"
-#include "aegis/config/state_store.hpp"
+#include "aegis/common/state_store.hpp"
 #include "aegis/common/util.hpp"
 #include "aegis/installer/packer.hpp"
 
 #if defined(AEGIS_ENABLE_DBUS)
-#include "aegis/service/dbus_service.hpp"
+#include "aegis/core/dbus_service.hpp"
 #endif
 
 namespace aegis {

@@ -1,4 +1,4 @@
-#include "aegis/io/cpio.hpp"
+#include "aegis/common/cpio.hpp"
 
 #include <cstring>
 

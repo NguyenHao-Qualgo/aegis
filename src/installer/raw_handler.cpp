@@ -1,4 +1,4 @@
-#include "aegis/installer/handlers.hpp"
+#include "aegis/installer/raw_handler.hpp"
 
 #include <fcntl.h>
 #include <filesystem>
@@ -10,7 +10,7 @@
 #include "aegis/core/types.hpp"
 #include "aegis/installer/handler_utils.hpp"
 #include "aegis/installer/install_context.hpp"
-#include "aegis/io/io.hpp"
+#include "aegis/common/io.hpp"
 
 namespace aegis {
 

@@ -2,9 +2,10 @@
 
 #include <stop_token>
 
-#include "aegis/installer/handlers.hpp"
 #include "aegis/core/types.hpp"
 #include "aegis/core/ota_state_machine.hpp"
+#include "aegis/installer/archive_handler.hpp"
+#include "aegis/installer/raw_handler.hpp"
 
 namespace aegis {
 

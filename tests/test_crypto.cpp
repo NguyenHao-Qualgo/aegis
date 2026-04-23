@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "aegis/crypto/crypto.hpp"
+#include "aegis/common/crypto.hpp"
 #include "aegis/common/error.hpp"
 #include <filesystem>
 #include <fstream>

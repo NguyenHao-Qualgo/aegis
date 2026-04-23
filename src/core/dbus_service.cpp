@@ -1,4 +1,4 @@
-#include "aegis/service/dbus_service.hpp"
+#include "aegis/core/dbus_service.hpp"
 #include "aegis/core/types.hpp"
 #include "aegis/common/util.hpp"
 

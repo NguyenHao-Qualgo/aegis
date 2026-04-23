@@ -10,7 +10,7 @@
 #include "aegis/core/ota_context.hpp"
 #include "aegis/core/ota_event.hpp"
 #include "aegis/core/ota_state.hpp"
-#include "aegis/config/state_store.hpp"
+#include "aegis/common/state_store.hpp"
 #include "aegis/core/types.hpp"
 
 namespace aegis {

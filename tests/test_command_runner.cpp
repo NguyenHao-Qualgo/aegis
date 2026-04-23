@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "aegis/io/command_runner.hpp"
+#include "aegis/common/command_runner.hpp"
 #include <stdexcept>
 
 using namespace aegis;

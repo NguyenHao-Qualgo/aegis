@@ -5,8 +5,8 @@
 #include <vector>
 
 #include "aegis/bootloader/boot_control.hpp"
-#include "aegis/config/config.hpp"
-#include "aegis/service/gcs_client.hpp"
+#include "aegis/common/config.hpp"
+#include "aegis/core/gcs_client.hpp"
 #include "aegis/core/types.hpp"
 
 namespace aegis {

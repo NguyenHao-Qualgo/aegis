@@ -3,7 +3,7 @@
 #include <stdexcept>
 #include <string>
 
-#include "aegis/io/command_runner.hpp"
+#include "aegis/common/command_runner.hpp"
 #include "aegis/common/util.hpp"
 
 namespace aegis {

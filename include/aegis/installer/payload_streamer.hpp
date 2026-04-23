@@ -9,10 +9,10 @@
 
 #include "aegis/common/logging.hpp"
 #include "aegis/core/types.hpp"
-#include "aegis/crypto/crypto.hpp"
-#include "aegis/crypto/sha256.hpp"
+#include "aegis/common/crypto.hpp"
+#include "aegis/common/sha256.hpp"
 #include "aegis/installer/install_context.hpp"
-#include "aegis/io/cpio.hpp"
+#include "aegis/common/cpio.hpp"
 
 namespace aegis {
 

@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "aegis/config/config.hpp"
+#include "aegis/common/config.hpp"
 #include "aegis/common/util.hpp"
 #include <filesystem>
 

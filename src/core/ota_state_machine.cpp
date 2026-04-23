@@ -3,7 +3,7 @@
 #include <filesystem>
 #include <stdexcept>
 
-#include "aegis/io/command_runner.hpp"
+#include "aegis/common/command_runner.hpp"
 #include "aegis/states/commit_state.hpp"
 #include "aegis/states/failure_state.hpp"
 #include "aegis/states/idle_state.hpp"

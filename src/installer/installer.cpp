@@ -8,9 +8,9 @@
 #include "aegis/installer/install_context.hpp"
 #include "aegis/installer/install_signal_scope.hpp"
 #include "aegis/installer/manifest.hpp"
-#include "aegis/io/cpio.hpp"
-#include "aegis/io/io.hpp"
-#include "aegis/crypto/crypto.hpp"
+#include "aegis/common/cpio.hpp"
+#include "aegis/common/io.hpp"
+#include "aegis/common/crypto.hpp"
 
 namespace aegis {
 

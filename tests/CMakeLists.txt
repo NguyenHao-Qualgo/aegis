@@ -11,8 +11,8 @@ set(AEGIS_TESTABLE_SOURCES
     ${CMAKE_SOURCE_DIR}/src/core/ota_context.cpp
     ${CMAKE_SOURCE_DIR}/src/core/ota_state_machine.cpp
     ${CMAKE_SOURCE_DIR}/src/core/ota_service.cpp
-    ${CMAKE_SOURCE_DIR}/src/config/config.cpp
-    ${CMAKE_SOURCE_DIR}/src/config/state_store.cpp
+    ${CMAKE_SOURCE_DIR}/src/common/config.cpp
+    ${CMAKE_SOURCE_DIR}/src/common/state_store.cpp
     ${CMAKE_SOURCE_DIR}/src/installer/manifest.cpp
     ${CMAKE_SOURCE_DIR}/src/installer/packer.cpp
     ${CMAKE_SOURCE_DIR}/src/installer/installer.cpp
@@ -21,11 +21,11 @@ set(AEGIS_TESTABLE_SOURCES
     ${CMAKE_SOURCE_DIR}/src/installer/archive_support.cpp
     ${CMAKE_SOURCE_DIR}/src/installer/raw_handler.cpp
     ${CMAKE_SOURCE_DIR}/src/installer/archive_handler.cpp
-    ${CMAKE_SOURCE_DIR}/src/crypto/crypto.cpp
-    ${CMAKE_SOURCE_DIR}/src/io/io.cpp
-    ${CMAKE_SOURCE_DIR}/src/io/cpio.cpp
-    ${CMAKE_SOURCE_DIR}/src/io/command_runner.cpp
-    ${CMAKE_SOURCE_DIR}/src/service/gcs_stub.cpp
+    ${CMAKE_SOURCE_DIR}/src/common/crypto.cpp
+    ${CMAKE_SOURCE_DIR}/src/common/io.cpp
+    ${CMAKE_SOURCE_DIR}/src/common/cpio.cpp
+    ${CMAKE_SOURCE_DIR}/src/common/command_runner.cpp
+    ${CMAKE_SOURCE_DIR}/src/stub/gcs_stub.cpp
     ${CMAKE_SOURCE_DIR}/src/bootloader/uboot_control.cpp
     ${CMAKE_SOURCE_DIR}/src/bootloader/nvboot_control.cpp
     ${CMAKE_SOURCE_DIR}/src/states/idle_state.cpp

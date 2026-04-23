@@ -7,10 +7,10 @@
 #include <thread>
 
 #include "aegis/bootloader/boot_control.hpp"
-#include "aegis/service/gcs_client.hpp"
+#include "aegis/core/gcs_client.hpp"
 #include "aegis/core/ota_context.hpp"
 #include "aegis/core/ota_state_machine.hpp"
-#include "aegis/config/state_store.hpp"
+#include "aegis/common/state_store.hpp"
 #include "aegis/core/types.hpp"
 
 namespace aegis {

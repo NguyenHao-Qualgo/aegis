@@ -23,18 +23,18 @@ endif()
 
 add_executable(aegis
     src/main.cpp
-    src/app/app.cpp
-    src/config/config.cpp
+    src/core/application.cpp
+    src/common/config.cpp
     src/core/types.cpp
     src/common/util.cpp
-    src/io/command_runner.cpp
+    src/common/command_runner.cpp
     src/bootloader/uboot_control.cpp
     src/bootloader/nvboot_control.cpp
-    src/config/state_store.cpp
+    src/common/state_store.cpp
     src/core/ota_context.cpp
     src/core/ota_state_machine.cpp
     src/core/ota_service.cpp
-    src/service/gcs_stub.cpp
+    src/stub/gcs_stub.cpp
     src/states/idle_state.cpp
     src/states/download_state.cpp
     src/states/install_state.cpp
@@ -49,16 +49,16 @@ add_executable(aegis
     src/installer/manifest.cpp
     src/installer/raw_handler.cpp
     src/installer/archive_handler.cpp
-    src/io/cpio.cpp
-    src/crypto/crypto.cpp
-    src/io/io.cpp
+    src/common/cpio.cpp
+    src/common/crypto.cpp
+    src/common/io.cpp
     src/common/logging.cpp
 )
 
 if (AEGIS_ENABLE_DBUS)
     target_sources(aegis PRIVATE
-        src/service/dbus_service.cpp
-        src/app/cli.cpp
+        src/core/dbus_service.cpp
+        src/core/cli.cpp
     )
 endif()
 

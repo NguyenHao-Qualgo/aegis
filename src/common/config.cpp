@@ -1,4 +1,4 @@
-#include "aegis/config/config.hpp"
+#include "aegis/common/config.hpp"
 
 #include <algorithm>
 #include <cctype>

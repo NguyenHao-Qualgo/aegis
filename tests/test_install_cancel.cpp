@@ -8,7 +8,7 @@
 #include <unistd.h>
 
 #include "fakes.hpp"
-#include "aegis/config/state_store.hpp"
+#include "aegis/common/state_store.hpp"
 #include "aegis/core/ota_context.hpp"
 #include "aegis/core/ota_state_machine.hpp"
 #include "aegis/installer/install_context.hpp"

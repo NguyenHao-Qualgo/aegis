@@ -1,4 +1,4 @@
-#include "aegis/app/cli.hpp"
+#include "aegis/core/cli.hpp"
 #include "aegis/common/util.hpp"
 
 #include <chrono>
