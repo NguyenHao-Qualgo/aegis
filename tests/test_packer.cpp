@@ -3,17 +3,50 @@
 #include "aegis/common/util.hpp"
 #include "aegis/common/error.hpp"
 #include <filesystem>
+#include <string>
+
+#include <unistd.h>
 
 using namespace aegis;
 
+namespace {
+
+std::string sanitize_name(std::string value) {
+    for (char& ch : value) {
+        const bool ok = (ch >= 'a' && ch <= 'z') ||
+                        (ch >= 'A' && ch <= 'Z') ||
+                        (ch >= '0' && ch <= '9');
+        if (!ok) {
+            ch = '_';
+        }
+    }
+    return value;
+}
+
+std::string make_test_path(const char* prefix, const char* suffix) {
+    const auto* test_info = ::testing::UnitTest::GetInstance()->current_test_info();
+    const std::string suite = sanitize_name(test_info ? test_info->test_suite_name() : "suite");
+    const std::string name = sanitize_name(test_info ? test_info->name() : "test");
+    return (std::filesystem::temp_directory_path() /
+            (std::string(prefix) + "_" + suite + "_" + name + "_" +
+             std::to_string(::getpid()) + suffix)).string();
+}
+
+}  // namespace
+
 class PackerTest : public ::testing::Test {
 protected:
-    const std::string sw_desc   = "/tmp/aegis_unittest_swdesc_12345";
-    const std::string payload   = "/tmp/aegis_unittest_payload_12345.ext4";
-    const std::string sig_file  = "/tmp/aegis_unittest_swdesc_sig_12345";
-    const std::string output    = "/tmp/aegis_unittest_output_12345.swu";
+    std::string sw_desc;
+    std::string payload;
+    std::string sig_file;
+    std::string output;
 
     void SetUp() override {
+        sw_desc = make_test_path("sw-description", "");
+        payload = make_test_path("rootfs", ".ext4");
+        sig_file = make_test_path("sw-description.sig", "");
+        output = make_test_path("test", ".swu");
+
         writeFile(sw_desc,  "software = { version = \"1.0\"; }");
         writeFile(payload,  "fake payload content for testing");
     }

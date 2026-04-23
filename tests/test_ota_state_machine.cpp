@@ -236,10 +236,16 @@ TEST_F(OtaServiceTest, StatusCallback) {
                    std::make_unique<FakeBootControl>(),
                    StateStore(store_path),
                    nullptr);
-    OtaStatus captured;
-    svc.setStatusChangedCallback([&](const OtaStatus& s) { captured = s; });
-    // startInstall dispatches an event that calls setProgress → save → callback
+    bool saw_non_idle = false;
+    svc.setStatusChangedCallback([&](const OtaStatus& s) {
+        if (s.state != OtaState::Idle) {
+            saw_non_idle = true;
+        }
+    });
+    // startInstall dispatches async work. The final callback may already be Idle
+    // again if the install fails quickly, so assert that we observed any non-idle
+    // status during the callback stream.
     svc.startInstall("/tmp/bundle.swu");
-    // State transitions: Idle → DownloadState::onEnter runs which calls setProgress
-    EXPECT_NE(captured.state, OtaState::Idle);
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    EXPECT_TRUE(saw_non_idle);
 }
