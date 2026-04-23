@@ -2,19 +2,41 @@
 
 #include <cstdlib>
 #include <fcntl.h>
+#include <memory>
 #include <unistd.h>
 
 #include "aegis/common/logging.hpp"
 #include "aegis/installer/install_context.hpp"
+#include "aegis/installer/archive_handler.hpp"
 #include "aegis/installer/install_signal_scope.hpp"
 #include "aegis/installer/manifest.hpp"
+#include "aegis/installer/raw_handler.hpp"
 #include "aegis/common/cpio.hpp"
 #include "aegis/common/io.hpp"
 #include "aegis/common/crypto.hpp"
 
 namespace aegis {
 
-PackageInstaller::PackageInstaller(const InstallOptions &options) : options_(options) {}
+PackageInstaller::HandlerMap PackageInstaller::createHandlers() {
+    HandlerMap handlers;
+    handlers.emplace("raw", std::make_unique<RawHandler>());
+    handlers.emplace("archive", std::make_unique<ArchiveHandler>());
+    return handlers;
+}
+
+PackageInstaller::PackageInstaller(const InstallOptions &options)
+    : options_(options),
+      handlers_(createHandlers()) {}
+
+PackageInstaller::~PackageInstaller() = default;
+
+IHandler& PackageInstaller::handlerFor(const std::string& type) const {
+    const auto it = handlers_.find(type);
+    if (it == handlers_.end() || it->second == nullptr) {
+        fail_runtime("unsupported installer handler type: " + type);
+    }
+    return *it->second;
+}
 
 int PackageInstaller::install(OtaStateMachine& machine, std::stop_token stop) {
     ScopedInstallSignalHandlers signal_scope;
@@ -85,9 +107,7 @@ int PackageInstaller::install(OtaStateMachine& machine, std::stop_token stop) {
             skip_padding(reader, next.size);
         } else {
             LOG_I("dispatching cpio entry '" + next.name + "' to handler type='" + manifest->type + "'");
-            IHandler &handler = (manifest->type == "raw")
-                ? static_cast<IHandler &>(raw_handler_)
-                : static_cast<IHandler &>(archive_handler_);
+            IHandler& handler = handlerFor(manifest->type);
             handler.install(ctx, reader, next, *manifest, aes ? &*aes : nullptr);
             manifest->installed = true;
             LOG_I("handler finished for '" + next.name + "'");

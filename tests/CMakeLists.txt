@@ -25,6 +25,7 @@ set(AEGIS_TESTABLE_SOURCES
     ${CMAKE_SOURCE_DIR}/src/common/io.cpp
     ${CMAKE_SOURCE_DIR}/src/common/cpio.cpp
     ${CMAKE_SOURCE_DIR}/src/common/command_runner.cpp
+    ${CMAKE_SOURCE_DIR}/src/common/signal_set.cpp
     ${CMAKE_SOURCE_DIR}/src/stub/gcs_stub.cpp
     ${CMAKE_SOURCE_DIR}/src/bootloader/uboot_control.cpp
     ${CMAKE_SOURCE_DIR}/src/bootloader/nvboot_control.cpp

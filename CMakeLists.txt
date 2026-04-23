@@ -28,6 +28,7 @@ add_executable(aegis
     src/core/types.cpp
     src/common/util.cpp
     src/common/command_runner.cpp
+    src/common/signal_set.cpp
     src/bootloader/uboot_control.cpp
     src/bootloader/nvboot_control.cpp
     src/common/state_store.cpp
