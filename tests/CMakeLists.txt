@@ -20,6 +20,7 @@ set(AEGIS_TESTABLE_SOURCES
     ${CMAKE_SOURCE_DIR}/src/installer/handler_utils.cpp
     ${CMAKE_SOURCE_DIR}/src/installer/archive_support.cpp
     ${CMAKE_SOURCE_DIR}/src/installer/raw_handler.cpp
+    ${CMAKE_SOURCE_DIR}/src/installer/file_handler.cpp
     ${CMAKE_SOURCE_DIR}/src/installer/archive_handler.cpp
     ${CMAKE_SOURCE_DIR}/src/common/crypto.cpp
     ${CMAKE_SOURCE_DIR}/src/common/io.cpp

@@ -60,6 +60,11 @@ software =
             filename = "esp.tar.gz";
             type = "archive";
             path = "/boot/efi";
+        },
+        {
+            filename = "secondLoader.enc";
+            type = "file";
+            path = "/boot/efi/EFI/BOOT/secondLoader.enc";
         }
     );
 }
@@ -68,7 +73,9 @@ software =
 static const std::string kSlottedManifest = R"(
 software =
 {
-    slotB: {
+    version = "1.0.0";
+
+    B: {
         images: (
             {
                 filename = "rootfs-b.ext4";
@@ -77,7 +84,7 @@ software =
             }
         );
     };
-    slotA: {
+    A: {
         images: (
             {
                 filename = "rootfs-a.ext4";
@@ -108,7 +115,7 @@ TEST(ManifestParseTest, MultipleEntries) {
 
 TEST(ManifestParseTest, ImagesAndFilesEntries) {
     const auto entries = parse_manifest(kImagesAndFilesManifest);
-    ASSERT_EQ(entries.size(), 2u);
+    ASSERT_EQ(entries.size(), 3u);
     EXPECT_EQ(entries[0].filename, "rootfs.ext4.gz");
     EXPECT_EQ(entries[0].type, "raw");
     EXPECT_EQ(entries[0].compress, "zlib");
@@ -117,17 +124,20 @@ TEST(ManifestParseTest, ImagesAndFilesEntries) {
     EXPECT_EQ(entries[1].path, "/boot/efi");
     EXPECT_TRUE(entries[1].device.empty());
     EXPECT_TRUE(entries[1].filesystem.empty());
+    EXPECT_EQ(entries[2].filename, "secondLoader.enc");
+    EXPECT_EQ(entries[2].type, "file");
+    EXPECT_EQ(entries[2].path, "/boot/efi/EFI/BOOT/secondLoader.enc");
 }
 
 TEST(ManifestParseTest, WithTargetSlot) {
-    const auto entries = parse_manifest(kSlottedManifest, "slotB");
+    const auto entries = parse_manifest(kSlottedManifest, "B");
     ASSERT_EQ(entries.size(), 1u);
     EXPECT_EQ(entries[0].filename, "rootfs-b.ext4");
     EXPECT_EQ(entries[0].device,   "/dev/sdb1");
 }
 
 TEST(ManifestParseTest, SlotAExtraction) {
-    const auto entries = parse_manifest(kSlottedManifest, "slotA");
+    const auto entries = parse_manifest(kSlottedManifest, "A");
     ASSERT_EQ(entries.size(), 1u);
     EXPECT_EQ(entries[0].filename, "rootfs-a.ext4");
 }
@@ -235,17 +245,27 @@ TEST(ManifestParseTest, NoImagesBlockThrows) {
 TEST(ManifestParseTest, FilesOnlyManifest) {
     const std::string manifest = R"(
         software = {
-            files: ({
-                filename = "esp.tar.gz";
-                type = "archive";
-                path = "/boot/efi";
-            });
+            files: (
+                {
+                    filename = "esp.tar.gz";
+                    type = "archive";
+                    path = "/boot/efi";
+                },
+                {
+                    filename = "secondLoader.enc";
+                    type = "file";
+                    path = "/boot/efi/EFI/BOOT/secondLoader.enc";
+                }
+            );
         }
     )";
     const auto entries = parse_manifest(manifest);
-    ASSERT_EQ(entries.size(), 1u);
+    ASSERT_EQ(entries.size(), 2u);
     EXPECT_EQ(entries[0].filename, "esp.tar.gz");
     EXPECT_EQ(entries[0].path, "/boot/efi");
+    EXPECT_EQ(entries[1].filename, "secondLoader.enc");
+    EXPECT_EQ(entries[1].type, "file");
+    EXPECT_EQ(entries[1].path, "/boot/efi/EFI/BOOT/secondLoader.enc");
 }
 
 TEST(FindManifestEntryTest, EntryFound) {
