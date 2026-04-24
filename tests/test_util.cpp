@@ -129,3 +129,16 @@ TEST(TimestampTest, ContainsT) {
     // ISO 8601 format like "2024-01-01T00:00:00Z"
     EXPECT_NE(currentTimestamp().find('T'), std::string::npos);
 }
+
+TEST(QuoteTest, StripDoubleQuotes) {
+    EXPECT_EQ(strip_quotes("\"hello\""), "hello");
+    EXPECT_EQ(strip_quotes("  \"hello\"  "), "hello");
+}
+
+TEST(QuoteTest, NoQuotesUnchanged) {
+    EXPECT_EQ(strip_quotes("hello"), "hello");
+}
+
+TEST(QuoteTest, EmptyQuotedString) {
+    EXPECT_EQ(strip_quotes("\"\""), "");
+}

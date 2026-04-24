@@ -240,19 +240,6 @@ TEST(ManifestHelpersTest, ToBoolFalse) {
     EXPECT_FALSE(to_bool("1"));
 }
 
-TEST(ManifestHelpersTest, StripDoubleQuotes) {
-    EXPECT_EQ(strip_quotes("\"hello\""), "hello");
-    EXPECT_EQ(strip_quotes("  \"hello\"  "), "hello");
-}
-
-TEST(ManifestHelpersTest, NoQuotesUnchanged) {
-    EXPECT_EQ(strip_quotes("hello"), "hello");
-}
-
-TEST(ManifestHelpersTest, EmptyQuotedString) {
-    EXPECT_EQ(strip_quotes("\"\""), "");
-}
-
 TEST(ParseAesKeyFileTest, ValidFile) {
     const std::string path = "/tmp/aegis_unittest_aes_12345.key";
     {

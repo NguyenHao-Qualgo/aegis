@@ -23,5 +23,9 @@ bool hasOption(const std::vector<std::string>& args, const std::string& option);
 std::string detectFilesystemType(const std::string& device);
 bool hasFilesystemType(const std::string& device, const std::string& expectedType);
 void makeExt4Filesystem(const std::string& device, bool force);
+std::string strip_quotes(const std::string& value);
+bool is_comment_or_empty(const std::string& line);
+bool is_section_header(const std::string& line, std::string& section_name);
+
 
 }  // namespace aegis

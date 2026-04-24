@@ -128,4 +128,31 @@ void makeExt4Filesystem(const std::string& device, bool force) {
     runner.runOrThrow(command);
 }
 
+std::string strip_quotes(const std::string& value) {
+    const std::string trimmed = trim(value);
+    if (trimmed.size() >= 2) {
+        const char first = trimmed.front();
+        const char last = trimmed.back();
+        if ((first == '"' && last == '"') || (first == '\'' && last == '\'')) {
+            return trimmed.substr(1, trimmed.size() - 2);
+        }
+    }
+    return trimmed;
+}
+
+bool is_comment_or_empty(const std::string& line) {
+    if (line.empty()) {
+        return true;
+    }
+    return line[0] == '#' || line[0] == ';';
+}
+
+bool is_section_header(const std::string& line, std::string& section_name) {
+    if (line.size() >= 3 && line.front() == '[' && line.back() == ']') {
+        section_name = trim(line.substr(1, line.size() - 2));
+        return true;
+    }
+    return false;
+}
+
 }  // namespace aegis

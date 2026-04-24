@@ -12,32 +12,6 @@
 namespace aegis {
 namespace {
 
-std::string strip_quotes(const std::string& value) {
-    if (value.size() >= 2) {
-        const char first = value.front();
-        const char last = value.back();
-        if ((first == '"' && last == '"') || (first == '\'' && last == '\'')) {
-            return value.substr(1, value.size() - 2);
-        }
-    }
-    return value;
-}
-
-bool is_comment_or_empty(const std::string& line) {
-    if (line.empty()) {
-        return true;
-    }
-    return line[0] == '#' || line[0] == ';';
-}
-
-bool is_section_header(const std::string& line, std::string& section_name) {
-    if (line.size() >= 3 && line.front() == '[' && line.back() == ']') {
-        section_name = trim(line.substr(1, line.size() - 2));
-        return true;
-    }
-    return false;
-}
-
 void assign_key(OtaConfig& config, const std::string& key, const std::string& value) {
     if (key == "public-key") {
         config.public_key = value;
