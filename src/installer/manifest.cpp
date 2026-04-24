@@ -69,21 +69,8 @@ std::string field_value(const std::string &object, const std::string &field) {
     return {};
 }
 
-}  // namespace
-
-std::vector<ManifestEntry> parse_manifest(const std::string &sw_description, const std::string &target_slot) {
-
-    const std::string search_in = (!target_slot.empty())
-        ? find_object_block(sw_description, target_slot)
-        : std::string{};
-
-    const std::string images_block =
-        find_list_block(search_in.empty() ? sw_description : search_in, "images");
-
-    if (images_block.empty()) { fail_runtime("sw-description does not contain an images list"); }
-
-    std::vector<ManifestEntry> entries;
-    for (const auto &object : split_objects(images_block)) {
+void append_manifest_entries(const std::string& list_block, std::vector<ManifestEntry>& entries) {
+    for (const auto& object : split_objects(list_block)) {
         ManifestEntry entry;
         entry.filename            = field_value(object, "filename");
         entry.type                = field_value(object, "type");
@@ -102,6 +89,27 @@ std::vector<ManifestEntry> parse_manifest(const std::string &sw_description, con
         if (entry.type != "raw" && entry.type != "archive" && entry.type != "tar") { continue; }
         entries.push_back(std::move(entry));
     }
+}
+
+}  // namespace
+
+std::vector<ManifestEntry> parse_manifest(const std::string &sw_description, const std::string &target_slot) {
+
+    const std::string search_in = (!target_slot.empty())
+        ? find_object_block(sw_description, target_slot)
+        : std::string{};
+    const std::string& manifest_scope = search_in.empty() ? sw_description : search_in;
+
+    const std::string images_block = find_list_block(manifest_scope, "images");
+    const std::string files_block = find_list_block(manifest_scope, "files");
+
+    if (images_block.empty() && files_block.empty()) {
+        fail_runtime("sw-description does not contain an images or files list");
+    }
+
+    std::vector<ManifestEntry> entries;
+    append_manifest_entries(images_block, entries);
+    append_manifest_entries(files_block, entries);
 
     if (entries.empty()) { fail_runtime("no supported raw/archive/tar entries found in sw-description"); }
     return entries;

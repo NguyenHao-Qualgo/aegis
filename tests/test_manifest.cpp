@@ -44,6 +44,27 @@ software =
 }
 )";
 
+static const std::string kImagesAndFilesManifest = R"(
+software =
+{
+    images: (
+        {
+            filename = "rootfs.ext4.gz";
+            type = "raw";
+            device = "/dev/sda1";
+            compress = "zlib";
+        }
+    );
+    files: (
+        {
+            filename = "esp.tar.gz";
+            type = "archive";
+            path = "/boot/efi";
+        }
+    );
+}
+)";
+
 static const std::string kSlottedManifest = R"(
 software =
 {
@@ -83,6 +104,19 @@ TEST(ManifestParseTest, MultipleEntries) {
     EXPECT_EQ(entries[0].type, "raw");
     EXPECT_EQ(entries[1].type, "archive");
     EXPECT_EQ(entries[2].type, "tar");
+}
+
+TEST(ManifestParseTest, ImagesAndFilesEntries) {
+    const auto entries = parse_manifest(kImagesAndFilesManifest);
+    ASSERT_EQ(entries.size(), 2u);
+    EXPECT_EQ(entries[0].filename, "rootfs.ext4.gz");
+    EXPECT_EQ(entries[0].type, "raw");
+    EXPECT_EQ(entries[0].compress, "zlib");
+    EXPECT_EQ(entries[1].filename, "esp.tar.gz");
+    EXPECT_EQ(entries[1].type, "archive");
+    EXPECT_EQ(entries[1].path, "/boot/efi");
+    EXPECT_TRUE(entries[1].device.empty());
+    EXPECT_TRUE(entries[1].filesystem.empty());
 }
 
 TEST(ManifestParseTest, WithTargetSlot) {
@@ -196,6 +230,22 @@ TEST(ManifestParseTest, EmptyImagesThrows) {
 TEST(ManifestParseTest, NoImagesBlockThrows) {
     const std::string manifest = "software = { version = \"1.0\"; }";
     EXPECT_THROW(parse_manifest(manifest), Error);
+}
+
+TEST(ManifestParseTest, FilesOnlyManifest) {
+    const std::string manifest = R"(
+        software = {
+            files: ({
+                filename = "esp.tar.gz";
+                type = "archive";
+                path = "/boot/efi";
+            });
+        }
+    )";
+    const auto entries = parse_manifest(manifest);
+    ASSERT_EQ(entries.size(), 1u);
+    EXPECT_EQ(entries[0].filename, "esp.tar.gz");
+    EXPECT_EQ(entries[0].path, "/boot/efi");
 }
 
 TEST(FindManifestEntryTest, EntryFound) {
