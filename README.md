@@ -42,6 +42,7 @@ Additional dependencies:
 ## Documentation
 
 - [Bundle Guide](docs/bundle.md)
+- [Installation Guide](docs/installation.md)
 - [Daemon Guide](docs/daemon.md)
 - [CLI Guide](docs/cli.md)
 

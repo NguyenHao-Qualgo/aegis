@@ -282,4 +282,4 @@ At install time, Aegis checks:
 
 For encrypted entries, Aegis decrypts the payload while streaming it to the handler.
 
-See [daemon.md](daemon.md) and [cli.md](cli.md) for runtime installation paths.
+See [installation.md](installation.md) for the step-by-step install flow, [daemon.md](daemon.md) for the service path, and [cli.md](cli.md) for the client path.
