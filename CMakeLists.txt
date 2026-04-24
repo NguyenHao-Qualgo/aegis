@@ -49,6 +49,7 @@ add_executable(aegis
     src/installer/archive_support.cpp
     src/installer/manifest.cpp
     src/installer/raw_handler.cpp
+    src/installer/file_handler.cpp
     src/installer/archive_handler.cpp
     src/common/cpio.cpp
     src/common/crypto.cpp

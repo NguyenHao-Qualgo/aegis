@@ -8,6 +8,7 @@
 #include "aegis/common/logging.hpp"
 #include "aegis/installer/install_context.hpp"
 #include "aegis/installer/archive_handler.hpp"
+#include "aegis/installer/file_handler.hpp"
 #include "aegis/installer/install_signal_scope.hpp"
 #include "aegis/installer/manifest.hpp"
 #include "aegis/installer/raw_handler.hpp"
@@ -21,6 +22,7 @@ PackageInstaller::HandlerMap PackageInstaller::createHandlers() {
     HandlerMap handlers;
     handlers.emplace("raw", std::make_unique<RawHandler>());
     handlers.emplace("archive", std::make_unique<ArchiveHandler>());
+    handlers.emplace("file", std::make_unique<FileHandler>());
     return handlers;
 }
 

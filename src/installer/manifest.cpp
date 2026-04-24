@@ -86,7 +86,10 @@ void append_manifest_entries(const std::string& list_block, std::vector<Manifest
         entry.atomic_install      = to_bool(field_value(object, "atomic-install"));
         if (entry.filename.empty()) { continue; }
         if (entry.type.empty()) { entry.type = "raw"; }
-        if (entry.type != "raw" && entry.type != "archive" && entry.type != "tar") { continue; }
+        if (entry.type != "raw" && entry.type != "archive" && entry.type != "tar" &&
+            entry.type != "file") {
+            continue;
+        }
         entries.push_back(std::move(entry));
     }
 }
@@ -111,7 +114,9 @@ std::vector<ManifestEntry> parse_manifest(const std::string &sw_description, con
     append_manifest_entries(images_block, entries);
     append_manifest_entries(files_block, entries);
 
-    if (entries.empty()) { fail_runtime("no supported raw/archive/tar entries found in sw-description"); }
+    if (entries.empty()) {
+        fail_runtime("no supported raw/archive/tar/file entries found in sw-description");
+    }
     return entries;
 }
 
