@@ -147,7 +147,7 @@ void printStatusLine(const std::map<std::string, sdbus::Variant>& status) {
 }
 
 bool isTerminalState(const std::string& state) {
-    return state == "Idle" || state == "Reboot" || state == "Failure";
+    return state == "Reboot" || state == "Failure";
 }
 
 int handleStatus(sdbus::IProxy& proxy, const sdbus::InterfaceName& interfaceName) {
