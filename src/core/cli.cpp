@@ -1,8 +1,8 @@
-#include "aegis/app/cli.hpp"
+#include "aegis/core/cli.hpp"
+#include "aegis/common/signal_set.hpp"
 #include "aegis/common/util.hpp"
 
 #include <chrono>
-#include <csignal>
 #include <iostream>
 #include <map>
 #include <stdexcept>
@@ -16,14 +16,6 @@
 namespace aegis {
 
 namespace {
-
-volatile sig_atomic_t gInterrupted = 0;
-
-void signalHandler(int /*signum*/) {
-    std::cerr << "\nCtrl+C pressed. Exiting aegis installation client...\n";
-    std::cerr << "Note that this will not abort the installation running in the aegis service!\n";
-    gInterrupted = 1;
-}
 
 struct DbusContext {
     static constexpr const char* kServiceName = "de.skytrack.Aegis";
@@ -182,6 +174,9 @@ int handleInstall(sdbus::IProxy& proxy,
         throw std::runtime_error("install requires <bundle-path>\nTry: aegis help install");
     }
 
+    SignalSet interrupted_signals{SIGINT, SIGTERM};
+    interrupted_signals.block();
+
     bool done = false;
     std::string terminalError;
 
@@ -205,8 +200,13 @@ int handleInstall(sdbus::IProxy& proxy,
         .onInterface(interfaceName)
         .withArguments(args[1]);
 
-    while (!done && !gInterrupted) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    while (!done) {
+        if (const auto signum = interrupted_signals.wait_for(std::chrono::milliseconds(100))) {
+            std::cerr << "\nReceived signal " << *signum
+                      << ". Exiting aegis installation client...\n";
+            std::cerr << "Note that this will not abort the installation running in the aegis service!\n";
+            break;
+        }
     }
 
     connection.leaveEventLoop();
@@ -271,9 +271,6 @@ int Cli::run(const std::vector<std::string>& args) const {
         }
         return 0;
     }
-
-    std::signal(SIGINT, signalHandler);
-    std::signal(SIGTERM, signalHandler);
 
     const sdbus::BusName serviceName{DbusContext::kServiceName};
     const sdbus::InterfaceName interfaceName{DbusContext::kInterfaceName};

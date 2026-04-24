@@ -1,4 +1,4 @@
-#include "aegis/crypto/crypto.hpp"
+#include "aegis/common/crypto.hpp"
 
 #include <memory>
 

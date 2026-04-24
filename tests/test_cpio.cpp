@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "aegis/io/cpio.hpp"
+#include "aegis/common/cpio.hpp"
 #include "aegis/common/error.hpp"
 #include <array>
 #include <cstring>

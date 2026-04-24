@@ -1,7 +1,5 @@
-#include "aegis/installer/handlers.hpp"
+#include "aegis/installer/raw_handler.hpp"
 
-#include <cerrno>
-#include <cstring>
 #include <fcntl.h>
 #include <filesystem>
 #include <limits.h>
@@ -10,9 +8,9 @@
 #include "aegis/common/error.hpp"
 #include "aegis/common/logging.hpp"
 #include "aegis/core/types.hpp"
+#include "aegis/installer/handler_utils.hpp"
 #include "aegis/installer/install_context.hpp"
-#include "aegis/installer/payload_streamer.hpp"
-#include "aegis/io/io.hpp"
+#include "aegis/common/io.hpp"
 
 namespace aegis {
 
@@ -67,23 +65,6 @@ int blkprotect(const fs::path& device, bool on) {
     return 1;
 }
 
-void write_all_checked(int fd, const char* data, std::size_t len, const InstallContext& ctx) {
-    while (len > 0) {
-        ctx.check_cancel();
-
-        const ssize_t rc = ::write(fd, data, len);
-        if (rc < 0) {
-            if (errno == EINTR) {
-                continue;
-            }
-            fail_runtime(std::string("write failed: ") + std::strerror(errno));
-        }
-
-        data += rc;
-        len -= static_cast<std::size_t>(rc);
-    }
-}
-
 class BlockProtectionGuard {
 public:
     explicit BlockProtectionGuard(fs::path device) : device_(std::move(device)) {
@@ -127,18 +108,7 @@ void RawHandler::install(const InstallContext& ctx,
     }
 
     PayloadStreamer streamer(ctx);
-    auto sink = [&](const char* data, std::size_t len) {
-        write_all_checked(out.get(), data, len, ctx);
-    };
-
-    if (entry.encrypted) {
-        if (!aes) {
-            fail_runtime("encrypted payload requires --aes-key");
-        }
-        streamer.stream_encrypted(reader, cpio_entry, *aes, entry.ivt, sink, entry.sha256);
-    } else {
-        streamer.stream_plain(reader, cpio_entry, sink, entry.sha256);
-    }
+    stream_payload_to_fd(streamer, reader, cpio_entry, entry, aes, ctx, out.get());
 
     ctx.check_cancel();
     if (::fsync(out.get()) != 0) {

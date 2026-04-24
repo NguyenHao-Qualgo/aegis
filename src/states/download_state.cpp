@@ -4,9 +4,6 @@
 #include <memory>
 
 #include "aegis/core/ota_state_machine.hpp"
-#include "aegis/states/failure_state.hpp"
-#include "aegis/states/install_state.hpp"
-
 namespace aegis {
 
 static bool isUrl(const std::string& path) {
@@ -25,9 +22,9 @@ void DownloadState::onEnter(OtaStateMachine& machine) {
                 throw std::runtime_error("Bundle not found: " + bundlePath);
             }
         }
-        machine.transitionTo(std::make_unique<InstallState>());
+        machine.transitionToInstall();
     } catch (const std::exception& e) {
-        machine.transitionTo(std::make_unique<FailureState>(e.what()));
+        machine.transitionToFailure(e.what());
     }
 }
 

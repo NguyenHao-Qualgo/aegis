@@ -1,7 +1,7 @@
 #pragma once
 
 #include "aegis/bootloader/boot_control.hpp"
-#include "aegis/service/gcs_client.hpp"
+#include "aegis/core/gcs_client.hpp"
 
 namespace aegis::test {
 

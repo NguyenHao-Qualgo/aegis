@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "aegis/config/state_store.hpp"
+#include "aegis/common/state_store.hpp"
 #include <filesystem>
 
 using namespace aegis;

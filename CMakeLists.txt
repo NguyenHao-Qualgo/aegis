@@ -10,6 +10,7 @@ option(AEGIS_BUILD_TESTS "Build unit tests" ON)
 
 find_package(PkgConfig REQUIRED)
 find_package(OpenSSL REQUIRED)
+find_package(ZLIB REQUIRED)
 find_package(spdlog REQUIRED)
 find_package(fmt REQUIRED)
 
@@ -22,18 +23,19 @@ endif()
 
 add_executable(aegis
     src/main.cpp
-    src/app/app.cpp
-    src/config/config.cpp
+    src/core/application.cpp
+    src/common/config.cpp
     src/core/types.cpp
     src/common/util.cpp
-    src/io/command_runner.cpp
+    src/common/command_runner.cpp
+    src/common/signal_set.cpp
     src/bootloader/uboot_control.cpp
     src/bootloader/nvboot_control.cpp
-    src/config/state_store.cpp
+    src/common/state_store.cpp
     src/core/ota_context.cpp
     src/core/ota_state_machine.cpp
     src/core/ota_service.cpp
-    src/service/gcs_stub.cpp
+    src/stub/gcs_stub.cpp
     src/states/idle_state.cpp
     src/states/download_state.cpp
     src/states/install_state.cpp
@@ -43,19 +45,21 @@ add_executable(aegis
     src/installer/packer.cpp
     src/installer/installer.cpp
     src/installer/install_signal_scope.cpp
+    src/installer/handler_utils.cpp
+    src/installer/archive_support.cpp
     src/installer/manifest.cpp
     src/installer/raw_handler.cpp
     src/installer/archive_handler.cpp
-    src/io/cpio.cpp
-    src/crypto/crypto.cpp
-    src/io/io.cpp
+    src/common/cpio.cpp
+    src/common/crypto.cpp
+    src/common/io.cpp
     src/common/logging.cpp
 )
 
 if (AEGIS_ENABLE_DBUS)
     target_sources(aegis PRIVATE
-        src/service/dbus_service.cpp
-        src/app/cli.cpp
+        src/core/dbus_service.cpp
+        src/core/cli.cpp
     )
 endif()
 
@@ -67,6 +71,7 @@ target_link_libraries(aegis PRIVATE
     PkgConfig::LIBARCHIVE
     OpenSSL::SSL
     OpenSSL::Crypto
+    ZLIB::ZLIB
     spdlog::spdlog_header_only
     fmt::fmt
 )

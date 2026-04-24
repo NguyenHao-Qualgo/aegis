@@ -10,7 +10,7 @@
 #include "aegis/core/ota_context.hpp"
 #include "aegis/core/ota_event.hpp"
 #include "aegis/core/ota_state.hpp"
-#include "aegis/config/state_store.hpp"
+#include "aegis/common/state_store.hpp"
 #include "aegis/core/types.hpp"
 
 namespace aegis {
@@ -25,6 +25,12 @@ public:
     // State machine
     void dispatch(const OtaEvent& event);
     void transitionTo(std::unique_ptr<IOtaState> next);
+    void transitionToIdle();
+    void transitionToDownload();
+    void transitionToInstall();
+    void transitionToReboot();
+    void transitionToCommit();
+    void transitionToFailure(std::string error);
     OtaStatus getStatus() const;
     void setStatusChangedCallback(std::function<void(const OtaStatus&)> cb);
 
@@ -61,6 +67,7 @@ public:
     void discardPendingRebootState();
 
 private:
+    static std::unique_ptr<IOtaState> stateFromPersisted(const OtaStatus& status);
     void init(std::unique_ptr<IOtaState> initialState);
     void save();
 

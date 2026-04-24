@@ -1,4 +1,4 @@
-#include "aegis/app/app.hpp"
+#include "aegis/core/application.hpp"
 
 #include <cstdlib>
 #include <cstring>
@@ -10,16 +10,17 @@
 #include <string_view>
 
 #include "aegis/bootloader/boot_control_factory.hpp"
-#include "aegis/app/cli.hpp"
-#include "aegis/config/config.hpp"
-#include "aegis/service/gcs_stub.hpp"
+#include "aegis/core/cli.hpp"
+#include "aegis/common/config.hpp"
+#include "aegis/common/signal_set.hpp"
+#include "aegis/stub/gcs_stub.hpp"
 #include "aegis/core/ota_service.hpp"
-#include "aegis/config/state_store.hpp"
+#include "aegis/common/state_store.hpp"
 #include "aegis/common/util.hpp"
 #include "aegis/installer/packer.hpp"
 
 #if defined(AEGIS_ENABLE_DBUS)
-#include "aegis/service/dbus_service.hpp"
+#include "aegis/core/dbus_service.hpp"
 #endif
 
 namespace aegis {
@@ -105,73 +106,96 @@ PackOptions parse_pack(int argc, char **argv, int start_index) {
     return options;
 }
 
+std::string daemon_config_path(const std::vector<std::string>& args) {
+    const std::string config_path = getOptionValue(args, "--config");
+    return config_path.empty() ? std::string(kDefaultConfigPath) : config_path;
+}
+
+OtaService make_ota_service(const std::vector<std::string>& args) {
+    const std::string config_path = daemon_config_path(args);
+    LOG_I("Loading config: " + config_path);
+
+    ConfigLoader loader;
+    const OtaConfig config = loader.load(config_path);
+    std::filesystem::create_directories(config.data_directory);
+
+    CommandRunner runner;
+    auto boot_control = BootControlFactory::create(config.bootloader_type, runner);
+    StateStore state_store(joinPath(config.data_directory, "ota-state.env"));
+    auto gcs_client = std::make_shared<GcsStub>();
+    return OtaService(config, std::move(boot_control), std::move(state_store), std::move(gcs_client));
+}
+
+#if defined(AEGIS_ENABLE_DBUS)
+SignalSet make_daemon_signal_set() {
+    SignalSet signal_set{SIGINT, SIGTERM};
+    signal_set.block();
+    return signal_set;
+}
+
+void start_daemon_signal_forwarder(DbusService& dbus, SignalSet signal_set) {
+    std::thread([&dbus, signal_set]() mutable {
+        const int signum = signal_set.wait();
+        LOG_I("Received stop signal " + std::to_string(signum) + ", stopping daemon");
+        dbus.stop();
+    }).detach();
+}
+#endif
+
+}  // namespace
+
+int Application::runPack(int argc, char** argv) const {
+    try {
+        return Packer(parse_pack(argc, argv, 2)).pack();
+    } catch (const Error& error) {
+        fail(error.what());
+    }
+}
+
+int Application::runCli(const std::vector<std::string>& args) const {
+#if defined(AEGIS_ENABLE_DBUS)
+    Cli client;
+    return client.run(args);
+#else
+    (void)args;
+    throw std::runtime_error("This build only supports 'bundle create'");
+#endif
+}
+
+int Application::runDaemon(const std::vector<std::string>& args) const {
+#if !defined(AEGIS_ENABLE_DBUS)
+    (void)args;
+    throw std::runtime_error("Daemon support is disabled in this build");
+#else
+    AppLog::Init(AppLog::Level::debug, nullptr, "aegis-daemon");
+    LOG_I("Starting aegis daemon");
+
+    OtaService service = make_ota_service(args);
+    service.resumeAfterBoot();
+
+    const SignalSet signal_set = make_daemon_signal_set();
+    DbusService dbus(service);
+    start_daemon_signal_forwarder(dbus, signal_set);
+    dbus.run();
+    return 0;
+#endif
 }
 
 int Application::run(int argc, char** argv) {
     const auto args = toArgs(argc, argv);
     if (args.empty()) {
-#if defined(AEGIS_ENABLE_DBUS)
-        Cli client;
-        return client.run(args);
-#else
-        fail("This build only supports 'bundle create'");
-#endif
+        return runCli(args);
     }
 
     if (args[0] == "pack") {
-        try {
-            return Packer(parse_pack(argc, argv, 2)).pack();
-        } catch (const Error& error) {
-            fail(error.what());
-        }
+        return runPack(argc, argv);
     }
 
     if (args[0] == "daemon") {
-#if !defined(AEGIS_ENABLE_DBUS)
-        throw std::runtime_error("Daemon support is disabled in this build");
-#else
-        AppLog::Init(AppLog::Level::debug, nullptr, "aegis-daemon");
-        LOG_I("Starting aegis daemon");
-
-        const auto configPath = getOptionValue(args, "--config").empty() ? std::string(kDefaultConfigPath) : getOptionValue(args, "--config");
-        LOG_I("Loading config: " + configPath);
-        ConfigLoader loader;
-        const auto config = loader.load(configPath);
-        std::filesystem::create_directories(config.data_directory);
-        CommandRunner runner;
-        auto bootControl = BootControlFactory::create(config.bootloader_type, runner);
-        StateStore stateStore(joinPath(config.data_directory, "ota-state.env"));
-        auto gcsClient = std::make_shared<GcsStub>();
-        OtaService service(config, std::move(bootControl), stateStore, std::move(gcsClient));
-        service.resumeAfterBoot();
-
-        sigset_t signal_set;
-        ::sigemptyset(&signal_set);
-        ::sigaddset(&signal_set, SIGINT);
-        ::sigaddset(&signal_set, SIGTERM);
-        if (::pthread_sigmask(SIG_BLOCK, &signal_set, nullptr) != 0) {
-            throw std::runtime_error("failed to block daemon signals");
-        }
-
-        DbusService dbus(service);
-        std::thread([&dbus, signal_set]() mutable {
-            int signum = 0;
-            if (::sigwait(&signal_set, &signum) == 0) {
-                LOG_I("Received stop signal " + std::to_string(signum) + ", stopping daemon");
-                dbus.stop();
-            }
-        }).detach();
-        dbus.run();
-        return 0;
-#endif
+        return runDaemon(args);
     }
 
-#if defined(AEGIS_ENABLE_DBUS)
-    Cli client;
-    return client.run(args);
-#else
-    throw std::runtime_error("This build only supports 'bundle create'");
-#endif
+    return runCli(args);
 }
 
 }  // namespace aegis

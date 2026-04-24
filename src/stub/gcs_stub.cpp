@@ -1,4 +1,4 @@
-#include "aegis/service/gcs_stub.hpp"
+#include "aegis/stub/gcs_stub.hpp"
 
 #include <iostream>
 

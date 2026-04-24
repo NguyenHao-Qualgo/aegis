@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "aegis/crypto/sha256.hpp"
+#include "aegis/common/sha256.hpp"
 #include <string>
 
 using namespace aegis;

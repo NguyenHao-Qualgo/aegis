@@ -5,8 +5,6 @@
 #include <stdexcept>
 
 #include "aegis/core/ota_state_machine.hpp"
-#include "aegis/states/failure_state.hpp"
-#include "aegis/states/reboot_state.hpp"
 #include "aegis/common/util.hpp"
 #include "aegis/installer/installer.hpp"
 
@@ -24,13 +22,13 @@ void InstallState::onEnter(OtaStateMachine& machine) {
         installer.install(machine, machine.installStopToken());
     } catch (const aegis::Error &error) {
         LOG_E("installation failed: " + std::string(error.what()));
-        machine.transitionTo(std::make_unique<FailureState>(error.what()));
+        machine.transitionToFailure(error.what());
         return;
     }
     machine.setProgress(OtaState::Install, "activate", 99, "Activating target slot");
     machine.bootControl().setSlotBootable(options.target_slot , true);
     machine.bootControl().setPrimarySlot(options.target_slot);
-    machine.transitionTo(std::make_unique<RebootState>());
+    machine.transitionToReboot();
 }
 
 void InstallState::onExit(OtaStateMachine& machine) {

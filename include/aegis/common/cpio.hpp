@@ -1,6 +1,6 @@
 #pragma once
 
-#include "aegis/io/io.hpp"
+#include "aegis/common/io.hpp"
 #include "aegis/core/types.hpp"
 
 namespace aegis {

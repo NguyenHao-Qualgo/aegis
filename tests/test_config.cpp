@@ -1,13 +1,45 @@
 #include <gtest/gtest.h>
-#include "aegis/config/config.hpp"
+#include "aegis/common/config.hpp"
 #include "aegis/common/util.hpp"
 #include <filesystem>
+#include <string>
+
+#include <unistd.h>
 
 using namespace aegis;
 
+namespace {
+
+std::string sanitize_name(std::string value) {
+    for (char& ch : value) {
+        const bool ok = (ch >= 'a' && ch <= 'z') ||
+                        (ch >= 'A' && ch <= 'Z') ||
+                        (ch >= '0' && ch <= '9');
+        if (!ok) {
+            ch = '_';
+        }
+    }
+    return value;
+}
+
+std::string make_test_path(const char* prefix, const char* suffix) {
+    const auto* test_info = ::testing::UnitTest::GetInstance()->current_test_info();
+    const std::string suite = sanitize_name(test_info ? test_info->test_suite_name() : "suite");
+    const std::string name = sanitize_name(test_info ? test_info->name() : "test");
+    return (std::filesystem::temp_directory_path() /
+            (std::string(prefix) + "_" + suite + "_" + name + "_" +
+             std::to_string(::getpid()) + suffix)).string();
+}
+
+}  // namespace
+
 class ConfigTest : public ::testing::Test {
 protected:
-    const std::string path{"/tmp/aegis_unittest_config_12345.conf"};
+    std::string path;
+
+    void SetUp() override {
+        path = make_test_path("aegis_unittest_config", ".conf");
+    }
 
     void TearDown() override { std::filesystem::remove(path); }
 

@@ -4,7 +4,6 @@
 #include <utility>
 
 #include "aegis/core/ota_state_machine.hpp"
-#include "aegis/states/idle_state.hpp"
 #include "aegis/common/util.hpp"
 
 namespace aegis {
@@ -19,7 +18,7 @@ void FailureState::onEnter(OtaStateMachine& machine) {
     if (auto* gcs = machine.gcsClient()) {
         gcs->reportStatus(machine.getStatus());
     }
-    machine.transitionTo(std::make_unique<IdleState>());
+    machine.transitionToIdle();
 }
 
 void FailureState::handle(OtaStateMachine& machine, const OtaEvent& event) {
@@ -27,7 +26,7 @@ void FailureState::handle(OtaStateMachine& machine, const OtaEvent& event) {
     case OtaEvent::Type::Reset:
     case OtaEvent::Type::MarkBad:
     case OtaEvent::Type::ResumeAfterBoot:
-        machine.transitionTo(std::make_unique<IdleState>());
+        machine.transitionToIdle();
         return;
 
     default:
