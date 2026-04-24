@@ -1,6 +1,6 @@
 # Aegis
 
-Aegis is a C++17 OTA utility that can:
+Aegis is a C++20 OTA utility that can:
 
 - create signed `.swu` bundles with `aegis pack`
 - stream-install signed bundles without unpacking the whole archive first
