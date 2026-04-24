@@ -119,7 +119,7 @@ void NVBootControl::setPrimarySlot(const std::string& slot) const {
 void NVBootControl::markGood(const std::string& slot) const {
     validateSlotName(slot);
     setSlotBootable(slot, true);
-    setPrimarySlot(slot);
+    // setPrimarySlot(slot);
 }
 
 void NVBootControl::markBad(const std::string& slot) const {
