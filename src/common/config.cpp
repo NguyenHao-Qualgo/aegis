@@ -25,7 +25,10 @@ void assign_key(OtaConfig& config, const std::string& key, const std::string& va
         } else {
             config.bootloader_type = BootloaderType::UBoot;
         }
-    }}
+    } else if (key == "hw-compatibility") {
+        config.hw_compatibility = value;
+    }
+}
 
 }  // namespace
 

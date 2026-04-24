@@ -35,6 +35,7 @@ struct SlotConfig {
 };
 
 struct OtaConfig {
+    std::string hw_compatibility;
     std::string public_key;
     std::string aes_key;
     std::string data_directory;

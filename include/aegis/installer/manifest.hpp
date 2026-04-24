@@ -15,7 +15,12 @@ inline bool to_bool(const std::string &value) {
     return v == "true" || v == "\"true\"";
 }
 
-std::vector<ManifestEntry> parse_manifest(const std::string &sw_description, const std::string &target_slot = {});
+struct ManifestParseResult {
+    std::vector<ManifestEntry> entries;
+    std::string hw_compatibility;
+};
+
+ManifestParseResult parse_manifest(const std::string &sw_description, const std::string &target_slot = {});
 ManifestEntry             *find_manifest_entry(std::vector<ManifestEntry> &entries, const std::string &name);
 AesMaterial                parse_aes_key_file(const std::string &path);
 

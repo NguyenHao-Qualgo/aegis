@@ -96,11 +96,12 @@ void append_manifest_entries(const std::string& list_block, std::vector<Manifest
 
 }  // namespace
 
-std::vector<ManifestEntry> parse_manifest(const std::string &sw_description, const std::string &target_slot) {
+ManifestParseResult parse_manifest(const std::string &sw_description, const std::string &target_slot) {
 
     const std::string search_in = (!target_slot.empty())
         ? find_object_block(sw_description, target_slot)
         : std::string{};
+
     const std::string& manifest_scope = search_in.empty() ? sw_description : search_in;
 
     const std::string images_block = find_list_block(manifest_scope, "images");
@@ -117,7 +118,12 @@ std::vector<ManifestEntry> parse_manifest(const std::string &sw_description, con
     if (entries.empty()) {
         fail_runtime("no supported raw/archive/tar/file entries found in sw-description");
     }
-    return entries;
+
+    ManifestParseResult result;
+    result.entries = std::move(entries);
+    result.hw_compatibility = field_value(sw_description, "hw-compatibility");
+
+    return result;
 }
 
 ManifestEntry *find_manifest_entry(std::vector<ManifestEntry> &entries, const std::string &name) {

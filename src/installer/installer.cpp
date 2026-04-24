@@ -88,7 +88,11 @@ int PackageInstaller::install(OtaStateMachine& machine, std::stop_token stop) {
     }
 
     ctx.check_cancel();
-    std::vector<ManifestEntry> entries = parse_manifest(sw_description, options_.target_slot);
+    auto [entries, hw_compatibility] = parse_manifest(sw_description, options_.target_slot);
+    if (!hw_compatibility.empty() && hw_compatibility != options_.config.hw_compatibility) {
+        fail_runtime("hardware compatibility mismatch: SWU requires '" + hw_compatibility +
+                     "' but device is '" + options_.config.hw_compatibility + "'");
+    }
     LOG_I("parsed sw-description, applicable images=" + std::to_string(entries.size()) +
                (options_.target_slot.empty() ? "" : " slot=" + options_.target_slot));
     const std::optional<AesMaterial> aes =

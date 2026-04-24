@@ -22,6 +22,7 @@ software =
 )";
 
 static const std::string kMultiManifest = R"(
+hw-compatibility = "jetson-orin";
 software =
 {
     images: (
@@ -71,6 +72,8 @@ software =
 )";
 
 static const std::string kSlottedManifest = R"(
+hw-compatibility = "jetson";
+
 software =
 {
     version = "1.0.0";
@@ -97,7 +100,7 @@ software =
 )";
 
 TEST(ManifestParseTest, BasicRawEntry) {
-    const auto entries = parse_manifest(kBasicManifest);
+    auto [entries, hw_compatibility] = parse_manifest(kBasicManifest);
     ASSERT_EQ(entries.size(), 1u);
     EXPECT_EQ(entries[0].filename, "rootfs.ext4");
     EXPECT_EQ(entries[0].type,     "raw");
@@ -106,15 +109,16 @@ TEST(ManifestParseTest, BasicRawEntry) {
 }
 
 TEST(ManifestParseTest, MultipleEntries) {
-    const auto entries = parse_manifest(kMultiManifest);
+    auto [entries, hw_compatibility] = parse_manifest(kMultiManifest);
     ASSERT_EQ(entries.size(), 3u);
     EXPECT_EQ(entries[0].type, "raw");
     EXPECT_EQ(entries[1].type, "archive");
     EXPECT_EQ(entries[2].type, "tar");
+    EXPECT_EQ(hw_compatibility, "jetson-orin");
 }
 
 TEST(ManifestParseTest, ImagesAndFilesEntries) {
-    const auto entries = parse_manifest(kImagesAndFilesManifest);
+    auto [entries, hw_compatibility] = parse_manifest(kImagesAndFilesManifest);
     ASSERT_EQ(entries.size(), 3u);
     EXPECT_EQ(entries[0].filename, "rootfs.ext4.gz");
     EXPECT_EQ(entries[0].type, "raw");
@@ -130,14 +134,14 @@ TEST(ManifestParseTest, ImagesAndFilesEntries) {
 }
 
 TEST(ManifestParseTest, WithTargetSlot) {
-    const auto entries = parse_manifest(kSlottedManifest, "B");
+    auto [entries, hw_compatibility] = parse_manifest(kSlottedManifest, "B");
     ASSERT_EQ(entries.size(), 1u);
     EXPECT_EQ(entries[0].filename, "rootfs-b.ext4");
     EXPECT_EQ(entries[0].device,   "/dev/sdb1");
 }
 
 TEST(ManifestParseTest, SlotAExtraction) {
-    const auto entries = parse_manifest(kSlottedManifest, "A");
+    auto [entries, hw_compatibility] = parse_manifest(kSlottedManifest, "A");
     ASSERT_EQ(entries.size(), 1u);
     EXPECT_EQ(entries[0].filename, "rootfs-a.ext4");
 }
@@ -146,7 +150,7 @@ TEST(ManifestParseTest, DefaultTypeIsRaw) {
     const std::string manifest = R"(
         software = { images: ({ filename = "x.ext4"; device = "/dev/sda1"; }); }
     )";
-    const auto entries = parse_manifest(manifest);
+    auto [entries, hw_compatibility] = parse_manifest(manifest);
     ASSERT_EQ(entries.size(), 1u);
     EXPECT_EQ(entries[0].type, "raw");
 }
@@ -160,7 +164,7 @@ TEST(ManifestParseTest, SkipsUnsupportedType) {
             );
         }
     )";
-    const auto entries = parse_manifest(manifest);
+    auto [entries, hw_compatibility] = parse_manifest(manifest);
     ASSERT_EQ(entries.size(), 1u);
     EXPECT_EQ(entries[0].filename, "good.ext4");
 }
@@ -174,7 +178,7 @@ TEST(ManifestParseTest, SkipsEntriesWithoutFilename) {
             );
         }
     )";
-    const auto entries = parse_manifest(manifest);
+    auto [entries, hw_compatibility] = parse_manifest(manifest);
     ASSERT_EQ(entries.size(), 1u);
 }
 
@@ -190,7 +194,7 @@ TEST(ManifestParseTest, EncryptedEntry) {
             });
         }
     )";
-    const auto entries = parse_manifest(manifest);
+    auto [entries, hw_compatibility] = parse_manifest(manifest);
     ASSERT_EQ(entries.size(), 1u);
     EXPECT_TRUE(entries[0].encrypted);
     EXPECT_EQ(entries[0].ivt, "0011223344556677");
@@ -207,7 +211,7 @@ TEST(ManifestParseTest, CompressedEntry) {
             });
         }
     )";
-    const auto entries = parse_manifest(manifest);
+    auto [entries, hw_compatibility] = parse_manifest(manifest);
     ASSERT_EQ(entries.size(), 1u);
     EXPECT_EQ(entries[0].compress, "zlib");
 }
@@ -225,7 +229,7 @@ TEST(ManifestParseTest, BoolFields) {
             });
         }
     )";
-    const auto entries = parse_manifest(manifest);
+    auto [entries, hw_compatibility] = parse_manifest(manifest);
     ASSERT_EQ(entries.size(), 1u);
     EXPECT_TRUE(entries[0].preserve_attributes);
     EXPECT_TRUE(entries[0].create_destination);
@@ -259,7 +263,7 @@ TEST(ManifestParseTest, FilesOnlyManifest) {
             );
         }
     )";
-    const auto entries = parse_manifest(manifest);
+    auto [entries, hw_compatibility] = parse_manifest(manifest);
     ASSERT_EQ(entries.size(), 2u);
     EXPECT_EQ(entries[0].filename, "esp.tar.gz");
     EXPECT_EQ(entries[0].path, "/boot/efi");
