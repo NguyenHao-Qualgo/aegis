@@ -29,6 +29,11 @@ void CommitState::onEnter(OtaStateMachine& machine) {
             } catch (const std::exception& e) {
                 LOG_W("Failed to reset primary slot to {}: {}", booted, e.what());
             }
+            if (auto* gcs = machine.gcsClient()) {
+                OtaStatus snapshot = machine.getStatus();
+                snapshot.message = "OTA failed due to slot mismatch after reboot";
+                gcs->reportStatus(snapshot);
+            }
 
             machine.transitionToFailure("Booted slot does not match expected target");
             return;
@@ -36,6 +41,11 @@ void CommitState::onEnter(OtaStateMachine& machine) {
 
         machine.clearLastError();
         machine.progress().complete(ProgressPhase::CommitDone);
+        if (auto* gcs = machine.gcsClient()) {
+            OtaStatus snapshot = machine.getStatus();
+            snapshot.message = "OTA complete";
+            gcs->reportStatus(snapshot);
+        }
         machine.clearWorkflowData();
         machine.transitionToIdle();
     } catch (const std::exception& e) {
@@ -50,11 +60,6 @@ void CommitState::handle(OtaStateMachine& machine, const OtaEvent& event) {
         machine.bootControl().markGood(slot);
         machine.updateSlots(slot, slot);
         machine.clearWorkflowData();
-        if (auto* gcs = machine.gcsClient()) {
-            OtaStatus snapshot = machine.getStatus();
-            snapshot.message = "OTA complete";
-            gcs->reportStatus(snapshot);
-        }
         machine.transitionToIdle();
         return;
     }

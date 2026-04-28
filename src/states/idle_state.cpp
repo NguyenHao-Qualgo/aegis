@@ -30,7 +30,6 @@ void IdleState::onEnter(OtaStateMachine& machine) {
     LOG_D(machine.getStatus().message);
 
     if (machine.gcsClient()) {
-        machine.gcsClient()->reportStatus(machine.getStatus());
         stopPolling_ = false;
         pollThread_ = std::thread([this, &machine]() { pollLoop(machine); });
     }
