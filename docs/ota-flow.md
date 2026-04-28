@@ -1,4 +1,16 @@
-# Aegis daemon flow
+# Aegis OTA State Machine
+
+This document explains the OTA state-machine flow used by the target daemon.
+
+Use this guide when you want to understand:
+
+- which states exist
+- what each state is responsible for
+- when the daemon transitions to success or failure paths
+
+For Yocto-side bundle generation, see [build.md](build.md).
+For target runtime, DBus, and CLI behavior, see [target.md](target.md).
+For the bundle install pipeline, see [overview.md](overview.md).
 
 ```mermaid
 graph TD
@@ -39,7 +51,7 @@ graph TD
   class LegendBox legend;
 ```
 
-# Description
+## State Descriptions
 
 ## Idle
 
