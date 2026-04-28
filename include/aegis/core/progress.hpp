@@ -46,7 +46,6 @@ public:
 
     void begin(ProgressPhase phase, std::string_view message = {});
     void complete(ProgressPhase phase, std::string_view message = {});
-    void set(ProgressPhase phase, int percent, std::string_view message = {});
 
     void setWeighted(ProgressPhase phase,
                      std::uint64_t current,
@@ -80,7 +79,6 @@ public:
 
     void begin(std::string_view message = {});
     void add(std::size_t bytes, std::string_view message = {});
-    void set(std::uint64_t current_bytes, std::string_view message = {});
     void complete(std::string_view message = {});
 
 private:

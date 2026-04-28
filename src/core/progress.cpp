@@ -115,11 +115,6 @@ void ProgressReporter::complete(ProgressPhase phase, std::string_view message) {
     publish(spec, spec.end_percent, message, true);
 }
 
-void ProgressReporter::set(ProgressPhase phase, int percent, std::string_view message) {
-    const auto& spec = progressSpec(phase);
-    publish(spec, percent, message, true);
-}
-
 void ProgressReporter::setWeighted(ProgressPhase phase,
                                    std::uint64_t current,
                                    std::optional<std::uint64_t> total,
@@ -205,11 +200,6 @@ void ByteProgressTracker::begin(std::string_view message) {
 
 void ByteProgressTracker::add(std::size_t bytes, std::string_view message) {
     current_bytes_ += static_cast<std::uint64_t>(bytes);
-    reporter_.setWeighted(phase_, current_bytes_, total_bytes_, message);
-}
-
-void ByteProgressTracker::set(std::uint64_t current_bytes, std::string_view message) {
-    current_bytes_ = current_bytes;
     reporter_.setWeighted(phase_, current_bytes_, total_bytes_, message);
 }
 
