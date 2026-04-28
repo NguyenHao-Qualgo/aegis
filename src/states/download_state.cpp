@@ -13,15 +13,15 @@ static bool isUrl(const std::string& path) {
 void DownloadState::onEnter(OtaStateMachine& machine) {
     try {
         const auto bundlePath = machine.getStatus().bundlePath;
+        machine.progress().begin(ProgressPhase::Download, "Preparing to download bundle");
         if (isUrl(bundlePath)) {
-            machine.setProgress(OtaState::Download, "download", 10, "Downloading bundle");
             machine.setBundlePath(machine.downloadBundle(bundlePath));
         } else {
-            machine.setProgress(OtaState::Download, "download", 10, "Preparing bundle");
             if (!std::filesystem::exists(bundlePath)) {
                 throw std::runtime_error("Bundle not found: " + bundlePath);
             }
         }
+        machine.progress().complete(ProgressPhase::Download, "Bundle ready");
         machine.transitionToInstall();
     } catch (const std::exception& e) {
         machine.transitionToFailure(e.what());

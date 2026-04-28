@@ -12,6 +12,7 @@
 #include "aegis/core/ota_state.hpp"
 #include "aegis/common/state_store.hpp"
 #include "aegis/core/types.hpp"
+#include "aegis/core/progress.hpp"
 
 namespace aegis {
 
@@ -39,7 +40,7 @@ public:
     void setFailure(const std::string& error, const std::string& message = "OTA failed");
 
     // In-progress status update (persist + notify)
-    void setProgress(OtaState state, std::string op, int progress, std::string message);
+    void setProgress(OtaState state, std::string op, int progress, std::string message, bool save_state = true);
 
     // Workflow data setters — in-memory only, persisted on next setProgress/setIdle/setFailure
     void setBundlePath(std::string path);
@@ -66,10 +67,12 @@ public:
     void markActive(const std::string& slot);
     void discardPendingRebootState();
 
+    ProgressReporter& progress() noexcept;
+
 private:
     static std::unique_ptr<IOtaState> stateFromPersisted(const OtaStatus& status);
     void init(std::unique_ptr<IOtaState> initialState);
-    void save();
+    void save(bool save_state = true);
 
     OtaContext context_;
     StateStore stateStore_;
@@ -79,6 +82,7 @@ private:
     mutable std::mutex mutex_;
     std::function<void(const OtaStatus&)> onStatusChanged_;
     std::stop_token installStopToken_;
+    ProgressReporter progress_;
 };
 
 }  // namespace aegis

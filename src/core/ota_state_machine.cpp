@@ -34,7 +34,8 @@ OtaStateMachine::OtaStateMachine(OtaContext context,
                                    StateStore stateStore,
                                    std::unique_ptr<IOtaState> initialState)
     : context_(std::move(context)),
-      stateStore_(std::move(stateStore)) {
+      stateStore_(std::move(stateStore)),
+      progress_(*this) {
     OtaStatus persisted = stateStore_.load();
     init(initialState ? std::move(initialState) : stateFromPersisted(persisted));
 }
@@ -114,13 +115,15 @@ OtaStatus OtaStateMachine::getStatus() const {
     return status_;
 }
 
-void OtaStateMachine::save() {
+void OtaStateMachine::save(bool save_state) {
     OtaStatus snapshot;
     std::function<void(const OtaStatus&)> cb;
 
     {
         std::scoped_lock lock(mutex_);
-        stateStore_.save(status_);
+        if (save_state) {
+            stateStore_.save(status_);
+        }
         snapshot = status_;
         cb = onStatusChanged_;
     }
@@ -130,12 +133,12 @@ void OtaStateMachine::save() {
     }
 }
 
-void OtaStateMachine::setProgress(OtaState state, std::string op, int progress, std::string message) {
+void OtaStateMachine::setProgress(OtaState state, std::string op, int progress, std::string message, bool save_state) {
     status_.state = state;
     status_.operation = std::move(op);
     status_.progress = progress;
     status_.message = std::move(message);
-    save();
+    save(save_state);
 }
 
 void OtaStateMachine::setIdle(const std::string& message) {
@@ -250,6 +253,10 @@ void OtaStateMachine::markActive(const std::string& slot) {
 void OtaStateMachine::discardPendingRebootState() {
     clearWorkflowData();
     setIdle();
+}
+
+ProgressReporter& OtaStateMachine::progress() noexcept {
+    return progress_;
 }
 
 }  // namespace aegis

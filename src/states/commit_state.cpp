@@ -9,6 +9,7 @@ namespace aegis {
 
 void CommitState::onEnter(OtaStateMachine& machine) {
     try {
+        machine.progress().begin(ProgressPhase::CommitCheck);
         const auto booted = machine.bootControl().getBootedSlot();
         const auto primary = machine.bootControl().getPrimarySlot();
         machine.updateSlots(booted, primary);
@@ -34,8 +35,7 @@ void CommitState::onEnter(OtaStateMachine& machine) {
         }
 
         machine.clearLastError();
-        machine.setProgress(OtaState::Commit, "commit", 100,
-                            "Booted into expected slot");
+        machine.progress().complete(ProgressPhase::CommitDone);
         machine.clearWorkflowData();
         machine.transitionToIdle();
     } catch (const std::exception& e) {

@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <string>
 #include <string_view>
+#include <functional>
 
 namespace aegis {
 
@@ -57,7 +58,8 @@ private:
 
 class StreamReader {
 public:
-    StreamReader(int input_fd, int tee_fd = -1) noexcept;
+    using ReadProgressCallback = std::function<void(std::size_t)>;
+    StreamReader(int input_fd, int tee_fd = -1, ReadProgressCallback progress_callback = {}) noexcept;
 
     void read_exact(char *dst, std::size_t len);
     void skip(std::uint64_t len, std::uint32_t *checksum = nullptr);
@@ -68,6 +70,7 @@ private:
 
     int input_fd_;
     int tee_fd_;
+    ReadProgressCallback progress_callback_;
 };
 
 }  // namespace aegis

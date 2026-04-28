@@ -35,6 +35,7 @@ add_executable(aegis
     src/core/ota_context.cpp
     src/core/ota_state_machine.cpp
     src/core/ota_service.cpp
+    src/core/progress.cpp
     src/stub/gcs_stub.cpp
     src/states/idle_state.cpp
     src/states/download_state.cpp

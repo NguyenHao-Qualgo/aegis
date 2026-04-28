@@ -26,7 +26,7 @@ void InstallState::onEnter(OtaStateMachine& machine) {
         machine.transitionToFailure(error.what());
         return;
     }
-    machine.setProgress(OtaState::Install, "activate", 99, "Activating target slot");
+    machine.progress().complete(ProgressPhase::InstallDone);
     machine.bootControl().setSlotBootable(options.target_slot , true);
     machine.bootControl().setPrimarySlot(options.target_slot);
     machine.updateSlots(machine.bootControl().getBootedSlot(), options.target_slot);

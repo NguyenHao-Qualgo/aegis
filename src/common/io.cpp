@@ -137,9 +137,10 @@ const std::string &TempFile::path() const noexcept {
     return path_;
 }
 
-StreamReader::StreamReader(int input_fd, int tee_fd) noexcept
+StreamReader::StreamReader(int input_fd, int tee_fd, ReadProgressCallback progress_callback) noexcept
     : input_fd_(input_fd),
-      tee_fd_(tee_fd) {
+      tee_fd_(tee_fd),
+      progress_callback_(progress_callback) {
 }
 
 void StreamReader::read_exact(char *dst, std::size_t len) {
@@ -163,6 +164,10 @@ void StreamReader::read_exact(char *dst, std::size_t len) {
         const auto bytes_read = static_cast<std::size_t>(rc);
 
         tee(dst + done, bytes_read);
+
+        if (progress_callback_) {
+            progress_callback_(bytes_read);
+        }
         done += bytes_read;
     }
 }

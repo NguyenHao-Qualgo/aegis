@@ -30,7 +30,7 @@ void RebootState::onEnter(OtaStateMachine& machine) {
         LOG_W("Reboot target slot was missing; falling back to primary slot {}", target);
     }
 
-    machine.setProgress(OtaState::Reboot, "reboot", 100, "Ready to reboot");
+    machine.progress().complete(ProgressPhase::RebootReady);
     // reboot
     LOG_I("Rebooting system now...");
 }

@@ -11,6 +11,7 @@ set(AEGIS_TESTABLE_SOURCES
     ${CMAKE_SOURCE_DIR}/src/core/ota_context.cpp
     ${CMAKE_SOURCE_DIR}/src/core/ota_state_machine.cpp
     ${CMAKE_SOURCE_DIR}/src/core/ota_service.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/progress.cpp
     ${CMAKE_SOURCE_DIR}/src/common/config.cpp
     ${CMAKE_SOURCE_DIR}/src/common/state_store.cpp
     ${CMAKE_SOURCE_DIR}/src/installer/manifest.cpp
