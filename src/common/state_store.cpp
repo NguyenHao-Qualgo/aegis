@@ -36,6 +36,7 @@ OtaStatus StateStore::load() const {
         else if (key == "booted_slot") status.bootedSlot = value;
         else if (key == "primary_slot") status.primarySlot = value;
         else if (key == "bundle_version") status.bundleVersion = value;
+        else if (key == "target_slot" && !value.empty()) status.targetSlot = value;
     }
     return status;
 }

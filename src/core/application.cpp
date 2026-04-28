@@ -111,12 +111,24 @@ std::string daemon_config_path(const std::vector<std::string>& args) {
     return config_path.empty() ? std::string(kDefaultConfigPath) : config_path;
 }
 
+void log_loaded_config(const OtaConfig& config) {
+    LOG_D("Config: hw-compatibility = " + config.hw_compatibility);
+    LOG_D("Config: public-key = " + config.public_key);
+    LOG_D("Config: aes-key = " + config.aes_key);
+    LOG_D("Config: bootloader-type = " + toString(config.bootloader_type));
+    LOG_D("Config: data-directory = " + config.data_directory);
+    LOG_D("Config: log-level = " + std::to_string(static_cast<int>(config.log_level)));
+}
+
 OtaService make_ota_service(const std::vector<std::string>& args) {
     const std::string config_path = daemon_config_path(args);
-    LOG_I("Loading config: " + config_path);
 
     ConfigLoader loader;
     const OtaConfig config = loader.load(config_path);
+    AppLog::Init(config.log_level, nullptr, "aegis-daemon");
+    LOG_I("Loading config: " + config_path);
+    log_loaded_config(config);
+    LOG_I("Starting aegis daemon");
     std::filesystem::create_directories(config.data_directory);
 
     CommandRunner runner;
@@ -167,9 +179,6 @@ int Application::runDaemon(const std::vector<std::string>& args) const {
     (void)args;
     throw std::runtime_error("Daemon support is disabled in this build");
 #else
-    AppLog::Init(AppLog::Level::debug, nullptr, "aegis-daemon");
-    LOG_I("Starting aegis daemon");
-
     OtaService service = make_ota_service(args);
     service.resumeAfterBoot();
 

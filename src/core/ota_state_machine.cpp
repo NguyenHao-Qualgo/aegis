@@ -18,12 +18,12 @@ std::unique_ptr<IOtaState> OtaStateMachine::stateFromPersisted(const OtaStatus& 
     switch (status.state) {
     case OtaState::Reboot:
         LOG_I("Resuming persisted Reboot state — waiting for ResumeAfterBoot");
-        return std::make_unique<RebootState>();
+        return std::make_unique<RebootState>(true);
     case OtaState::Commit:
-        LOG_I("Resuming persisted Commit state — waiting for mark-good");
+        LOG_I("Resuming persisted Commit state");
         return std::make_unique<CommitState>();
     case OtaState::Failure:
-        LOG_W("Resuming persisted Failure state: " + status.lastError);
+        LOG_W("Resuming persisted FFailure state: " + status.lastError);
         return std::make_unique<FailureState>(status.lastError);
     default:
         return std::make_unique<IdleState>();

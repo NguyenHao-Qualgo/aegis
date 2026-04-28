@@ -27,6 +27,19 @@ void assign_key(OtaConfig& config, const std::string& key, const std::string& va
         }
     } else if (key == "hw-compatibility") {
         config.hw_compatibility = value;
+    } else if (key == "log-level") {
+        // check if value is a valid integer in range [0, 6] if not use default level
+        try {
+            int level = std::stoi(value);
+            if (level < AppLog::Level::off || level > AppLog::Level::trace) {
+                config.log_level = AppLog::Level::info;
+            } else {
+                config.log_level = static_cast<AppLog::Level>(level);
+            }
+        } catch (const std::exception&) {
+            config.log_level = AppLog::Level::info;
+        }
+
     }
 }
 
@@ -77,7 +90,6 @@ OtaConfig ConfigLoader::load(const std::string& path) {
         if (current_section.empty() || current_section == "update") {
             assign_key(config, key, value);
         }
-        LOG_D("Config: " + key + " = " + value);
     }
 
     return config;

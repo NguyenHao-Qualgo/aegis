@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "aegis/common/error.hpp"
+#include "aegis/common/logging.hpp"
 
 namespace aegis {
 
@@ -40,6 +41,7 @@ struct OtaConfig {
     std::string aes_key;
     std::string data_directory;
     BootloaderType bootloader_type{BootloaderType::Nvidia};
+    AppLog::Level log_level{AppLog::Level::info};
 };
 
 struct OtaStatus {

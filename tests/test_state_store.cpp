@@ -29,6 +29,7 @@ TEST_F(StateStoreTest, SaveLoadRoundTrip) {
     s.lastError     = "";
     s.bootedSlot    = "B";
     s.primarySlot   = "A";
+    s.targetSlot    = "B";
     s.bundleVersion = "2.5.0";
     store.save(s);
 
@@ -39,6 +40,8 @@ TEST_F(StateStoreTest, SaveLoadRoundTrip) {
     EXPECT_EQ(loaded.message,       "fetching bundle");
     EXPECT_EQ(loaded.bootedSlot,    "B");
     EXPECT_EQ(loaded.primarySlot,   "A");
+    ASSERT_TRUE(loaded.targetSlot.has_value());
+    EXPECT_EQ(*loaded.targetSlot,   "B");
     EXPECT_EQ(loaded.bundleVersion, "2.5.0");
 }
 

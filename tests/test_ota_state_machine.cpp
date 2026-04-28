@@ -156,6 +156,7 @@ TEST_F(OtaStateMachineTest, MarkActiveUnbootableThrows) {
 TEST_F(OtaStateMachineTest, PersistenceReboot) {
     {
         auto m = make(std::make_unique<IdleState>());
+        m->setTargetSlot("B");
         m->setProgress(OtaState::Reboot, "rebooting", 95, "waiting for reboot");
     }
     // New machine picks up persisted Reboot state
@@ -166,6 +167,33 @@ TEST_F(OtaStateMachineTest, PersistenceReboot) {
     StateStore store(store_path);
     OtaStateMachine m(std::move(ctx), std::move(store));
     EXPECT_EQ(m.getStatus().state, OtaState::Reboot);
+    ASSERT_TRUE(m.getStatus().targetSlot.has_value());
+    EXPECT_EQ(*m.getStatus().targetSlot, "B");
+}
+
+TEST_F(OtaStateMachineTest, ResumeAfterBootFromPersistedRebootUsesPersistedTargetSlot) {
+    {
+        auto m = make(std::make_unique<IdleState>());
+        m->setTargetSlot("B");
+        m->setProgress(OtaState::Reboot, "rebooting", 100, "waiting for reboot");
+    }
+
+    OtaConfig cfg;
+    cfg.data_directory = "/tmp";
+    auto boot = std::make_unique<FakeBootControl>();
+    boot->booted = "B";
+    boot->primary = "B";
+    OtaContext ctx(std::move(cfg), std::move(boot), nullptr);
+    StateStore store(store_path);
+    OtaStateMachine m(std::move(ctx), std::move(store));
+
+    m.dispatch(OtaEvent{OtaEvent::Type::ResumeAfterBoot, "", ""});
+
+    const auto status = m.getStatus();
+    EXPECT_EQ(status.state, OtaState::Idle);
+    EXPECT_EQ(status.bootedSlot, "B");
+    EXPECT_EQ(status.primarySlot, "B");
+    EXPECT_TRUE(status.lastError.empty());
 }
 
 TEST_F(OtaStateMachineTest, PersistenceFailure) {

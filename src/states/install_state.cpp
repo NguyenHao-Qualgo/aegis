@@ -14,6 +14,7 @@ void InstallState::onEnter(OtaStateMachine& machine) {
     InstallOptions options;
     if (!machine.bootControl().getBootedSlot().empty()) {
         options.target_slot = machine.bootControl().getBootedSlot() == "A" ? "B" : "A";
+        machine.setTargetSlot(options.target_slot);
     }
     options.config = machine.config();
     options.image_path = machine.getStatus().bundlePath;
@@ -28,6 +29,7 @@ void InstallState::onEnter(OtaStateMachine& machine) {
     machine.setProgress(OtaState::Install, "activate", 99, "Activating target slot");
     machine.bootControl().setSlotBootable(options.target_slot , true);
     machine.bootControl().setPrimarySlot(options.target_slot);
+    machine.updateSlots(machine.bootControl().getBootedSlot(), options.target_slot);
     machine.transitionToReboot();
 }
 

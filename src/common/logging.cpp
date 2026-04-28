@@ -57,7 +57,7 @@ void AppLog::Init(
         file_info = fmt::format("\n\tFile log: {}, max size: {}, total files: {}.", file_path, file_size, file_count);
     }
     s_AppLogger = std::make_shared<spdlog::logger>("AppLogger", dup_filter);
-    s_AppLogger->set_level(spdlog::level::trace);
+    s_AppLogger->set_level(s_Level);
     for (const spdlog::sink_ptr& sink : s_AppLogger->sinks()) {
         sink->set_level(s_Level);
     }
@@ -75,11 +75,13 @@ void AppLog::Flush() {
 void AppLog::DumpBacktrace() {
     if (s_AppLogger == nullptr)
         return;
+    s_AppLogger->set_level(spdlog::level::trace);
     for (const spdlog::sink_ptr& sink : s_AppLogger->sinks()) {
         sink->set_level(spdlog::level::trace);
     }
     s_AppLogger->dump_backtrace();
     s_AppLogger->flush();
+    s_AppLogger->set_level(s_Level);
     for (const spdlog::sink_ptr& sink : s_AppLogger->sinks()) {
         sink->set_level(s_Level);
     }
