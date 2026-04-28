@@ -87,7 +87,7 @@ ScopedMount::~ScopedMount() {
     if (mounted) {
         ::sync();
         if (::umount(mountpoint.c_str()) != 0) {
-            LOG_E("failed to unmount '" + mountpoint.string() + "'");
+            LOG_E("failed to unmount {}", mountpoint.string());
         }
     }
 }
@@ -121,8 +121,7 @@ void extract_archive_to_disk(ExtractData* data) {
         goto out;
     }
 
-    LOG_I("archive handler: libarchive opened FIFO '" + data->fifo_path +
-          "' and is consuming streamed payload data");
+    LOG_I("archive handler: libarchive opened FIFO {} and is consuming streamed payload data", data->fifo_path);
 
     for (;;) {
         const int r = archive_read_next_header(a, &entry);

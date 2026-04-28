@@ -30,8 +30,7 @@ public:
         std::uint32_t checksum = 0;
         Sha256 sha;
 
-        LOG_I("streaming payload '" + entry.name + "' directly from SWU stream, size=" +
-              std::to_string(entry.size) + " bytes");
+        LOG_I("streaming payload {} directly from SWU stream, size={} bytes", entry.name, entry.size);
 
         while (remaining > 0) {
             ctx_.check_cancel();
@@ -58,8 +57,7 @@ public:
             fail_runtime("sha256 mismatch for " + entry.name);
         }
 
-        LOG_I("finished streaming payload '" + entry.name + "', streamed=" +
-              std::to_string(entry.size) + " bytes");
+        LOG_I("finished streaming payload {} from SWU stream, streamed={} bytes", entry.name, entry.size); 
     }
 
     template <typename Sink>
@@ -91,8 +89,7 @@ public:
                          (errors.empty() ? std::string() : "\n" + errors));
         }
 
-        LOG_I("streaming encrypted payload '" + entry.name +
-              "' through in-process OpenSSL AES-CBC decrypt without extracting SWU");
+        LOG_I("streaming encrypted payload {} through in-process OpenSSL AES-CBC decrypt without extracting SWU", entry.name);
 
         std::array<char, kIoBufferSize> inbuf{};
         std::vector<unsigned char> outbuf(kIoBufferSize + EVP_CIPHER_block_size(cipher));
@@ -149,7 +146,7 @@ public:
             fail_runtime("sha256 mismatch for " + entry.name);
         }
 
-        LOG_I("finished decrypted streaming for payload '" + entry.name + "'");
+        LOG_I("finished decrypted streaming for payload {}", entry.name);
     }
 
 private:

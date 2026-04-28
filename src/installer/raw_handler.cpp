@@ -99,7 +99,7 @@ void RawHandler::install(const InstallContext& ctx,
     }
 
     const fs::path target = entry.device;
-    LOG_I("raw handler: target device='" + target.string() + "', mode=direct stream write");
+    LOG_I("raw handler: target device='{}', mode=direct stream write", target.string());
 
     BlockProtectionGuard protection(target);
     FileDescriptor out(::open(target.c_str(), O_RDWR));
@@ -115,7 +115,7 @@ void RawHandler::install(const InstallContext& ctx,
         fail_runtime("failed to fsync raw device " + target.string());
     }
 
-    LOG_I("raw handler: completed direct stream write to '" + target.string() + "'");
+    LOG_I("raw handler: completed direct stream write to '{}'", target.string());
 }
 
 }  // namespace aegis

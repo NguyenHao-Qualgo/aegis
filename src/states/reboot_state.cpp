@@ -17,7 +17,7 @@ void RebootState::onEnter(OtaStateMachine& machine) {
         const auto status = machine.getStatus();
         if (status.targetSlot) {
             LOG_I("Restored Reboot state for target slot " + *status.targetSlot +
-                  " — waiting for ResumeAfterBoot");
+                  " waiting for ResumeAfterBoot");
         } else {
             LOG_W("Restored Reboot state without a persisted target slot");
         }
@@ -27,7 +27,7 @@ void RebootState::onEnter(OtaStateMachine& machine) {
     if (!machine.getStatus().targetSlot) {
         const auto target = machine.bootControl().getPrimarySlot();
         machine.setTargetSlot(target);
-        LOG_W("Reboot target slot was missing; falling back to primary slot " + target);
+        LOG_W("Reboot target slot was missing; falling back to primary slot {}", target);
     }
 
     machine.setProgress(OtaState::Reboot, "reboot", 100, "Ready to reboot");
@@ -46,7 +46,7 @@ void RebootState::handle(OtaStateMachine& machine, const OtaEvent& event) {
         return;
 
     case OtaEvent::Type::ResumeAfterBoot: {
-        LOG_I("System resumed after reboot — transitioning to Commit");
+        LOG_I("System resumed after reboot, transitioning to Commit");
         machine.transitionToCommit();
         return;
     }

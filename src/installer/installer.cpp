@@ -58,14 +58,13 @@ int PackageInstaller::install(OtaStateMachine& machine, std::stop_token stop) {
 
     FileDescriptor tee_fd;
     StreamReader reader(image_fd.get(), tee_fd.get());
-    LOG_I("starting streaming install from " +
-               std::string(options_.image_path == "-" ? "stdin" : options_.image_path));
+    LOG_I("starting streaming install from {}", options_.image_path == "-" ? "stdin" : options_.image_path);
     LOG_I("outer SWU cpio is read sequentially; no full SWU extraction is performed");
 
     ctx.check_cancel();
     const CpioEntry swdesc = read_cpio_entry(reader);
     if (swdesc.name != "sw-description") { fail_runtime("sw-description must be the first cpio entry"); }
-    LOG_I("read cpio entry '" + swdesc.name + "' size=" + std::to_string(swdesc.size));
+    LOG_I("read cpio entry '{}' size={}", swdesc.name, swdesc.size);
 
     std::uint32_t swdesc_checksum = 0;
     const std::string sw_description = reader.read_string(swdesc.size, &swdesc_checksum);
@@ -73,7 +72,7 @@ int PackageInstaller::install(OtaStateMachine& machine, std::stop_token stop) {
     skip_padding(reader, swdesc.size);
 
     CpioEntry next = read_cpio_entry(reader);
-    LOG_I("read cpio entry '" + next.name + "' size=" + std::to_string(next.size));
+    LOG_I("read cpio entry '{}' size={}", next.name, next.size);
     if (next.name == "sw-description.sig") {
         std::uint32_t sig_checksum = 0;
         const std::string signature = reader.read_string(next.size, &sig_checksum);
@@ -82,7 +81,7 @@ int PackageInstaller::install(OtaStateMachine& machine, std::stop_token stop) {
         verify_signature(sw_description, signature, options_.config.public_key);
         LOG_I("verified signed sw-description successfully");
         next = read_cpio_entry(reader);
-        LOG_I("read next cpio entry '" + next.name + "' size=" + std::to_string(next.size));
+        LOG_I("read next cpio entry '{}' size={}", next.name, next.size);
     } else {
         fail_runtime("signed sw-description is required");
     }
@@ -93,7 +92,7 @@ int PackageInstaller::install(OtaStateMachine& machine, std::stop_token stop) {
         fail_runtime("hardware compatibility mismatch: SWU requires '" + hw_compatibility +
                      "' but device is '" + options_.config.hw_compatibility + "'");
     }
-    LOG_I("parsed sw-description, applicable images=" + std::to_string(entries.size()) +
+    LOG_I("parsed sw-description, applicable images={}{}", std::to_string(entries.size()),
                (options_.target_slot.empty() ? "" : " slot=" + options_.target_slot));
     const std::optional<AesMaterial> aes =
         options_.config.aes_key.empty() ? std::optional<AesMaterial>{}
@@ -106,21 +105,21 @@ int PackageInstaller::install(OtaStateMachine& machine, std::stop_token stop) {
 
         ManifestEntry *manifest = find_manifest_entry(entries, next.name);
         if (!manifest) {
-            LOG_I("skipping unreferenced cpio entry '" + next.name + "'");
+            LOG_I("skipping unreferenced cpio entry '{}'", next.name);
             std::uint32_t checksum = 0;
             reader.skip(next.size, &checksum);
             if (checksum != next.checksum) { fail_runtime("cpio checksum mismatch for skipped entry " + next.name); }
             skip_padding(reader, next.size);
         } else {
-            LOG_I("dispatching cpio entry '" + next.name + "' to handler type='" + manifest->type + "'");
+            LOG_I("dispatching cpio entry '{}' to handler type='{}'", next.name, manifest->type);
             IHandler& handler = handlerFor(manifest->type);
             handler.install(ctx, reader, next, *manifest, aes ? &*aes : nullptr);
             manifest->installed = true;
-            LOG_I("handler finished for '" + next.name + "'");
+            LOG_I("handler finished for '{}'", next.name);
         }
 
         next = read_cpio_entry(reader);
-        LOG_I("read next cpio entry '" + next.name + "' size=" + std::to_string(next.size));
+        LOG_I("read next cpio entry '{}' size={}", next.name, next.size);
     }
 
     ctx.check_cancel();

@@ -19,15 +19,14 @@ void CommitState::onEnter(OtaStateMachine& machine) {
         }
 
         if (booted != *status.targetSlot) {
-            LOG_W("Slot mismatch: expected " + *status.targetSlot +
-                  " but booted into " + booted + " (possible watchdog rollback)");
+            LOG_W("Slot mismatch: expected {} but booted into {} (possible watchdog rollback)", *status.targetSlot, booted);
 
             try {
                 machine.bootControl().setPrimarySlot(booted);
                 machine.updateSlots(booted, booted);
-                LOG_I("Primary slot reset to " + booted);
+                LOG_I("Primary slot reset to {}", booted);
             } catch (const std::exception& e) {
-                LOG_W("Failed to reset primary slot to " + booted + ": " + e.what());
+                LOG_W("Failed to reset primary slot to {}: {}", booted, e.what());
             }
 
             machine.transitionToFailure("Booted slot does not match expected target");

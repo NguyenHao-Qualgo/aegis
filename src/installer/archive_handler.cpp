@@ -61,7 +61,7 @@ void extract_archive_payload(const InstallContext& ctx,
         fail_runtime("FIFO cannot be created in archive handler");
     }
     UnlinkPath fifo_guard{fifo.string()};
-    LOG_I("archive handler: created FIFO '" + fifo.string() + "' for streamed archive extraction");
+    LOG_I("archive handler: created FIFO {} for streamed archive extraction", fifo.string());
 
     ExtractData extract_data{
         .flags = archive_extract_flags(entry.preserve_attributes),
@@ -140,25 +140,24 @@ void ArchiveHandler::install(const InstallContext& ctx,
         }
         RemoveTree mountpoint_guard{mountpoint};
 
-        LOG_I("archive handler: mounting device='" + entry.device + "' filesystem='" +
-              entry.filesystem + "' at '" + mountpoint.string() + "'");
+        LOG_I("archive handler: mounting device={} filesystem={} at {}", entry.device, entry.filesystem, mountpoint.string());
 
         mount_target_device(entry, mountpoint);
         ScopedMount scoped_mount{mountpoint, true};
 
         const fs::path target = resolve_archive_target(entry, mountpoint);
-        LOG_I("archive handler: target path='" + target.string() + "'");
+        LOG_I("archive handler: target path='{}'", target.string());
         ensure_destination_directory(entry, target);
         extract_archive_payload(ctx, reader, cpio_entry, entry, aes, target);
-        LOG_I("archive handler: completed streamed extraction into '" + target.string() + "'");
+        LOG_I("archive handler: completed streamed extraction into '{}'", target.string());
         return;
     }
 
     const fs::path target = entry.path;
-    LOG_I("archive handler: extracting into existing path '" + target.string() + "'");
+    LOG_I("archive handler: extracting into existing path '{}'", target.string());
     ensure_destination_directory(entry, target);
     extract_archive_payload(ctx, reader, cpio_entry, entry, aes, target);
-    LOG_I("archive handler: completed streamed extraction into '" + target.string() + "'");
+    LOG_I("archive handler: completed streamed extraction into '{}'", target.string());
 }
 
 }  // namespace aegis

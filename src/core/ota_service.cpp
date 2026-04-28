@@ -59,7 +59,7 @@ void OtaService::startInstall(const std::string& bundlePath) {
             runInstall(stop, bundlePath);
             LOG_I("Install finished");
         } catch (const std::exception& e) {
-            LOG_E(std::string("Install failed: ") + e.what());
+            LOG_E("Install failed: {}", e.what());
             machine_.clearInstallStopToken();
         }
     });

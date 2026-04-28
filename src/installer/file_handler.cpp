@@ -25,7 +25,7 @@ void FileHandler::install(const InstallContext& ctx,
     const fs::path target = entry.path;
     ensure_parent_dir(target);
 
-    LOG_I("file target: " + target.string());
+    LOG_I("file target: {}", target.string());
 
     FileDescriptor out(::open(target.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644));
     if (!out) {
@@ -40,7 +40,7 @@ void FileHandler::install(const InstallContext& ctx,
         fail_runtime("failed to fsync file " + target.string());
     }
 
-    LOG_I("file done: " + target.string());
+    LOG_I("file done: {}", target.string());
 }
 
 }  // namespace aegis

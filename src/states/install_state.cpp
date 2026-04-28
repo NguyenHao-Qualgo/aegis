@@ -22,7 +22,7 @@ void InstallState::onEnter(OtaStateMachine& machine) {
     try {
         installer.install(machine, machine.installStopToken());
     } catch (const aegis::Error &error) {
-        LOG_E("installation failed: " + std::string(error.what()));
+        LOG_E("installation failed: {}", std::string(error.what()));
         machine.transitionToFailure(error.what());
         return;
     }

@@ -112,12 +112,12 @@ std::string daemon_config_path(const std::vector<std::string>& args) {
 }
 
 void log_loaded_config(const OtaConfig& config) {
-    LOG_D("Config: hw-compatibility = " + config.hw_compatibility);
-    LOG_D("Config: public-key = " + config.public_key);
-    LOG_D("Config: aes-key = " + config.aes_key);
-    LOG_D("Config: bootloader-type = " + toString(config.bootloader_type));
-    LOG_D("Config: data-directory = " + config.data_directory);
-    LOG_D("Config: log-level = " + std::to_string(static_cast<int>(config.log_level)));
+    LOG_D("Config: hw-compatibility = {}", config.hw_compatibility);
+    LOG_D("Config: public-key = {}", config.public_key);
+    LOG_D("Config: aes-key = {}", config.aes_key);
+    LOG_D("Config: bootloader-type = {}", toString(config.bootloader_type));
+    LOG_D("Config: data-directory = {}", config.data_directory);
+    LOG_D("Config: log-level = {}", std::to_string(static_cast<int>(config.log_level)));
 }
 
 OtaService make_ota_service(const std::vector<std::string>& args) {
@@ -126,7 +126,7 @@ OtaService make_ota_service(const std::vector<std::string>& args) {
     ConfigLoader loader;
     const OtaConfig config = loader.load(config_path);
     AppLog::Init(config.log_level, nullptr, "aegis-daemon");
-    LOG_I("Loading config: " + config_path);
+    LOG_I("Loading config: {}", config_path);
     log_loaded_config(config);
     LOG_I("Starting aegis daemon");
     std::filesystem::create_directories(config.data_directory);
@@ -148,7 +148,7 @@ SignalSet make_daemon_signal_set() {
 void start_daemon_signal_forwarder(DbusService& dbus, SignalSet signal_set) {
     std::thread([&dbus, signal_set]() mutable {
         const int signum = signal_set.wait();
-        LOG_I("Received stop signal " + std::to_string(signum) + ", stopping daemon");
+        LOG_I("Received stop signal {}, stopping daemon", std::to_string(signum));
         dbus.stop();
     }).detach();
 }
