@@ -1,6 +1,6 @@
-# Installation Guide
+# Overview Aegis tool
 
-This document describes how Aegis installs an existing `.swu` bundle. For bundle generation, signing, and encryption setup, see [bundle.md](bundle.md).
+This document describes how Aegis installs an existing `.swu` bundle. For bundle generation, signing, and encryption setup, see [native.md](native.md).
 
 ## Overview
 
@@ -65,4 +65,4 @@ During installation, Aegis checks:
 - Encrypted payloads are decrypted in-process while streaming.
 - The outer `.swu` archive is consumed sequentially from start to finish.
 
-See [bundle.md](bundle.md) for bundle generation, [daemon.md](daemon.md) for the DBus service flow, and [cli.md](cli.md) for the client commands.
+See [native.md](native.md) for bundle generation, [target.md](target.md) for the DBus service flow, and cli commands.

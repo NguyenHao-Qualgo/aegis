@@ -1,77 +1,80 @@
 # Aegis
 
-Aegis is a C++20 OTA utility that can:
+Aegis is a C++20 OTA tool for SWUpdate-style `.swu` bundles.
 
-- create signed `.swu` bundles with `aegis pack`
-- stream-install signed bundles without unpacking the whole archive first
-- handle `raw`, `archive`, and `tar` payload entries
-- verify `sw-description` signatures and optionally decrypt AES-CBC payloads
-- manage A/B slot activation through U-Boot or NVIDIA boot-control backends
+This repository contains the Aegis application code used to:
 
-When built with DBus support, the same binary also exposes an OTA daemon and a small CLI client for `status`, `install`, `mark-active`, `get-primary`, and `get-booted`.
+- create OTA bundles on the native/Yocto side
+- run an OTA daemon on the target device
+- provide a CLI client that talks to the daemon over DBus
 
-## Repository Highlights
+For the full Yocto product build and image integration, see:
 
-- `src/installer/packer.cpp`: writes `.swu` archives in `cpio crc/newc` format
-- `src/installer/installer.cpp`: streaming installer for signed `.swu` bundles
-- `src/installer/raw_handler.cpp`: raw image/file writer
-- `src/installer/archive_handler.cpp`: streamed archive extraction through `libarchive`
-- `src/service/dbus_service.cpp`: DBus daemon surface
-- `sw-description.default`: example A/B rootfs manifest template
-- `gen_update.sh`: helper that fills the manifest template, signs it, and packs the bundle
-- `gen_test_keys.sh`: helper that creates local test RSA/AES materials
+- <https://github.com/uneycom/uav-yocto-build/tree/UAV-1708-develop-new-ota-tool>
 
-## Build Requirements
+## What Aegis Does
 
-Required for all builds:
+Aegis provides a simple OTA update flow for A/B root filesystem systems.
 
-- CMake 3.16+
-- a C++17 compiler
-- `pkg-config`
-- OpenSSL
-- `libarchive`
-- `fmt`
-- `spdlog`
+It supports:
 
-Additional dependencies:
+- signed `sw-description` manifest verification
+- AES-CBC encrypted payloads
+- streaming installation without extracting the full `.swu` bundle first
+- archive payload installation, such as rootfs `tar.gz`
+- raw payload installation, such as compressed raw images
+- A/B slot selection and activation
+- U-Boot and NVIDIA boot-control backends
+- DBus daemon mode on the target
+- CLI commands for status, install, and slot control
 
-- `GTest` when `AEGIS_BUILD_TESTS=ON` (default)
-- `sdbus-c++` when `AEGIS_ENABLE_DBUS=ON`
-- `lcov` and `genhtml` if you want the coverage target
+## High-Level Flow
 
-## Documentation
+### Native / Yocto Side
 
-- [Bundle Guide](docs/bundle.md)
-- [Installation Guide](docs/installation.md)
-- [Daemon Guide](docs/daemon.md)
-- [CLI Guide](docs/cli.md)
+On the build machine, Aegis is used to create the final `.swu` bundle.
 
-## Native Build
+The native flow prepares payload files, fills the `sw-description` manifest, signs the manifest, optionally encrypts payloads, and packs everything into one `.swu` file.
 
-Pack-only build
-There is also a helper script that configures coverage, builds, runs the tests, and generates an HTML report:
+Typical responsibilities:
 
-```bash
-./build_and_run_test.sh
-```
+- collect payload images from Yocto deploy output
+- generate or update `sw-description`
+- calculate payload SHA-256 hashes
+- sign `sw-description`
+- encrypt payloads when AES is enabled
+- create the final `.swu` archive
 
-## DBus-Enabled Build
+Read more:
 
-Enable DBus support if you want the daemon and client commands:
+- [Native Bundle Creation](docs/native.md)
 
-```bash
-cmake -S . -B build -DAEGIS_ENABLE_DBUS=ON
-cmake --build build --parallel
-```
+### Target Side
 
-With that build, `aegis` supports:
+On the target device, Aegis runs as a systemd-managed daemon.
 
-daemon systemd service
-```bash
-aegis daemon --config /etc/skytrack/system.
-```
+The daemon receives install requests from GCS or from the local CLI, verifies the bundle, chooses the inactive slot, and streams the payload into the correct installer handler.
 
-cli
+Typical responsibilities:
+
+- load `/etc/skytrack/system.conf`
+- verify `sw-description.sig` using the configured public key
+- decrypt encrypted payloads when required
+- stream payloads directly from the `.swu` bundle
+- write the update into the inactive slot
+- update boot-control state
+- persist OTA state under the configured data directory
+- expose status and control through DBus
+
+Read more:
+
+- [Target Runtime](docs/target.md)
+- [OTA flow](docs/ota-flow.md)
+
+## Runtime Commands
+
+Common target-side commands:
+
 ```bash
 aegis status
 aegis install /data/update.swu
@@ -80,4 +83,69 @@ aegis get-primary
 aegis get-booted
 ```
 
-See [docs/daemon.md](docs/daemon.md) for the DBus API and `busctl` examples, and [docs/cli.md](docs/cli.md) for CLI usage.
+The CLI does not install bundles by itself. It sends requests to the daemon over DBus.
+
+## Target Configuration
+
+The daemon normally reads:
+
+```text
+/etc/skytrack/system.conf
+```
+
+Example:
+
+```ini
+[update]
+hw-compatibility=jetson-orin-nano-devkit-nvme
+public-key=/etc/skytrack/public.pem
+aes-key=/etc/skytrack/aes.key
+bootloader-type=nvidia
+data-directory=/data/aegis
+log-level=4
+```
+
+Important files:
+
+- `public-key`: verifies the signed `sw-description`
+- `aes-key`: decrypts encrypted payloads
+- `data-directory`: stores OTA state and downloaded bundles
+- `bootloader-type`: selects the boot-control backend
+
+## Repository Map
+
+```text
+docs/       Documentation
+include/    Public headers
+src/        Implementation
+tests/      Unit tests
+dbus/       DBus interface and policy
+systemd/    systemd service unit
+```
+
+Useful source areas:
+
+```text
+src/core/        application, CLI, daemon, state machine
+src/states/      OTA state implementations
+src/installer/   packer, manifest parser, streaming installer, handlers
+src/bootloader/  U-Boot and NVIDIA slot-control backends
+src/common/      config, logging, crypto, persistence, utilities
+```
+
+## Local Verification
+
+For local repository verification:
+
+```bash
+./build_and_run_test.sh
+```
+
+This is only for local development and tests. The main product bundle creation flow is done through Yocto.
+
+## Documentation
+
+- [Overview of this tool](docs/overview.md)
+- [Native Bundle Creation](docs/native.md)
+- [Target Runtime](docs/target.md)
+- [OTA flow](docs/ota-flow.md)
