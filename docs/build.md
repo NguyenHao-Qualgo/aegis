@@ -10,7 +10,7 @@ Use this guide when you want to:
 - understand which keys must also be provisioned on the target
 
 For target runtime behavior, see [target.md](target.md).
-For the install pipeline on the device, see [overview.md](overview.md).
+For the high-level OTA architecture, update strategy, and target-side install flow, see [overview.md](overview.md).
 For OTA state-machine behavior, see [ota-flow.md](ota-flow.md).
 
 ## 1. Scope

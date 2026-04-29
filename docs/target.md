@@ -12,7 +12,7 @@ Use this guide when you want to understand:
 - target-side key and AES material requirements
 
 For Yocto-side bundle generation, see [build.md](build.md).
-For the install pipeline inside the daemon, see [overview.md](overview.md).
+For the high-level OTA architecture, update strategy, and target-side install flow, see [overview.md](overview.md).
 For the OTA state machine, see [ota-flow.md](ota-flow.md).
 
 ## 1. Runtime Model

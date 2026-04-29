@@ -10,7 +10,7 @@ Use this guide when you want to understand:
 
 For Yocto-side bundle generation, see [build.md](build.md).
 For target runtime, DBus, and CLI behavior, see [target.md](target.md).
-For the bundle install pipeline, see [overview.md](overview.md).
+For the high-level OTA architecture, update strategy, and install overview, see [overview.md](overview.md).
 
 ```mermaid
 graph TD
