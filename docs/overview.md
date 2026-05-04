@@ -101,7 +101,7 @@ Aegis provides:
 
 - bootloader interaction for NVIDIA and U-Boot style systems
 - signed `sw-description` verification
-- optional AES-encrypted payload support
+- AES-encrypted payload support
 - SHA-256 payload integrity checking
 - streaming install from the `.swu` without extracting the full archive first
 - installer handlers for `raw`, `archive`, and `file` payload types
@@ -191,6 +191,8 @@ software =
             filesystem = "ext4";
             device = "@@ROOTFS_DEVICE_PATH@@/ROOTFS_A";
             sha256 = "$get_sha256(@@ROOTFS_FILENAME@@)";
+            encrypted = true;
+            ivt = "@@AEGIS_IV@@";
         }
         );
         files: (
@@ -199,6 +201,8 @@ software =
             type = "archive";
             path = "/boot/efi";
             sha256 = "$get_sha256(@@ESP_ARCHIVE@@)";
+            encrypted = true;
+            ivt = "@@AEGIS_IV@@";
         }
         );
     };
@@ -213,6 +217,8 @@ software =
             filesystem = "ext4";
             device = "@@ROOTFS_DEVICE_PATH@@/ROOTFS_B";
             sha256 = "$get_sha256(@@ROOTFS_FILENAME@@)";
+            encrypted = true;
+            ivt = "@@AEGIS_IV@@";
         }
         );
         files: (
@@ -221,6 +227,8 @@ software =
             type = "archive";
             path = "/boot/efi";
             sha256 = "$get_sha256(@@ESP_ARCHIVE@@)";
+            encrypted = true;
+            ivt = "@@AEGIS_IV@@";
         }
         );
     };
@@ -229,19 +237,13 @@ software =
 
 Important points:
 
-- `@@MACHINE@@`, `@@ROOTFS_FILENAME@@`, `@@ROOTFS_DEVICE_PATH@@`, and `@@ESP_ARCHIVE@@` are build-time placeholders
+- `@@MACHINE@@`, `@@ROOTFS_FILENAME@@`, `@@ROOTFS_DEVICE_PATH@@`, `@@AEGIS_IV@@` and `@@ESP_ARCHIVE@@` are build-time placeholders
 - `$get_sha256(...)` is resolved during bundle generation
 - `A` and `B` are symmetric update blocks
 - the same payload names can appear in both blocks
 - the main rootfs difference between `A` and `B` is the destination device
 - the ESP archive is installed through the `files:` list to `/boot/efi`
-
-When encrypted payloads are enabled, the final generated manifest can also carry fields such as:
-
-```sw-description
-encrypted = true;
-ivt = "...";
-```
+- Encrypted payloads are always enabled
 
 ## 7. How The Target Uses `sw-description`
 

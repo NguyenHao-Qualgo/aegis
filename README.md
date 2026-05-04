@@ -15,8 +15,6 @@ For the high-level product overview, read these first:
 
 - [docs/overview.md](docs/overview.md)
   One-page summary of how Aegis is organized, how `.swu` is built, how A/B slot selection works, and what happens on the device.
-- [docs/overview.pptx](docs/overview.pptx)
-  Presentation version of the same flow for walkthrough meetings.
 
 For native build and bundle creation, use the Yocto integration repository:
 
