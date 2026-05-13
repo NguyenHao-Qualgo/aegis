@@ -18,6 +18,7 @@
 #include "aegis/common/state_store.hpp"
 #include "aegis/common/util.hpp"
 #include "aegis/installer/packer.hpp"
+#include "aegis/common/crash_handler.hpp"
 
 #if defined(AEGIS_ENABLE_DBUS)
 #include "aegis/core/dbus_service.hpp"
@@ -191,6 +192,7 @@ int Application::runDaemon(const std::vector<std::string>& args) const {
 }
 
 int Application::run(int argc, char** argv) {
+    CrashHandler handler("/tmp");
     const auto args = toArgs(argc, argv);
     if (args.empty()) {
         return runCli(args);

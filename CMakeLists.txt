@@ -16,6 +16,7 @@ find_package(fmt REQUIRED)
 
 pkg_check_modules(LIBARCHIVE REQUIRED IMPORTED_TARGET libarchive)
 pkg_check_modules(EFIVAR IMPORTED_TARGET efivar)
+pkg_check_modules(BREAKPAD REQUIRED IMPORTED_TARGET breakpad-client)
 
 if (AEGIS_ENABLE_DBUS)
     find_package(sdbus-c++ REQUIRED)
@@ -56,6 +57,7 @@ add_executable(aegis
     src/common/crypto.cpp
     src/common/io.cpp
     src/common/logging.cpp
+    src/common/crash_handler.cpp
 )
 
 if (AEGIS_ENABLE_DBUS)
@@ -76,6 +78,7 @@ target_link_libraries(aegis PRIVATE
     ZLIB::ZLIB
     spdlog::spdlog_header_only
     fmt::fmt
+    PkgConfig::BREAKPAD
 )
 
 add_compile_definitions(SPDLOG_FMT_EXTERNAL)
